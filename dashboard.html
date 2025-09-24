@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tossin - Tableau de Bord</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#2563EB',
+                        secondary: '#1E40AF',
+                        accent: '#F59E0B'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
+        <div class="flex items-center justify-center h-16 bg-primary">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-building text-white text-2xl"></i>
+                <span class="text-white text-xl font-bold">Tossin</span>
+            </div>
+        </div>
+        
+        <nav class="mt-8">
+            <a href="dashboard.html" class="flex items-center px-6 py-3 text-primary bg-blue-50 border-r-4 border-primary">
+                <i class="fas fa-tachometer-alt mr-3"></i>
+                <span>Tableau de bord</span>
+            </a>
+            <a href="creances.html" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                <i class="fas fa-money-bill-wave mr-3"></i>
+                <span>Créances</span>
+            </a>
+            <a href="commandes.html" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                <i class="fas fa-shopping-cart mr-3"></i>
+                <span>Commandes</span>
+            </a>
+        </nav>
+        
+        <div class="absolute bottom-0 w-full p-4">
+            <button onclick="logout()" class="w-full flex items-center justify-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
+                <i class="fas fa-sign-out-alt mr-2"></i>
+                <span>Déconnexion</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="lg:hidden fixed top-4 left-4 z-50">
+        <button onclick="toggleSidebar()" class="bg-white p-2 rounded-lg shadow-lg">
+            <i class="fas fa-bars text-gray-700"></i>
+        </button>
+    </div>
+
+    <div class="lg:ml-64 min-h-screen">
+        <header class="bg-white shadow-sm border-b">
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-2xl font-bold text-gray-900">Tableau de Bord</h1>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-500">
+                            <i class="fas fa-user mr-1"></i>
+                            <span id="currentUser">Admin</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Total Créances</p>
+                            <p class="text-2xl font-bold text-gray-900">2,450,000 XOF</p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-full">
+                            <i class="fas fa-money-bill-wave text-blue-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Commandes du mois</p>
+                            <p class="text-2xl font-bold text-gray-900">24</p>
+                        </div>
+                        <div class="bg-green-100 p-3 rounded-full">
+                            <i class="fas fa-shopping-cart text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Échéances dépassées</p>
+                            <p class="text-2xl font-bold text-gray-900">7</p>
+                        </div>
+                        <div class="bg-yellow-100 p-3 rounded-full">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600">Fournisseurs actifs</p>
+                            <p class="text-2xl font-bold text-gray-900">12</p>
+                        </div>
+                        <div class="bg-purple-100 p-3 rounded-full">
+                            <i class="fas fa-truck text-purple-600 text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
+                    <div class="space-y-3">
+                        <a href="creances.html" class="flex items-center p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+                            <i class="fas fa-plus-circle text-blue-600 mr-3"></i>
+                            <span class="text-blue-700 font-medium">Ajouter une créance</span>
+                        </a>
+                        <a href="commandes.html" class="flex items-center p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">
+                            <i class="fas fa-shopping-cart text-green-600 mr-3"></i>
+                            <span class="text-green-700 font-medium">Nouvelle commande</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Activité récente</h3>
+                    <div class="space-y-3">
+                        <div class="flex items-center p-3 border-l-4 border-blue-500 bg-blue-50">
+                            <i class="fas fa-money-bill-wave text-blue-600 mr-3"></i>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">Paiement reçu</p>
+                                <p class="text-xs text-gray-500">Client ABC - 150,000 XOF</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center p-3 border-l-4 border-green-500 bg-green-50">
+                            <i class="fas fa-shopping-cart text-green-600 mr-3"></i>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">Nouvelle commande</p>
+                                <p class="text-xs text-gray-500">CMD-025 créée</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+
+        function logout() {
+            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                localStorage.removeItem('tossin_user');
+                window.location.href = 'login.html';
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const menuButton = e.target.closest('button');
+            
+            if (window.innerWidth < 1024 && !sidebar.contains(e.target) && !menuButton) {
+                sidebar.classList.add('-translate-x-full');
+            }
+        });
+    </script>
+</body>
+</html>
