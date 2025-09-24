@@ -18,6 +18,21 @@ switch ($action) {
         }
         break;
 
+    case 'newPayment':
+        // FormData envoyé via POST
+        $data = $_POST;
+        $file = $_FILES['file'] ?? null;
+
+        if ($data) {
+            newPayment($data, $file);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Aucune donnée reçue pour le paiement.'
+            ]);
+        }
+        break;
+
     default:
         echo json_encode(['error' => 'Action non reconnue']);
         break;

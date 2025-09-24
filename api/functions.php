@@ -63,3 +63,90 @@ function addNewClaim($data)
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
 }
+
+// Ajouter un nouveau paiement
+function newPayment($data, $file = null)
+{
+    global $pdo;
+
+    // Vérification des champs obligatoires
+    if (empty($data['claim_id']) || !isset($data['amount']) || empty($data['payment_method'])) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Champs obligatoires manquants : claim_id, amount ou payment_method'
+        ]);
+        return;
+    }
+
+    $amount = floatval($data['amount']);
+    $claim_id = intval($data['claim_id']);
+    $payment_method = $data['payment_method'];
+    $notes = $data['notes'] ?? '';
+    $date_of_insertion = $data['date_of_insertion'] ?? date('Y-m-d H:i:s');
+
+    // Gestion du fichier si fourni
+    $fileName = null;
+    if ($file && $file['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = __DIR__ . '/uploads/payments/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        $fileName = time() . '_' . basename($file['name']);
+        if (!move_uploaded_file($file['tmp_name'], $uploadDir . $fileName)) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Erreur lors de l\'upload du fichier.'
+            ]);
+            return;
+        }
+    }
+
+    // Préparer la requête d'insertion du paiement
+    $sql = "INSERT INTO payments (date_of_insertion, amount, claim_id, payment_method, notes, file)
+            VALUES (:date_of_insertion, :amount, :claim_id, :payment_method, :notes, :file)";
+    $stmt = $pdo->prepare($sql);
+
+    try {
+        $pdo->beginTransaction();
+
+        // Insertion du paiement
+        $stmt->execute([
+            ':date_of_insertion' => $date_of_insertion,
+            ':amount' => $amount,
+            ':claim_id' => $claim_id,
+            ':payment_method' => $payment_method,
+            ':notes' => $notes,
+            ':file' => $fileName
+        ]);
+
+        // Mise à jour du remaining_amount dans claims
+        $update = $pdo->prepare("UPDATE claims 
+                                 SET remaining_amount = remaining_amount - :amount 
+                                 WHERE id = :claim_id");
+        $update->execute([
+            ':amount' => $amount,
+            ':claim_id' => $claim_id
+        ]);
+
+        $pdo->commit();
+
+        $newPayment = [
+            'id' => $pdo->lastInsertId(),
+            'date_of_insertion' => $date_of_insertion,
+            'amount' => $amount,
+            'claim_id' => $claim_id,
+            'payment_method' => $payment_method,
+            'notes' => $notes,
+            'file' => $fileName
+        ];
+
+        echo json_encode([
+            'success' => true,
+            'payment' => $newPayment
+        ]);
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erreur lors de l\'insertion en base : ' . $e->getMessage()
+        ]);
+    }
+}

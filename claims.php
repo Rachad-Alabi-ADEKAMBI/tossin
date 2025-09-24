@@ -304,15 +304,16 @@
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                         <i class="fas fa-money-bill-wave mr-1"></i>Montant (XOF)
                                     </label>
-                                    <input v-model.number="newClaim.amount" type="number" required min="0" step="1000"
+                                    <input v-model.number="newClaim.amount" type="number" required min="0"
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                         <i class="fas fa-calendar-alt mr-1"></i>Date d'échéance
                                     </label>
-                                    <input v-model="newClaim.due_date" type="date"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <input v-model="newClaim.due_date" type="date" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2
+                                         focus:ring-primary focus:border-transparent">
                                 </div>
                             </div>
 
@@ -419,32 +420,46 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-money-bill-wave mr-1"></i>Montant (XOF)
                                 </label>
-                                <input v-model.number="newPayment.amount" type="number" required min="0" step="1000" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <input v-model.number="newPayment.amount"
+                                    type="number"
+                                    required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+
                             </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-calendar mr-1"></i>Date de paiement
                                 </label>
                                 <input v-model="newPayment.date" type="date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-credit-card mr-1"></i>Moyen de paiement
                                 </label>
-                                <select v-model="newPayment.method" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <select v-model="newPayment.payment_method" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                     <option value="">Sélectionner...</option>
-                                    <option value="especes">Espèces</option>
+                                    <option value="cash">Espèces</option>
                                     <option value="cheque">Chèque</option>
                                     <option value="virement">Virement bancaire</option>
                                     <option value="mobile">Mobile Money</option>
-                                    <option value="carte">Carte bancaire</option>
+                                    <option value="card">Carte bancaire</option>
                                 </select>
                             </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-sticky-note mr-1"></i>Notes
                                 </label>
                                 <textarea v-model="newPayment.notes" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-image mr-1"></i>Photo (facultatif)
+                                </label>
+                                <input type="file" @change="handleFileUpload" accept="image/*" class="w-full">
                             </div>
 
                             <div class="flex space-x-3 pt-4">
@@ -456,6 +471,8 @@
                                 </button>
                             </div>
                         </form>
+
+
                     </div>
                 </div>
             </div>
@@ -472,7 +489,7 @@
                 return {
                     sidebarOpen: false,
                     searchTerm: '',
-                    sortBy: 'name',
+                    sortBy: 'client_name',
                     statusFilter: 'all',
                     currentPage: 1,
                     itemsPerPage: 10,
@@ -501,6 +518,16 @@
                         },
                         // autres clients...
                     ],
+                    claim: {
+                        id: null,
+                        client_name: '',
+                        client_phone: '',
+                        amount: 0,
+                        date_of_claim: '',
+                        due_date: '',
+                        notes: '',
+                        status: ''
+                    },
 
                     claims: [],
 
@@ -510,7 +537,7 @@
                         amount: 150000,
                         date_of_claim: new Date().toISOString().split('T')[0],
                         due_date: '',
-                        notes: 'est'
+                        notes: 'test'
                     },
 
                     newPayment: {
@@ -535,26 +562,31 @@
             },
 
             computed: {
-                filteredClients() {
-                    let filtered = this.clients.filter(client => {
-                        const matchesSearch = claim.client_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                            client.phone.includes(this.searchTerm) ||
-                            client.email.toLowerCase().includes(this.searchTerm.toLowerCase());
-                        const matchesStatus = this.statusFilter === 'all' || client.status === this.statusFilter;
+                filteredClaims() {
+                    let filtered = this.claims.filter(claim => {
+                        const matchesSearch =
+                            claim.client_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+                            claim.client_phone.toString().includes(this.searchTerm) ||
+                            (claim.notes && claim.notes.toLowerCase().includes(this.searchTerm.toLowerCase()));
+
+                        const matchesStatus =
+                            this.statusFilter === 'all' || claim.status === this.statusFilter;
+
                         return matchesSearch && matchesStatus;
                     });
 
+                    // tri
                     filtered.sort((a, b) => {
                         switch (this.sortBy) {
                             case 'name':
-                                return a.name.localeCompare(b.name);
+                                return a.client_name.localeCompare(b.client_name);
                             case 'amount':
-                                return b.remaining_amount - a.remaining_amount;
+                                return parseFloat(b.remaining_amount) - parseFloat(a.remaining_amount);
                             case 'date':
-                                return new Date(a.debtDate) - new Date(b.debtDate);
+                                return new Date(a.date_of_claim) - new Date(b.date_of_claim);
                             case 'overdue':
-                                const aOverdue = new Date(a.dueDate) < new Date() && a.remaining_amount > 0;
-                                const bOverdue = new Date(b.dueDate) < new Date() && b.remaining_amount > 0;
+                                const aOverdue = new Date(a.due_date) < new Date() && parseFloat(a.remaining_amount) > 0;
+                                const bOverdue = new Date(b.due_date) < new Date() && parseFloat(b.remaining_amount) > 0;
                                 return bOverdue - aOverdue;
                             default:
                                 return 0;
@@ -563,6 +595,7 @@
 
                     return filtered;
                 },
+
 
                 totalItems() {
                     return this.filteredClients.length;
@@ -698,6 +731,7 @@
                             if (response.data.error) {
                                 // Si le backend renvoie une erreur
                                 console.error('Erreur backend:', response.data.error);
+                                alert('Erreur backend : ' + response.data.error);
                                 return;
                             }
 
@@ -714,7 +748,7 @@
                             };
 
                             this.closeNewClaimModal();
-                            console.log('Claim ajouté:', newClaim);
+                            alert("Nouvelle créance ajoutée avec succès !");
                             this.fetchClaims();
                         })
                         .catch(error => {
@@ -722,6 +756,7 @@
                             console.error('Erreur lors de l’ajout du claim :', error.response?.data || error.message);
                             alert('Erreur lors de l’ajout du claim : ' + (error.response?.data?.error || error.message));
                         });
+
                 },
 
                 showPaymentHistory(client) {
@@ -735,8 +770,8 @@
                     this.selectedClient = null;
                 },
 
-                openNewPaymentModal(client) {
-                    this.selectedClient = client;
+                openNewPaymentModal(claim) {
+                    this.selectedClaim = claim;
                     this.showNewPaymentModal = true;
                     this.newPayment.date = new Date().toISOString().split('T')[0];
                 },
@@ -752,20 +787,60 @@
                     };
                 },
 
+                handleFileUpload(event) {
+                    this.newPayment.file = event.target.files[0] || null;
+                },
+
                 addNewPayment() {
-                    if (this.newPayment.amount > this.selectedClient.remaining_amount) {
+                    if (this.newPayment.amount > this.selectedClaim.remaining_amount) {
                         alert('Le montant du paiement ne peut pas dépasser le montant restant');
                         return;
                     }
 
-                  //soumets le formulaire a la route 127.0.0.1/tossin/api/index.php?action=newPayment
-                    this.closeNewPaymentModal();
+                    if (this.newPayment.amount < 0) {
+                        alert("Le montant ne peut pas être négatif.");
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('claim_id', this.selectedClaim.id);
+                    formData.append('amount', this.newPayment.amount);
+                    formData.append('date_of_insertion', this.newPayment.date);
+                    formData.append('payment_method', this.newPayment.payment_method); // corrigé
+                    formData.append('notes', this.newPayment.notes);
+                    if (this.newPayment.file) {
+                        formData.append('file', this.newPayment.file);
+                    }
+
+                    axios.post('http://127.0.0.1/tossin/api/index.php?action=newPayment', formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        })
+                        .then(response => {
+                            this.fetchClaims;
+                            // Réinitialiser le formulaire
+                            this.newPayment = {
+                                amount: 0,
+                                date: new Date().toISOString().split('T')[0],
+                                payment_method: '',
+                                notes: '',
+                                file: null
+                            };
+                            alert("Nouveau paiement ajouté avec succès !");
+                            this.fetchClaims();
+                            this.closeNewPaymentModal();
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de l’ajout du paiement :', error);
+                            alert('Une erreur est survenue lors de l’ajout du paiement.');
+                        });
                 },
 
-                deleteClient(clientId) {
-                    if (confirm('Êtes-vous sûr de vouloir supprimer ce client ?')) {
-                        const index = this.clients.findIndex(c => c.id === clientId);
-                        if (index !== -1) this.clients.splice(index, 1);
+                deleteClaim(claimId) {
+                    if (confirm('Êtes-vous sûr de vouloir supprimer cette créance ?')) {
+                        const index = this.claim.findIndex(c => c.id === clsimId);
+                        if (index !== -1) this.claims.splice(index, 1);
                     }
                 },
 
