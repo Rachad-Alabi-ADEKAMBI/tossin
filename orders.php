@@ -260,8 +260,7 @@
         </div>
     </div>
 
-     Increased z-index to 60 to appear above order details modal 
-    <div id="editLineModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-60">
+    <div id="editLineModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-70">
         <div class="flex items-center justify-center min-h-screen p-4">
             <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
                 <div class="flex justify-between items-center mb-6">
@@ -301,6 +300,44 @@
                             <i class="fas fa-save mr-2"></i>Sauvegarder
                         </button>
                         <button type="button" onclick="closeEditLineModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
+                            <i class="fas fa-times mr-2"></i>Annuler
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="editStatusModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-60">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-semibold text-gray-900">
+                        <i class="fas fa-edit mr-2"></i>Modifier le statut
+                    </h3>
+                    <button onclick="closeEditStatusModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                
+                <form id="editStatusForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            <i class="fas fa-info-circle mr-1"></i>Nouveau statut
+                        </label>
+                        <select id="newOrderStatus" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="en-attente">En attente</option>
+                            <option value="en-cours">En cours</option>
+                            <option value="livree">Livrée</option>
+                            <option value="annulee">Annulée</option>
+                        </select>
+                    </div>
+
+                    <div class="flex space-x-3 pt-4">
+                        <button type="submit" class="flex-1 bg-accent hover:bg-yellow-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                            <i class="fas fa-save mr-2"></i>Modifier
+                        </button>
+                        <button type="button" onclick="closeEditStatusModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
                             <i class="fas fa-times mr-2"></i>Annuler
                         </button>
                     </div>
@@ -413,6 +450,7 @@
         let filteredOrders = [...orders];
         let editingLineIndex = -1;
         let editingOrderId = -1;
+        let editingOrderIdForStatus = -1;
 
         function getStatusInfo(status) {
             const statusMap = {
@@ -724,15 +762,34 @@
 
         function editOrderStatus(orderId) {
             const order = orders.find(o => o.id === orderId);
-            const newStatus = prompt('Nouveau statut (en-attente, en-cours, livree, annulee):', order.status);
+            editingOrderIdForStatus = orderId;
             
-            if (newStatus && ['en-attente', 'en-cours', 'livree', 'annulee'].includes(newStatus)) {
+            document.getElementById('newOrderStatus').value = order.status;
+            document.getElementById('editStatusModal').classList.remove('hidden');
+        }
+
+        function closeEditStatusModal() {
+            document.getElementById('editStatusModal').classList.add('hidden');
+            editingOrderIdForStatus = -1;
+        }
+
+        document.getElementById('editStatusForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (editingOrderIdForStatus > 0) {
+                const order = orders.find(o => o.id === editingOrderIdForStatus);
+                const newStatus = document.getElementById('newOrderStatus').value;
+                
                 order.status = newStatus;
                 applyFilters();
-            } else if (newStatus) {
-                alert('Statut invalide. Utilisez: en-attente, en-cours, livree, ou annulee');
+                
+                if (document.getElementById('orderDetailsModal').classList.contains('hidden') === false) {
+                    showOrderDetails(editingOrderIdForStatus);
+                }
+                
+                closeEditStatusModal();
             }
-        }
+        });
 
         function showOrderDetails(orderId) {
             const order = orders.find(o => o.id === orderId);
