@@ -415,7 +415,7 @@
                             </button>
                         </div>
 
-                        <form @submit.prevent="addNewPayment" class="space-y-4">
+                        <form @submit.prevent="addNewPayment" class="space-y-4" enctype="multipart/form-data">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-money-bill-wave mr-1"></i>Montant (XOF)
@@ -440,11 +440,11 @@
                                 </label>
                                 <select v-model="newPayment.payment_method" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                     <option value="">Sélectionner...</option>
-                                    <option value="cash">Espèces</option>
-                                    <option value="cheque">Chèque</option>
-                                    <option value="virement">Virement bancaire</option>
-                                    <option value="mobile">Mobile Money</option>
-                                    <option value="card">Carte bancaire</option>
+                                    <option value="Especes">Espèces</option>
+                                    <option value="Mobile_money">Mobile Money</option>
+                                    <option value="Cheque">Chèque</option>
+                                    <option value="Virement">Virement bancaire</option>
+                                    <option value="Carte_bancaire">Carte bancaire</option>
                                 </select>
                             </div>
 
@@ -471,8 +471,6 @@
                                 </button>
                             </div>
                         </form>
-
-
                     </div>
                 </div>
             </div>
@@ -532,16 +530,16 @@
                     claims: [],
 
                     newClaim: {
-                        client_name: 'nouveau',
-                        client_phone: '012546658',
-                        amount: 150000,
+                        client_name: '',
+                        client_phone: '',
+                        amount: '',
                         date_of_claim: new Date().toISOString().split('T')[0],
                         due_date: '',
-                        notes: 'test'
+                        notes: ''
                     },
 
                     newPayment: {
-                        amount: 0,
+                        amount: '',
                         date: new Date().toISOString().split('T')[0],
                         method: '',
                         notes: ''
@@ -759,8 +757,8 @@
 
                 },
 
-                showPaymentHistory(client) {
-                    this.selectedClient = client;
+                showPaymentHistory(claim) {
+                    this.selectedClaim = claim;
                     this.showPaymentHistoryModal = true;
                     alert('show paiement');
                 },
@@ -806,7 +804,7 @@
                     formData.append('claim_id', this.selectedClaim.id);
                     formData.append('amount', this.newPayment.amount);
                     formData.append('date_of_insertion', this.newPayment.date);
-                    formData.append('payment_method', this.newPayment.payment_method); // corrigé
+                    formData.append('payment_method', this.newPayment.payment_method);
                     formData.append('notes', this.newPayment.notes);
                     if (this.newPayment.file) {
                         formData.append('file', this.newPayment.file);
@@ -818,7 +816,13 @@
                             }
                         })
                         .then(response => {
-                            this.fetchClaims;
+                            // Vérifie le succès du backend
+                            if (!response.data.success) {
+                                console.error('Erreur backend:', response.data.error);
+                                alert('Erreur backend : ' + response.data.error);
+                                return;
+                            }
+
                             // Réinitialiser le formulaire
                             this.newPayment = {
                                 amount: 0,
@@ -827,13 +831,14 @@
                                 notes: '',
                                 file: null
                             };
-                            alert("Nouveau paiement ajouté avec succès !");
-                            this.fetchClaims();
+
                             this.closeNewPaymentModal();
+                            alert("Nouveau paiement ajouté avec succès !");
+                            this.fetchClaims(); // Ajout des parenthèses
                         })
                         .catch(error => {
-                            console.error('Erreur lors de l’ajout du paiement :', error);
-                            alert('Une erreur est survenue lors de l’ajout du paiement.');
+                            console.error('Erreur lors de l’ajout du paiement :', error.response?.data || error.message);
+                            alert('Une erreur est survenue lors de l’ajout du paiement : ' + (error.response?.data?.error || error.message));
                         });
                 },
 
