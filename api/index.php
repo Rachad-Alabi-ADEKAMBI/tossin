@@ -9,6 +9,22 @@ switch ($action) {
         getAllClaims();
         break;
 
+    case 'allPayments':
+        getAllPayments();
+        break;
+
+    case 'allOrders':
+        getAllOrders();
+        break;
+
+    case 'allProducts':
+        getAllProducts();
+        break;
+
+    case 'newOrder':
+        newOrder();
+        break;
+
     case 'newClaim':
         $data = json_decode(file_get_contents('php://input'), true);
         if ($data) {

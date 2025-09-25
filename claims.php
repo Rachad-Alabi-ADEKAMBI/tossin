@@ -112,42 +112,7 @@
 <body>
     <div id="app">
         <div class="bg-gray-50 min-h-screen">
-            <div :class="['fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300', sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0']">
-                <div class="flex items-center justify-center h-16 bg-primary">
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-building text-white text-2xl"></i>
-                        <span class="text-white text-xl font-bold">Tossin</span>
-                    </div>
-                </div>
-
-                <nav class="mt-8">
-                    <a href="dashboard.html" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-                        <i class="fas fa-tachometer-alt mr-3"></i>
-                        <span>Tableau de bord</span>
-                    </a>
-                    <a href="creances.html" class="flex items-center px-6 py-3 text-primary bg-blue-50 border-r-4 border-primary">
-                        <i class="fas fa-money-bill-wave mr-3"></i>
-                        <span>Créances</span>
-                    </a>
-                    <a href="commandes.html" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-                        <i class="fas fa-shopping-cart mr-3"></i>
-                        <span>Commandes</span>
-                    </a>
-                </nav>
-
-                <div class="absolute bottom-0 w-full p-4">
-                    <button @click="logout" class="w-full flex items-center justify-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
-                        <i class="fas fa-sign-out-alt mr-2"></i>
-                        <span>Déconnexion</span>
-                    </button>
-                </div>
-            </div>
-
-            <div class="lg:hidden fixed top-4 left-4 z-50">
-                <button @click="toggleSidebar" class="bg-white p-2 rounded-lg shadow-lg">
-                    <i class="fas fa-bars text-gray-700"></i>
-                </button>
-            </div>
+            <?php include 'sidebar.php'; ?>
 
             <div class="lg:ml-64 min-h-screen">
                 <header class="bg-white shadow-sm border-b">
@@ -353,21 +318,21 @@
                             </button>
                         </div>
 
-                        <div v-if="selectedClient">
+                        <div v-if="selectedClaim">
                             <div class="mb-6">
-                                <h4 class="text-lg font-medium text-gray-900 mb-2">{{ selectedClient.name }}</h4>
+                                <h4 class="text-lg font-medium text-gray-900 mb-2">{{ selectedClaim.client_name }}</h4>
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                     <div class="bg-blue-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant initial</p>
-                                        <p class="text-lg font-semibold text-blue-600">{{ formatCurrency(selectedClient.initialAmount) }}</p>
+                                        <p class="text-lg font-semibold text-blue-600">{{ formatCurrency(selectedClaim.amount) }}</p>
                                     </div>
                                     <div class="bg-green-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant payé</p>
-                                        <p class="text-lg font-semibold text-green-600">{{ formatCurrency(selectedClient.initialAmount - selectedClient.remaining_amount) }}</p>
+                                        <p class="text-lg font-semibold text-green-600">{{ formatCurrency(selectedClaim.amount - selectedClaim.remaining_amount) }}</p>
                                     </div>
                                     <div class="bg-red-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant restant</p>
-                                        <p class="text-lg font-semibold text-red-600">{{ formatCurrency(selectedClient.remaining_amount) }}</p>
+                                        <p class="text-lg font-semibold text-red-600">{{ formatCurrency(selectedClaim.remaining_amount) }}</p>
                                     </div>
                                 </div>
                             </div>
@@ -380,21 +345,31 @@
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Moyen</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Justificatif</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200">
-                                        <tr v-if="selectedClient.payments.length === 0">
+                                        <tr v-if="payments.length === 0">
                                             <td colspan="4" class="px-4 py-8 text-center text-gray-500">
                                                 <i class="fas fa-inbox text-4xl mb-2"></i>
                                                 <p>Aucun paiement enregistré</p>
                                             </td>
                                         </tr>
-                                        <tr v-for="payment in selectedClient.payments" :key="payment.date + payment.amount" class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 text-sm text-gray-900">{{ formatDate(payment.date) }}</td>
-                                            <td class="px-4 py-3 text-sm font-medium text-green-600">{{ formatCurrency(payment.amount) }}</td>
-                                            <td class="px-4 py-3 text-sm text-gray-600">{{ payment.method }}</td>
-                                            <td class="px-4 py-3 text-sm text-gray-600">{{ payment.notes || '-' }}</td>
+                                        <tr v-for="payment in payments" :key="payment.id" class="hover:bg-gray-50">
+                                            <td class="px-4 py-3 text-sm text-gray-900" data-label="Date">{{ formatDate(payment.date_of_insertion) }}</td>
+                                            <td class="px-4 py-3 text-sm font-medium text-green-600" data-label="Montant">{{ formatCurrency(payment.amount) }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-600" data-label="Moyen">{{ payment.payment_method }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-600" data-label="Notes">{{ payment.notes || '-' }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-600" data-label="Justificatif">
+                                                <div v-if="payment.file && payment.file !== ''">
+                                                    <a :href="getImgUrl(payment.file)" target="_blank">
+                                                        <img :src="getImgUrl(payment.file)" alt="Justificatif" style="width: 80px; height: 80px; object-fit: cover;">
+                                                    </a>
+                                                </div>
+                                                <p v-else>Aucun justificatif disponible</p>
+                                            </td>
                                         </tr>
+
                                     </tbody>
                                 </table>
                             </div>
@@ -494,28 +469,8 @@
                     showNewClaimModal: false,
                     showPaymentHistoryModal: false,
                     showNewPaymentModal: false,
-                    selectedClient: null,
-
-                    clients: [{
-                            id: 1,
-                            name: "Entreprise Alpha",
-                            phone: "+221 77 123 45 67",
-                            email: "contact@alpha.sn",
-                            debtDate: "2024-01-15",
-                            initialAmount: 500000,
-                            remaining_amount: 350000,
-                            dueDate: "2024-03-15",
-                            status: "overdue",
-                            notes: "Client régulier, bon payeur",
-                            payments: [{
-                                date: "2024-02-10",
-                                amount: 150000,
-                                method: "virement",
-                                notes: "Paiement partiel"
-                            }]
-                        },
-                        // autres clients...
-                    ],
+                    selectedClaim: '',
+                    payments: [],
                     claim: {
                         id: null,
                         client_name: '',
@@ -757,11 +712,36 @@
 
                 },
 
+                getImgUrl(fileName) {
+                    if (!fileName || fileName === '') return '';
+                    return `http://127.0.0.1/tossin/api/uploads/payments/${fileName}`;
+                },
+
                 showPaymentHistory(claim) {
                     this.selectedClaim = claim;
+
+                    // Filtrer les paiements déjà chargés par claim_id
+                    axios.get('http://127.0.0.1/tossin/api/index.php?action=allPayments')
+                        .then(response => {
+                            if (!response.data || !Array.isArray(response.data)) {
+                                console.error('Données de paiement invalides :', response.data);
+                                this.payments = [];
+                                return;
+                            }
+
+                            // Filtrage des paiements correspondant à la créance sélectionnée
+                            this.payments = response.data.filter(payment => payment.claim_id === claim.id);
+
+                            console.log('Paiements filtrés :', this.payments);
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la récupération des paiements :', error.response?.data || error.message);
+                            this.payments = [];
+                        });
+
                     this.showPaymentHistoryModal = true;
-                    alert('show paiement');
                 },
+
 
                 closePaymentHistoryModal() {
                     this.showPaymentHistoryModal = false;

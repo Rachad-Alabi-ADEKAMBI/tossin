@@ -174,3 +174,99 @@ function newPayment($data, $file = null)
         ]);
     }
 }
+
+// ajouter une nouvelle commande
+function newOrder()
+{
+    global $pdo;
+
+    // Lire les données JSON envoyées par Axios
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (!$data || empty($data['seller']) || !isset($data['total']) || empty($data['lines'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs obligatoires manquants : seller, total ou lines'
+        ]);
+        return;
+    }
+
+    try {
+        // Démarrer une transaction
+        $pdo->beginTransaction();
+
+        // Insérer la commande dans la table orders
+        $stmt = $pdo->prepare("
+            INSERT INTO orders (date_of_insertion, seller, total, status) 
+            VALUES (NOW(), :seller, :total, :status)
+        ");
+        $stmt->execute([
+            ':seller' => $data['seller'],
+            ':total'  => $data['total'],
+            ':status' => $data['status']
+        ]);
+
+        // Récupérer l'ID de la commande nouvellement insérée
+        $orderId = $pdo->lastInsertId();
+
+        // Insérer chaque produit de la commande dans la table products
+        $stmtProduct = $pdo->prepare("
+            INSERT INTO products (date_of_insertion, name, quantity, price, order_id) 
+            VALUES (NOW(), :name, :quantity, :price, :order_id)
+        ");
+
+        foreach ($data['lines'] as $line) {
+            $stmtProduct->execute([
+                ':name'     => $line['product'],
+                ':quantity' => $line['quantity'],
+                ':price'    => $line['price'],
+                ':order_id' => $orderId
+            ]);
+        }
+
+        // Valider la transaction
+        $pdo->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Commande et produits insérés avec succès',
+            'order_id' => $orderId
+        ]);
+    } catch (Exception $e) {
+        // Annuler en cas d'erreur
+        $pdo->rollBack();
+
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de l\'insertion: ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+// Récupérer toutes les claims
+function getAllPayments()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM payments ORDER BY id DESC");
+    $payments = $stmt->fetchAll();
+    echo json_encode($payments);
+}
+
+// Récupérer toutes les orders
+function getAllOrders()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM orders ORDER BY id DESC");
+    $orders = $stmt->fetchAll();
+    echo json_encode($orders);
+}
+
+// Récupérer toutes les produits
+function getAllProducts()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM products ORDER BY id DESC");
+    $products = $stmt->fetchAll();
+    echo json_encode($products);
+}

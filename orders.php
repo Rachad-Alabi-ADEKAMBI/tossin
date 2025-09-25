@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tossin - Gestion des Commandes</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -20,23 +23,75 @@
         }
     </script>
     <style>
+        .primary {
+            color: #2563EB;
+        }
+
+        .secondary {
+            color: #1E40AF;
+        }
+
+        .accent {
+            color: #F59E0B;
+        }
+
+        .bg-primary {
+            background-color: #2563EB;
+        }
+
+        .bg-secondary {
+            background-color: #1E40AF;
+        }
+
+        .bg-accent {
+            background-color: #F59E0B;
+        }
+
+        .hover\:bg-accent:hover {
+            background-color: #D97706;
+        }
+
+        .hover\:bg-secondary:hover {
+            background-color: #1E40AF;
+        }
+
+        .text-primary {
+            color: #2563EB;
+        }
+
+        .text-secondary {
+            color: #1E40AF;
+        }
+
+        .text-accent {
+            color: #F59E0B;
+        }
+
+        .border-primary {
+            border-color: #2563EB;
+        }
+
+        .focus\:ring-primary:focus {
+            --tw-ring-color: #2563EB;
+        }
+
         @media (max-width: 768px) {
             .responsive-table {
                 display: block;
                 overflow-x: auto;
                 white-space: nowrap;
             }
-            
+
             .responsive-table thead {
                 display: none;
             }
-            
+
             .responsive-table tbody,
             .responsive-table tr,
             .responsive-table td {
                 display: block;
             }
-            
+
             .responsive-table tr {
                 border: 1px solid #e5e7eb;
                 margin-bottom: 1rem;
@@ -44,14 +99,14 @@
                 border-radius: 0.5rem;
                 background: white;
             }
-            
+
             .responsive-table td {
                 border: none;
                 padding: 0.5rem 0;
                 position: relative;
                 padding-left: 50%;
             }
-            
+
             .responsive-table td:before {
                 content: attr(data-label);
                 position: absolute;
@@ -65,884 +120,1019 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
-        <div class="flex items-center justify-center h-16 bg-primary">
-            <div class="flex items-center space-x-2">
-                <i class="fas fa-building text-white text-2xl"></i>
-                <span class="text-white text-xl font-bold">Tossin</span>
-            </div>
-        </div>
-        
-        <nav class="mt-8">
-            <a href="dashboard.html" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-                <i class="fas fa-tachometer-alt mr-3"></i>
-                <span>Tableau de bord</span>
-            </a>
-            <a href="creances.html" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-                <i class="fas fa-money-bill-wave mr-3"></i>
-                <span>Créances</span>
-            </a>
-            <a href="commandes.html" class="flex items-center px-6 py-3 text-primary bg-blue-50 border-r-4 border-primary">
-                <i class="fas fa-shopping-cart mr-3"></i>
-                <span>Commandes</span>
-            </a>
-        </nav>
-        
-        <div class="absolute bottom-0 w-full p-4">
-            <button onclick="logout()" class="w-full flex items-center justify-center px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors">
-                <i class="fas fa-sign-out-alt mr-2"></i>
-                <span>Déconnexion</span>
-            </button>
-        </div>
-    </div>
 
-    <div class="lg:hidden fixed top-4 left-4 z-50">
-        <button onclick="toggleSidebar()" class="bg-white p-2 rounded-lg shadow-lg">
-            <i class="fas fa-bars text-gray-700"></i>
-        </button>
-    </div>
+<body>
+    <div id="app">
+        <div class="bg-gray-50 min-h-screen">
+            <?php include 'sidebar.php'; ?>
 
-    <div class="lg:ml-64 min-h-screen">
-        <header class="bg-white shadow-sm border-b">
-            <div class="px-6 py-4">
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-                    <h1 class="text-2xl font-bold text-gray-900">Gestion des Commandes</h1>
-                    <button onclick="openNewOrderModal()" 
-                            class="bg-accent hover:bg-yellow-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center">
-                        <i class="fas fa-plus mr-2"></i>Nouvelle commande
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <div class="p-6">
-            <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
-                        <input type="text" id="searchInput" placeholder="N° commande ou fournisseur..." 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
-                        <select id="statusFilter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                            <option value="all">Tous</option>
-                            <option value="en-attente">En attente</option>
-                            <option value="en-cours">En cours</option>
-                            <option value="livree">Livrée</option>
-                            <option value="annulee">Annulée</option>
-                        </select>
-                    </div>
-                    <div class="flex items-end">
-                        <button onclick="applyFilters()" class="w-full bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors">
-                            <i class="fas fa-filter mr-2"></i>Filtrer
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200 responsive-table" id="ordersTable">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Commande</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fournisseur</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="ordersTableBody" class="bg-white divide-y divide-gray-200">
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                    <div class="flex-1 flex justify-between sm:hidden">
-                        <button onclick="previousPage()" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                            Précédent
-                        </button>
-                        <button onclick="nextPage()" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
-                            Suivant
-                        </button>
-                    </div>
-                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm text-gray-700">
-                                Affichage de <span id="startItem">1</span> à <span id="endItem">10</span> sur <span id="totalItems">0</span> résultats
-                            </p>
-                        </div>
-                        <div>
-                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" id="pagination">
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="newOrderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-semibold text-gray-900">
-                        <i class="fas fa-shopping-cart mr-2"></i>Nouvelle Commande
-                    </h3>
-                    <button onclick="closeNewOrderModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <form id="newOrderForm" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-truck mr-1"></i>Fournisseur
-                            </label>
-                            <input type="text" id="orderSupplier" required 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-calendar mr-1"></i>Date
-                            </label>
-                            <input type="date" id="orderDate" required 
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                <i class="fas fa-info-circle mr-1"></i>Statut
-                            </label>
-                            <select id="orderStatus" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                <option value="en-attente">En attente</option>
-                                <option value="en-cours">En cours</option>
-                                <option value="livree">Livrée</option>
-                                <option value="annulee">Annulée</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="border-t pt-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h4 class="text-lg font-medium text-gray-900">
-                                <i class="fas fa-list mr-2"></i>Lignes de commande
-                            </h4>
-                            <button type="button" onclick="addOrderLine()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                                <i class="fas fa-plus mr-1"></i>Ajouter ligne
+            <div class="lg:ml-64 min-h-screen">
+                <header class="bg-white shadow-sm border-b">
+                    <div class="px-6 py-4">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+                            <h1 class="text-2xl font-bold text-gray-900">Gestion des Commandes</h1>
+                            <button @click="openNewOrderModal"
+                                class="bg-accent hover:bg-yellow-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center">
+                                <i class="fas fa-plus mr-2"></i>Nouvelle commande
                             </button>
                         </div>
-                        
-                        <div id="orderLines" class="space-y-3">
-                        </div>
-                        
-                        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                            <div class="flex justify-between items-center">
-                                <span class="text-lg font-semibold text-gray-900">Total:</span>
-                                <span id="orderTotal" class="text-2xl font-bold text-primary">0 XOF</span>
+                    </div>
+                </header>
+
+                <div class="p-6">
+                    <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                                <input v-model="searchTerm" @input="applyFilters" type="text" placeholder="N° commande ou fournisseur..."
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                                <select v-model="statusFilter" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="all">Tous</option>
+                                    <option value="en-attente">En attente</option>
+                                    <option value="en-cours">En cours</option>
+                                    <option value="livree">Livrée</option>
+                                    <option value="annulee">Annulée</option>
+                                </select>
+                            </div>
+                            <div class="flex items-end">
+                                <button @click="applyFilters" class="w-full bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-filter mr-2"></i>Filtrer
+                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex space-x-3 pt-4">
-                        <button type="submit" class="flex-1 bg-accent hover:bg-yellow-600 text-white py-3 px-4 rounded-lg transition-colors font-medium">
-                            <i class="fas fa-save mr-2"></i>Créer la commande
-                        </button>
-                        <button type="button" onclick="closeNewOrderModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg transition-colors font-medium">
-                            <i class="fas fa-times mr-2"></i>Annuler
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
+                    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+                        <div v-if="loading" class="flex justify-center items-center h-64">
+                            <i class="fas fa-spinner fa-spin text-4xl text-primary"></i>
+                        </div>
+                        <div v-else class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200 responsive-table">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Commande</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fournisseur</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="order in paginatedOrders" :key="order.id" class="hover:bg-gray-50">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-label="N° Commande">
+                                            {{ order.number }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-label="Date">
+                                            {{ formatDate(order.date) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" data-label="Fournisseur">
+                                            {{ order.supplier }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-label="Total">
+                                            {{ formatCurrency(order.total) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap" data-label="Statut">
+                                            <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getStatusInfo(order.status).class]">
+                                                {{ getStatusInfo(order.status).label }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" data-label="Actions">
+                                            <button @click="showOrderDetails(order)" class="text-primary hover:text-secondary mr-3" title="Voir détails">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button @click="editOrderStatus(order)" class="text-accent hover:text-yellow-600 mr-3" title="Modifier statut">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button @click="deleteOrder(order.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
 
-    <div id="editLineModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-70">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-semibold text-gray-900">
-                        <i class="fas fa-edit mr-2"></i>Modifier la ligne
-                    </h3>
-                    <button onclick="closeEditLineModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
+                        <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                            <div class="flex-1 flex justify-between sm:hidden">
+                                <button @click="previousPage" :disabled="currentPage === 1" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Précédent
+                                </button>
+                                <button @click="nextPage" :disabled="currentPage === totalPages" class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                                    Suivant
+                                </button>
+                            </div>
+                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-700">
+                                        Affichage de <span>{{ startItem }}</span> à <span>{{ endItem }}</span> sur <span>{{ totalItems }}</span> résultats
+                                    </p>
+                                </div>
+                                <div>
+                                    <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                        <button @click="previousPage" :disabled="currentPage === 1"
+                                            :class="['relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50', currentPage === 1 ? 'cursor-not-allowed' : '']">
+                                            <i class="fas fa-chevron-left"></i>
+                                        </button>
+                                        <button v-for="page in visiblePages" :key="page" @click="goToPage(page)"
+                                            :class="['relative inline-flex items-center px-4 py-2 border text-sm font-medium', 
+                                                page === currentPage ? 'z-10 bg-primary border-primary text-white' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50']">
+                                            {{ page }}
+                                        </button>
+                                        <button @click="nextPage" :disabled="currentPage === totalPages"
+                                            :class="['relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50', currentPage === totalPages ? 'cursor-not-allowed' : '']">
+                                            <i class="fas fa-chevron-right"></i>
+                                        </button>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                
-                <form id="editLineForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-box mr-1"></i>Nom du produit
-                        </label>
-                        <input type="text" id="editProductName" required 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
-                        </label>
-                        <input type="number" id="editQuantity" required min="1" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire (XOF)
-                        </label>
-                        <input type="number" id="editPrice" required min="0" step="100"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                    </div>
-
-                    <div class="flex space-x-3 pt-4">
-                        <button type="submit" class="flex-1 bg-primary hover:bg-secondary text-white py-2 px-4 rounded-lg transition-colors font-medium">
-                            <i class="fas fa-save mr-2"></i>Sauvegarder
-                        </button>
-                        <button type="button" onclick="closeEditLineModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
-                            <i class="fas fa-times mr-2"></i>Annuler
-                        </button>
-                    </div>
-                </form>
             </div>
-        </div>
-    </div>
 
-    <div id="editStatusModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-60">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-semibold text-gray-900">
-                        <i class="fas fa-edit mr-2"></i>Modifier le statut
-                    </h3>
-                    <button onclick="closeEditStatusModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
+            <!-- Modal Nouvelle Commande -->
+            <div v-if="showNewOrderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-shopping-cart mr-2"></i>Nouvelle Commande
+                            </h3>
+                            <button @click="closeNewOrderModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="addNewOrder" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-truck mr-1"></i>Fournisseur
+                                    </label>
+                                    <input v-model="newOrder.supplier" type="text" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-calendar mr-1"></i>Date
+                                    </label>
+                                    <input v-model="newOrder.date" type="date" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-info-circle mr-1"></i>Statut
+                                    </label>
+                                    <select v-model="newOrder.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="en-attente">En attente</option>
+                                        <option value="en-cours">En cours</option>
+                                        <option value="livree">Livrée</option>
+                                        <option value="annulee">Annulée</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="border-t pt-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="text-lg font-medium text-gray-900">
+                                        <i class="fas fa-list mr-2"></i>Lignes de commande
+                                    </h4>
+                                    <button type="button" @click="addOrderLine" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                        <i class="fas fa-plus mr-1"></i>Ajouter ligne
+                                    </button>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div v-for="(line, index) in newOrder.lines" :key="index" class="grid grid-cols-1 md:grid-cols-6 gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                <i class="fas fa-box mr-1"></i>Produit
+                                            </label>
+                                            <input v-model="line.product" type="text" required
+                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
+                                            </label>
+                                            <input v-model.number="line.quantity" type="number" min="1" required
+                                                @input="updateLineTotal(index)"
+                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire (XOF)
+                                            </label>
+                                            <input v-model.number="line.price" type="number" step="100" min="0" required
+                                                @input="updateLineTotal(index)"
+                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                <i class="fas fa-calculator mr-1"></i>Total
+                                            </label>
+                                            <input :value="formatCurrency(line.total)" type="text" readonly
+                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm bg-gray-100">
+                                        </div>
+                                        <div class="flex items-end space-x-2">
+                                            <button type="button" @click="editOrderLineInModal(index)"
+                                                class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded text-sm transition-colors" title="Modifier">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                        <div class="flex items-end">
+                                            <button type="button" @click="removeOrderLine(index)"
+                                                class="w-full bg-red-500 hover:bg-red-600 text-white px-2 py-2 rounded text-sm transition-colors">
+                                                <i class="fas fa-trash mr-1"></i>Supprimer
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-lg font-semibold text-gray-900">Total:</span>
+                                        <span class="text-2xl font-bold text-primary">{{ formatCurrency(orderTotal) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex space-x-3 pt-4">
+                                <button type="submit" class="flex-1 bg-accent hover:bg-yellow-600 text-white py-3 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-save mr-2"></i>Créer la commande
+                                </button>
+                                <button type="button" @click="closeNewOrderModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Annuler
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                
-                <form id="editStatusForm" class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">
-                            <i class="fas fa-info-circle mr-1"></i>Nouveau statut
-                        </label>
-                        <select id="newOrderStatus" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                            <option value="en-attente">En attente</option>
-                            <option value="en-cours">En cours</option>
-                            <option value="livree">Livrée</option>
-                            <option value="annulee">Annulée</option>
-                        </select>
-                    </div>
-
-                    <div class="flex space-x-3 pt-4">
-                        <button type="submit" class="flex-1 bg-accent hover:bg-yellow-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
-                            <i class="fas fa-save mr-2"></i>Modifier
-                        </button>
-                        <button type="button" onclick="closeEditStatusModal()" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
-                            <i class="fas fa-times mr-2"></i>Annuler
-                        </button>
-                    </div>
-                </form>
             </div>
-        </div>
-    </div>
 
-    <div id="orderDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden z-50">
-        <div class="flex items-center justify-center min-h-screen p-4">
-            <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-semibold text-gray-900">
-                        <i class="fas fa-eye mr-2"></i>Détails de la commande
-                    </h3>
-                    <button onclick="closeOrderDetailsModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
+            <!-- Modal Modifier Ligne -->
+            <div v-if="showEditLineModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-70">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-edit mr-2"></i>Modifier la ligne
+                            </h3>
+                            <button @click="closeEditLineModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="saveEditLine" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-box mr-1"></i>Nom du produit
+                                </label>
+                                <input v-model="editingLine.product" type="text" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
+                                </label>
+                                <input v-model.number="editingLine.quantity" type="number" required min="1"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire (XOF)
+                                </label>
+                                <input v-model.number="editingLine.price" type="number" required min="0" step="100"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+
+                            <div class="flex space-x-3 pt-4">
+                                <button type="submit" class="flex-1 bg-primary hover:bg-secondary text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-save mr-2"></i>Sauvegarder
+                                </button>
+                                <button type="button" @click="closeEditLineModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Annuler
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-                
-                <div id="orderDetailsContent">
+            </div>
+
+            <!-- Modal Modifier Statut -->
+            <div v-if="showEditStatusModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-60">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-edit mr-2"></i>Modifier le statut
+                            </h3>
+                            <button @click="closeEditStatusModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="saveEditStatus" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-info-circle mr-1"></i>Nouveau statut
+                                </label>
+                                <select v-model="editingOrder.status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="en-attente">En attente</option>
+                                    <option value="en-cours">En cours</option>
+                                    <option value="livree">Livrée</option>
+                                    <option value="annulee">Annulée</option>
+                                </select>
+                            </div>
+
+                            <div class="flex space-x-3 pt-4">
+                                <button type="submit" class="flex-1 bg-accent hover:bg-yellow-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-save mr-2"></i>Modifier
+                                </button>
+                                <button type="button" @click="closeEditStatusModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Annuler
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Détails Commande -->
+            <div v-if="showOrderDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-eye mr-2"></i>Détails de la commande
+                            </h3>
+                            <button @click="closeOrderDetailsModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div v-if="selectedOrder">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                                <div class="bg-blue-50 p-4 rounded-lg">
+                                    <p class="text-sm font-medium text-gray-700">N° Commande</p>
+                                    <p class="text-lg font-semibold text-blue-600">{{ selectedOrder.number }}</p>
+                                </div>
+                                <div class="bg-green-50 p-4 rounded-lg">
+                                    <p class="text-sm font-medium text-gray-700">Fournisseur</p>
+                                    <p class="text-lg font-semibold text-green-600">{{ selectedOrder.supplier }}</p>
+                                </div>
+                                <div class="bg-yellow-50 p-4 rounded-lg">
+                                    <p class="text-sm font-medium text-gray-700">Date</p>
+                                    <p class="text-lg font-semibold text-yellow-600">{{ formatDate(selectedOrder.date) }}</p>
+                                </div>
+                                <div class="bg-purple-50 p-4 rounded-lg">
+                                    <p class="text-sm font-medium text-gray-700">Statut</p>
+                                    <span :class="['inline-block px-3 py-1 text-sm font-semibold rounded-full', getStatusInfo(selectedOrder.status).class]">
+                                        {{ getStatusInfo(selectedOrder.status).label }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="border-t pt-6">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h4 class="text-lg font-medium text-gray-900">
+                                        <i class="fas fa-list mr-2"></i>Lignes de commande
+                                    </h4>
+                                    <div class="flex space-x-2">
+                                        <!-- Added button to add new product line in order details -->
+                                        <button @click="addNewProductLine" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                            <i class="fas fa-plus mr-1"></i>Ajouter ligne
+                                        </button>
+                                        <button @click="editOrderStatus(selectedOrder)" class="bg-accent hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                            <i class="fas fa-edit mr-1"></i>Modifier statut
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg responsive-table">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix unitaire</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                                                <!-- Adding Actions column for inline editing -->
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200">
+                                            <tr v-for="(line, index) in selectedOrder.lines" :key="index" class="hover:bg-gray-50">
+                                                <!-- Adding inline editing for product name -->
+                                                <td class="px-4 py-3 text-sm font-medium text-gray-900" data-label="Produit">
+                                                    <input v-if="editingDetailLineIndex === index"
+                                                        v-model="editingDetailLine.product"
+                                                        type="text"
+                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                        @keyup.enter="saveDetailLineEdit(index)"
+                                                        @keyup.escape="cancelDetailLineEdit()">
+                                                    <span v-else>{{ line.product }}</span>
+                                                </td>
+                                                <!-- Adding inline editing for quantity -->
+                                                <td class="px-4 py-3 text-sm text-gray-600" data-label="Quantité">
+                                                    <input v-if="editingDetailLineIndex === index"
+                                                        v-model.number="editingDetailLine.quantity"
+                                                        type="number"
+                                                        min="1"
+                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                        @keyup.enter="saveDetailLineEdit(index)"
+                                                        @keyup.escape="cancelDetailLineEdit()">
+                                                    <span v-else>{{ line.quantity }}</span>
+                                                </td>
+                                                <!-- Adding inline editing for price -->
+                                                <td class="px-4 py-3 text-sm text-gray-600" data-label="Prix unitaire">
+                                                    <input v-if="editingDetailLineIndex === index"
+                                                        v-model.number="editingDetailLine.price"
+                                                        type="number"
+                                                        min="0"
+                                                        step="100"
+                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                        @keyup.enter="saveDetailLineEdit(index)"
+                                                        @keyup.escape="cancelDetailLineEdit()">
+                                                    <span v-else>{{ formatCurrency(line.price) }}</span>
+                                                </td>
+                                                <td class="px-4 py-3 text-sm font-medium text-gray-900" data-label="Total">
+                                                    <!-- Show calculated total during editing -->
+                                                    <span v-if="editingDetailLineIndex === index">
+                                                        {{ formatCurrency(editingDetailLine.quantity * editingDetailLine.price) }}
+                                                    </span>
+                                                    <span v-else>{{ formatCurrency(line.total) }}</span>
+                                                </td>
+                                                <!-- Adding edit and validate buttons -->
+                                                <td class="px-4 py-3 text-sm font-medium" data-label="Actions">
+                                                    <div v-if="editingDetailLineIndex === index" class="flex space-x-2">
+                                                        <button @click="saveDetailLineEdit(index)"
+                                                            class="text-green-600 hover:text-green-800"
+                                                            title="Valider">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                        <button @click="cancelDetailLineEdit()"
+                                                            class="text-red-600 hover:text-red-800"
+                                                            title="Annuler">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div v-else class="flex space-x-2">
+                                                        <button @click="startDetailLineEdit(index)"
+                                                            class="text-blue-600 hover:text-blue-800"
+                                                            title="Modifier">
+                                                            <i class="fas fa-pen"></i>
+                                                        </button>
+                                                        <!-- Adding delete button for product lines -->
+                                                        <button @click="deleteProductLine(index)"
+                                                            class="text-red-600 hover:text-red-800"
+                                                            title="Supprimer le produit">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-lg font-semibold text-gray-900">Total de la commande:</span>
+                                        <!-- Using computed total that updates automatically -->
+                                        <span class="text-2xl font-bold text-primary">{{ formatCurrency(selectedOrderTotal) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        let orders = [
-            {
-                id: 1,
-                number: "CMD-001",
-                date: "2024-01-15",
-                supplier: "Fournisseur Alpha Tech",
-                status: "livree",
-                lines: [
-                    { product: "Ordinateur portable Dell", quantity: 2, price: 500000, total: 1000000 },
-                    { product: "Souris sans fil Logitech", quantity: 5, price: 25000, total: 125000 },
-                    { product: "Clavier mécanique", quantity: 2, price: 75000, total: 150000 }
-                ],
-                total: 1275000
-            },
-            {
-                id: 2,
-                number: "CMD-002",
-                date: "2024-02-20",
-                supplier: "Fournisseur Beta Solutions",
-                status: "en-cours",
-                lines: [
-                    { product: "Imprimante laser HP", quantity: 1, price: 200000, total: 200000 },
-                    { product: "Cartouches d'encre", quantity: 4, price: 45000, total: 180000 },
-                    { product: "Papier A4 (ramettes)", quantity: 10, price: 5000, total: 50000 }
-                ],
-                total: 430000
-            },
-            {
-                id: 3,
-                number: "CMD-003",
-                date: "2024-03-10",
-                supplier: "Fournisseur Gamma Electronics",
-                status: "en-attente",
-                lines: [
-                    { product: "Écran 24 pouces Samsung", quantity: 3, price: 150000, total: 450000 },
-                    { product: "Câbles HDMI", quantity: 5, price: 8000, total: 40000 }
-                ],
-                total: 490000
-            },
-            {
-                id: 4,
-                number: "CMD-004",
-                date: "2024-03-25",
-                supplier: "Fournisseur Delta Office",
-                status: "livree",
-                lines: [
-                    { product: "Chaises de bureau", quantity: 8, price: 45000, total: 360000 },
-                    { product: "Bureau en bois", quantity: 4, price: 120000, total: 480000 },
-                    { product: "Lampes de bureau LED", quantity: 6, price: 15000, total: 90000 }
-                ],
-                total: 930000
-            },
-            {
-                id: 5,
-                number: "CMD-005",
-                date: "2024-04-05",
-                supplier: "Fournisseur Epsilon Network",
-                status: "annulee",
-                lines: [
-                    { product: "Routeur WiFi 6", quantity: 2, price: 85000, total: 170000 },
-                    { product: "Switch 24 ports", quantity: 1, price: 250000, total: 250000 }
-                ],
-                total: 420000
-            },
-            {
-                id: 6,
-                number: "CMD-006",
-                date: "2024-04-12",
-                supplier: "Fournisseur Zeta Mobile",
-                status: "en-cours",
-                lines: [
-                    { product: "Smartphones Samsung Galaxy", quantity: 10, price: 180000, total: 1800000 },
-                    { product: "Coques de protection", quantity: 15, price: 5000, total: 75000 },
-                    { product: "Chargeurs rapides", quantity: 12, price: 12000, total: 144000 }
-                ],
-                total: 2019000
-            }
-        ];
+        const {
+            createApp
+        } = Vue;
 
-        let currentOrderLines = [];
-        let currentPage = 1;
-        let itemsPerPage = 10;
-        let filteredOrders = [...orders];
-        let editingLineIndex = -1;
-        let editingOrderId = -1;
-        let editingOrderIdForStatus = -1;
+        createApp({
+            data() {
+                return {
+                    searchTerm: '',
+                    statusFilter: 'all',
+                    currentPage: 1,
+                    itemsPerPage: 10,
+                    showNewOrderModal: false,
+                    showEditLineModal: false,
+                    showEditStatusModal: false,
+                    showOrderDetailsModal: false,
+                    selectedOrder: null,
+                    editingLineIndex: -1,
+                    editingOrder: null,
+                    editingDetailLineIndex: -1,
+                    editingDetailLine: {
+                        product: '',
+                        quantity: 0,
+                        price: 0
+                    },
+                    loading: false,
 
-        function getStatusInfo(status) {
-            const statusMap = {
-                'en-attente': { label: 'En attente', class: 'text-yellow-600 bg-yellow-100' },
-                'en-cours': { label: 'En cours', class: 'text-blue-600 bg-blue-100' },
-                'livree': { label: 'Livrée', class: 'text-green-600 bg-green-100' },
-                'annulee': { label: 'Annulée', class: 'text-red-600 bg-red-100' }
-            };
-            return statusMap[status] || { label: status, class: 'text-gray-600 bg-gray-100' };
-        }
+                    orders: [],
+                    allProducts: [],
 
-        function formatCurrency(amount) {
-            return new Intl.NumberFormat('fr-FR').format(amount) + ' XOF';
-        }
+                    newOrder: {
+                        supplier: '',
+                        date: new Date().toISOString().split('T')[0],
+                        status: 'en-attente',
+                        lines: []
+                    },
 
-        function renderOrders() {
-            const tbody = document.getElementById('ordersTableBody');
-            tbody.innerHTML = '';
-            
-            const startIndex = (currentPage - 1) * itemsPerPage;
-            const endIndex = startIndex + itemsPerPage;
-            const pageOrders = filteredOrders.slice(startIndex, endIndex);
-            
-            pageOrders.forEach(order => {
-                const row = document.createElement('tr');
-                const statusInfo = getStatusInfo(order.status);
-                
-                row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-label="N° Commande">
-                        ${order.number}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-label="Date">
-                        ${new Date(order.date).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" data-label="Fournisseur">
-                        ${order.supplier}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-label="Total">
-                        ${formatCurrency(order.total)}
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap" data-label="Statut">
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusInfo.class}">
-                            ${statusInfo.label}
-                        </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" data-label="Actions">
-                        <button onclick="showOrderDetails(${order.id})" class="text-primary hover:text-secondary mr-3" title="Voir détails">
-                            <i class="fas fa-eye"></i>
-                        </button>
-                        <button onclick="editOrderStatus(${order.id})" class="text-accent hover:text-yellow-600 mr-3" title="Modifier statut">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button onclick="deleteOrder(${order.id})" class="text-red-600 hover:text-red-800" title="Supprimer">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(row);
-            });
-            
-            updatePagination();
-        }
+                    editingLine: {
+                        product: '',
+                        quantity: 0,
+                        price: 0
+                    }
+                };
+            },
 
-        function updatePagination() {
-            const totalItems = filteredOrders.length;
-            const totalPages = Math.ceil(totalItems / itemsPerPage);
-            const startItem = (currentPage - 1) * itemsPerPage + 1;
-            const endItem = Math.min(currentPage * itemsPerPage, totalItems);
-            
-            document.getElementById('startItem').textContent = startItem;
-            document.getElementById('endItem').textContent = endItem;
-            document.getElementById('totalItems').textContent = totalItems;
-            
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
-            
-            const prevButton = document.createElement('button');
-            prevButton.onclick = () => previousPage();
-            prevButton.disabled = currentPage === 1;
-            prevButton.className = `relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === 1 ? 'cursor-not-allowed' : ''}`;
-            prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
-            pagination.appendChild(prevButton);
-            
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
-                    const pageButton = document.createElement('button');
-                    pageButton.onclick = () => goToPage(i);
-                    pageButton.className = `relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        i === currentPage 
-                            ? 'z-10 bg-primary border-primary text-white' 
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                    }`;
-                    pageButton.textContent = i;
-                    pagination.appendChild(pageButton);
-                } else if (i === currentPage - 2 || i === currentPage + 2) {
-                    const dots = document.createElement('span');
-                    dots.className = 'relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700';
-                    dots.textContent = '...';
-                    pagination.appendChild(dots);
+            async mounted() {
+                // Fermer la sidebar sur mobile
+                document.addEventListener('click', (e) => {
+                    if (window.innerWidth < 1024 && !e.target.closest('#sidebar') && !e.target.closest('button')) {
+                        this.sidebarOpen = false;
+                    }
+                });
+
+                await this.loadOrders();
+                await this.loadProducts();
+            },
+
+            computed: {
+                filteredOrders() {
+                    return this.orders.filter(order => {
+                        const matchesSearch = order.number.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+                            order.supplier.toLowerCase().includes(this.searchTerm.toLowerCase());
+                        const matchesStatus = this.statusFilter === 'all' || order.status.toLowerCase().replace(' ', '-') === this.statusFilter;
+
+                        return matchesSearch && matchesStatus;
+                    });
+                },
+
+                totalItems() {
+                    return this.filteredOrders.length;
+                },
+
+                totalPages() {
+                    return Math.ceil(this.totalItems / this.itemsPerPage);
+                },
+
+                startItem() {
+                    return (this.currentPage - 1) * this.itemsPerPage + 1;
+                },
+
+                endItem() {
+                    return Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                },
+
+                paginatedOrders() {
+                    const start = (this.currentPage - 1) * this.itemsPerPage;
+                    return this.filteredOrders.slice(start, start + this.itemsPerPage);
+                },
+
+                visiblePages() {
+                    const pages = [];
+                    const total = this.totalPages;
+                    const current = this.currentPage;
+                    for (let i = 1; i <= total; i++) {
+                        if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) {
+                            pages.push(i);
+                        }
+                    }
+                    return pages;
+                },
+
+                orderTotal() {
+                    return this.newOrder.lines.reduce((sum, line) => sum + (line.total || 0), 0);
+                },
+
+                selectedOrderTotal() {
+                    if (!this.selectedOrder || !this.selectedOrder.lines) return 0;
+                    return this.selectedOrder.lines.reduce((sum, line) => sum + (line.total || 0), 0);
                 }
-            }
-            
-            const nextButton = document.createElement('button');
-            nextButton.onclick = () => nextPage();
-            nextButton.disabled = currentPage === totalPages;
-            nextButton.className = `relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 ${currentPage === totalPages ? 'cursor-not-allowed' : ''}`;
-            nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
-            pagination.appendChild(nextButton);
-        }
+            },
 
-        function previousPage() {
-            if (currentPage > 1) {
-                currentPage--;
-                renderOrders();
-            }
-        }
+            methods: {
+                async loadOrders() {
+                    try {
+                        this.loading = true;
+                        const response = await axios.get('http://127.0.0.1/tossin/api/index.php?action=allOrders');
+                        this.orders = response.data.map(order => ({
+                            ...order,
+                            number: `CMD-${String(order.id).padStart(3, '0')}`,
+                            date: order.date_of_insertion,
+                            supplier: order.seller,
+                            status: order.status.toLowerCase().replace(' ', '-'), // Ensure consistent status format
+                            total: parseFloat(order.total),
+                            lines: [] // Will be populated after loading products
+                        }));
 
-        function nextPage() {
-            const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                renderOrders();
-            }
-        }
+                        // Load products for each order
+                        for (let order of this.orders) {
+                            order.lines = this.allProducts.filter(product => product.order_id === order.id)
+                                .map(product => ({
+                                    id: product.id,
+                                    product: product.name,
+                                    quantity: product.quantity,
+                                    price: parseFloat(product.price),
+                                    total: product.quantity * parseFloat(product.price)
+                                }));
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors du chargement des commandes:', error);
+                        alert('Erreur lors du chargement des commandes');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
 
-        function goToPage(page) {
-            currentPage = page;
-            renderOrders();
-        }
+                async loadProducts() {
+                    try {
+                        const response = await axios.get('http://127.0.0.1/tossin/api/index.php?action=allProducts');
+                        this.allProducts = response.data;
+                        // After loading products, update the lines for existing orders
+                        this.orders.forEach(order => {
+                            order.lines = this.allProducts.filter(product => product.order_id === order.id)
+                                .map(product => ({
+                                    id: product.id,
+                                    product: product.name,
+                                    quantity: product.quantity,
+                                    price: parseFloat(product.price),
+                                    total: product.quantity * parseFloat(product.price)
+                                }));
+                        });
+                    } catch (error) {
+                        console.error('Erreur lors du chargement des produits:', error);
+                    }
+                },
 
-        function applyFilters() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const statusFilter = document.getElementById('statusFilter').value;
-            
-            filteredOrders = orders.filter(order => {
-                const matchesSearch = order.number.toLowerCase().includes(searchTerm) || 
-                                    order.supplier.toLowerCase().includes(searchTerm);
-                const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-                
-                return matchesSearch && matchesStatus;
-            });
-            
-            currentPage = 1;
-            renderOrders();
-        }
+                async createNewOrder() {
+                    try {
+                        this.loading = true;
+                        const orderData = {
+                            seller: this.newOrder.supplier,
+                            total: this.orderTotal,
+                            status: this.newOrder.status,
+                            lines: this.newOrder.lines.map(line => ({
+                                product: line.product,
+                                quantity: line.quantity,
+                                price: line.price
+                            }))
+                        };
 
-        function openNewOrderModal() {
-            document.getElementById('newOrderModal').classList.remove('hidden');
-            document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
-            currentOrderLines = [];
-            addOrderLine();
-        }
+                        const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=newOrder', orderData);
 
-        function closeNewOrderModal() {
-            document.getElementById('newOrderModal').classList.add('hidden');
-            document.getElementById('newOrderForm').reset();
-            currentOrderLines = [];
-            document.getElementById('orderLines').innerHTML = '';
-        }
+                        if (response.data.success) {
+                            await this.loadOrders();
+                            await this.loadProducts(); // Reload products to ensure new lines are associated
+                            this.closeNewOrderModal();
+                            alert('Commande créée avec succès !');
+                        } else {
+                            alert('Erreur lors de la création de la commande: ' + (response.data.message || 'Erreur inconnue'));
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors de la création de la commande:', error);
+                        alert('Erreur lors de la création de la commande');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
 
-        function addOrderLine() {
-            const lineIndex = currentOrderLines.length;
-            const orderLinesDiv = document.getElementById('orderLines');
-            
-            const lineDiv = document.createElement('div');
-            lineDiv.className = 'grid grid-cols-1 md:grid-cols-6 gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50';
-            lineDiv.innerHTML = `
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">
-                        <i class="fas fa-box mr-1"></i>Produit
-                    </label>
-                    <input type="text" class="w-full px-2 py-2 border border-gray-300 rounded text-sm" 
-                           onchange="updateOrderLine(${lineIndex}, 'product', this.value)" required>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">
-                        <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
-                    </label>
-                    <input type="number" min="1" class="w-full px-2 py-2 border border-gray-300 rounded text-sm" 
-                           onchange="updateOrderLine(${lineIndex}, 'quantity', this.value)" required>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">
-                        <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire (XOF)
-                    </label>
-                    <input type="number" step="100" min="0" class="w-full px-2 py-2 border border-gray-300 rounded text-sm" 
-                           onchange="updateOrderLine(${lineIndex}, 'price', this.value)" required>
-                </div>
-                <div>
-                    <label class="block text-xs font-medium text-gray-700 mb-1">
-                        <i class="fas fa-calculator mr-1"></i>Total
-                    </label>
-                    <input type="text" class="w-full px-2 py-2 border border-gray-300 rounded text-sm bg-gray-100" 
-                           id="lineTotal${lineIndex}" readonly>
-                </div>
-                <div class="flex items-end space-x-2">
-                    <button type="button" onclick="editOrderLineInModal(${lineIndex})" 
-                            class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded text-sm transition-colors" title="Modifier">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                </div>
-                <div class="flex items-end">
-                    <button type="button" onclick="removeOrderLine(${lineIndex})" 
-                            class="w-full bg-red-500 hover:bg-red-600 text-white px-2 py-2 rounded text-sm transition-colors">
-                        <i class="fas fa-trash mr-1"></i>Supprimer
-                    </button>
-                </div>
-            `;
-            
-            orderLinesDiv.appendChild(lineDiv);
-            currentOrderLines.push({ product: '', quantity: 0, price: 0, total: 0 });
-        }
+                async deleteProductFromBackend(productId) {
+                    try {
+                        const response = await axios.delete(` `);
 
-        function editOrderLineInModal(lineIndex) {
-            const line = currentOrderLines[lineIndex];
-            editingLineIndex = lineIndex;
-            
-            document.getElementById('editProductName').value = line.product;
-            document.getElementById('editQuantity').value = line.quantity;
-            document.getElementById('editPrice').value = line.price;
-            
-            document.getElementById('editLineModal').classList.remove('hidden');
-        }
+                        if (response.data.success) {
+                            // Reload data to reflect changes
+                            await this.loadOrders();
+                            await this.loadProducts();
+                        } else {
+                            alert('Erreur lors de la suppression du produit');
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors de la suppression du produit:', error);
+                        alert('Erreur lors de la suppression du produit');
+                    }
+                },
 
-        function closeEditLineModal() {
-            document.getElementById('editLineModal').classList.add('hidden');
-            editingLineIndex = -1;
-        }
+                formatDate(dateString) {
+                    if (!dateString) return '';
+                    return new Date(dateString).toLocaleDateString('fr-FR');
+                },
 
-        document.getElementById('editLineForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (editingLineIndex >= 0) {
-                const product = document.getElementById('editProductName').value;
-                const quantity = parseInt(document.getElementById('editQuantity').value);
-                const price = parseFloat(document.getElementById('editPrice').value);
-                
-                if (editingOrderId > 0) {
-                    const order = orders.find(o => o.id === editingOrderId);
-                    order.lines[editingLineIndex] = {
-                        product: product,
-                        quantity: quantity,
-                        price: price,
-                        total: quantity * price
+                formatCurrency(amount) {
+                    if (typeof amount !== 'number') return '0 XOF';
+                    return new Intl.NumberFormat('fr-FR', {
+                        style: 'currency',
+                        currency: 'XOF',
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                    }).format(amount);
+                },
+
+                getStatusInfo(status) {
+                    const statusMap = {
+                        'en-attente': {
+                            label: 'En attente',
+                            class: 'text-yellow-600 bg-yellow-100'
+                        },
+                        'en-cours': {
+                            label: 'En cours',
+                            class: 'text-blue-600 bg-blue-100'
+                        },
+                        'livree': {
+                            label: 'Livrée',
+                            class: 'text-green-600 bg-green-100'
+                        },
+                        'annulee': {
+                            label: 'Annulée',
+                            class: 'text-red-600 bg-red-100'
+                        }
                     };
-                    order.total = order.lines.reduce((sum, line) => sum + line.total, 0);
-                    applyFilters();
-                    closeOrderDetailsModal();
-                } else {
-                    currentOrderLines[editingLineIndex] = {
-                        product: product,
-                        quantity: quantity,
-                        price: price,
-                        total: quantity * price
+                    return statusMap[status] || {
+                        label: status,
+                        class: 'text-gray-600 bg-gray-100'
                     };
-                    
-                    const orderLinesDiv = document.getElementById('orderLines');
-                    const lineDiv = orderLinesDiv.children[editingLineIndex];
-                    const inputs = lineDiv.querySelectorAll('input');
-                    inputs[0].value = product;
-                    inputs[1].value = quantity;
-                    inputs[2].value = price;
-                    inputs[3].value = formatCurrency(quantity * price);
-                    
-                    updateOrderTotal();
+                },
+
+                applyFilters() {
+                    this.currentPage = 1;
+                },
+
+                previousPage() {
+                    if (this.currentPage > 1) this.currentPage--;
+                },
+
+                nextPage() {
+                    if (this.currentPage < this.totalPages) this.currentPage++;
+                },
+
+                goToPage(page) {
+                    this.currentPage = page;
+                },
+
+                openNewOrderModal() {
+                    this.showNewOrderModal = true;
+                    this.newOrder.date = new Date().toISOString().split('T')[0];
+                    this.newOrder.lines = [];
+                    this.addOrderLine();
+                },
+
+                closeNewOrderModal() {
+                    this.showNewOrderModal = false;
+                    this.newOrder = {
+                        supplier: '',
+                        date: new Date().toISOString().split('T')[0],
+                        status: 'en-attente',
+                        lines: []
+                    };
+                },
+
+                addOrderLine() {
+                    this.newOrder.lines.push({
+                        product: '',
+                        quantity: 1,
+                        price: 0,
+                        total: 0
+                    });
+                },
+
+                removeOrderLine(index) {
+                    this.newOrder.lines.splice(index, 1);
+                },
+
+                updateLineTotal(index) {
+                    const line = this.newOrder.lines[index];
+                    line.total = (line.quantity || 0) * (line.price || 0);
+                },
+
+                editOrderLineInModal(index) {
+                    this.editingLineIndex = index;
+                    const line = this.newOrder.lines[index];
+                    this.editingLine = {
+                        ...line
+                    };
+                    this.showEditLineModal = true;
+                },
+
+                closeEditLineModal() {
+                    this.showEditLineModal = false;
+                    this.editingLineIndex = -1;
+                },
+
+                saveEditLine() {
+                    if (this.editingLineIndex >= 0) {
+                        const line = this.editingLine;
+                        line.total = line.quantity * line.price;
+                        this.newOrder.lines[this.editingLineIndex] = {
+                            ...line
+                        };
+                        this.closeEditLineModal();
+                    }
+                },
+
+                startDetailLineEdit(index) {
+                    this.editingDetailLineIndex = index;
+                    const line = this.selectedOrder.lines[index];
+                    this.editingDetailLine = {
+                        product: line.product,
+                        quantity: line.quantity,
+                        price: line.price
+                    };
+                },
+
+                saveDetailLineEdit(index) {
+                    if (this.editingDetailLineIndex === index) {
+                        // Update the line in selectedOrder
+                        const line = this.selectedOrder.lines[index];
+                        line.product = this.editingDetailLine.product;
+                        line.quantity = this.editingDetailLine.quantity;
+                        line.price = this.editingDetailLine.price;
+                        line.total = this.editingDetailLine.quantity * this.editingDetailLine.price;
+
+                        // Update the line in the main orders array
+                        const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                        if (orderIndex >= 0) {
+                            this.orders[orderIndex].lines[index] = {
+                                ...line
+                            };
+                            // Update the order total
+                            this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, l) => sum + l.total, 0);
+                            this.selectedOrder.total = this.orders[orderIndex].total;
+                        }
+
+                        this.cancelDetailLineEdit();
+                    }
+                },
+
+                cancelDetailLineEdit() {
+                    this.editingDetailLineIndex = -1;
+                    this.editingDetailLine = {
+                        product: '',
+                        quantity: 0,
+                        price: 0
+                    };
+                },
+
+                async addNewOrder() {
+                    if (this.newOrder.lines.length === 0 || this.newOrder.lines.some(line => !line.product || line.quantity <= 0 || line.price <= 0)) {
+                        alert('Veuillez ajouter au moins une ligne de commande valide');
+                        return;
+                    }
+
+                    await this.createNewOrder();
+                },
+
+                showOrderDetails(order) {
+                    this.selectedOrder = {
+                        ...order
+                    };
+                    // Ensure lines are loaded correctly if they were not initially
+                    if (this.selectedOrder.lines.length === 0) {
+                        this.selectedOrder.lines = this.allProducts.filter(product => product.order_id === this.selectedOrder.id)
+                            .map(product => ({
+                                id: product.id,
+                                product: product.name,
+                                quantity: product.quantity,
+                                price: parseFloat(product.price),
+                                total: product.quantity * parseFloat(product.price)
+                            }));
+                    }
+                    this.showOrderDetailsModal = true;
+                },
+
+                closeOrderDetailsModal() {
+                    this.showOrderDetailsModal = false;
+                    this.selectedOrder = null;
+                    this.cancelDetailLineEdit();
+                },
+
+                editOrderStatus(order) {
+                    this.editingOrder = {
+                        ...order
+                    };
+                    this.showEditStatusModal = true;
+                },
+
+                closeEditStatusModal() {
+                    this.showEditStatusModal = false;
+                    this.editingOrder = null;
+                },
+
+                saveEditStatus() {
+                    if (this.editingOrder) {
+                        const order = this.orders.find(o => o.id === this.editingOrder.id);
+                        if (order) {
+                            order.status = this.editingOrder.status;
+                        }
+                        this.closeEditStatusModal();
+                        if (this.selectedOrder && this.selectedOrder.id === this.editingOrder.id) {
+                            this.selectedOrder.status = this.editingOrder.status;
+                        }
+                    }
+                },
+
+                deleteOrder(orderId) {
+                    if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
+                        axios.delete(`http://127.0.0.1/tossin/api/index.php?action=deleteOrder&id=${orderId}`)
+                            .then(response => {
+                                if (response.data.success) {
+                                    this.orders = this.orders.filter(o => o.id !== orderId);
+                                    this.applyFilters();
+                                    alert('Commande supprimée avec succès !');
+                                } else {
+                                    alert('Erreur lors de la suppression de la commande');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Erreur lors de la suppression de la commande:', error);
+                                alert('Erreur lors de la suppression de la commande');
+                            });
+                    }
+                },
+
+                async deleteProductLine(index) {
+                    if (confirm('Êtes-vous sûr de vouloir supprimer ce produit de la commande ?')) {
+                        const productId = this.selectedOrder.lines[index].id;
+
+                        if (productId) {
+                            // Delete from backend
+                            await this.deleteProductFromBackend(productId);
+
+                            // Update local data
+                            this.selectedOrder.lines.splice(index, 1);
+
+                            // Update the order in the main orders array
+                            const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                            if (orderIndex >= 0) {
+                                this.orders[orderIndex].lines.splice(index, 1);
+                                // Update the order total automatically
+                                this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, line) => sum + line.total, 0);
+                                this.selectedOrder.total = this.orders[orderIndex].total;
+                            }
+                        } else {
+                            // For new lines without ID, just remove locally
+                            this.selectedOrder.lines.splice(index, 1);
+
+                            const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                            if (orderIndex >= 0) {
+                                this.orders[orderIndex].lines.splice(index, 1);
+                                this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, line) => sum + line.total, 0);
+                                this.selectedOrder.total = this.orders[orderIndex].total;
+                            }
+                        }
+
+                        // Cancel any ongoing edit
+                        this.cancelDetailLineEdit();
+                    }
+                },
+
+                addNewProductLine() {
+                    if (this.selectedOrder) {
+                        const newLine = {
+                            product: 'Nouveau produit',
+                            quantity: 1,
+                            price: 0,
+                            total: 0
+                        };
+
+                        this.selectedOrder.lines.push(newLine);
+
+                        // Update the order in the main orders array
+                        const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                        if (orderIndex >= 0) {
+                            this.orders[orderIndex].lines.push({
+                                ...newLine
+                            });
+                        }
+
+                        // Start editing the new line immediately
+                        const newIndex = this.selectedOrder.lines.length - 1;
+                        this.startDetailLineEdit(newIndex);
+                    }
+                },
+
+                logout() {
+                    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
+                        localStorage.removeItem('tossin_user');
+                        window.location.href = 'login.html';
+                    }
                 }
-                
-                closeEditLineModal();
             }
-        });
-
-        function updateOrderLine(index, field, value) {
-            currentOrderLines[index][field] = field === 'product' ? value : parseFloat(value) || 0;
-            
-            if (field === 'quantity' || field === 'price') {
-                const line = currentOrderLines[index];
-                line.total = line.quantity * line.price;
-                document.getElementById(`lineTotal${index}`).value = formatCurrency(line.total);
-            }
-            
-            updateOrderTotal();
-        }
-
-        function removeOrderLine(index) {
-            currentOrderLines.splice(index, 1);
-            renderOrderLines();
-        }
-
-        function renderOrderLines() {
-            const orderLinesDiv = document.getElementById('orderLines');
-            orderLinesDiv.innerHTML = '';
-            
-            currentOrderLines.forEach((line, index) => {
-                addOrderLine();
-                const inputs = orderLinesDiv.lastElementChild.querySelectorAll('input');
-                inputs[0].value = line.product;
-                inputs[1].value = line.quantity;
-                inputs[2].value = line.price;
-                inputs[3].value = formatCurrency(line.total);
-            });
-            
-            updateOrderTotal();
-        }
-
-        function updateOrderTotal() {
-            const total = currentOrderLines.reduce((sum, line) => sum + line.total, 0);
-            document.getElementById('orderTotal').textContent = formatCurrency(total);
-        }
-
-        function editOrderStatus(orderId) {
-            const order = orders.find(o => o.id === orderId);
-            editingOrderIdForStatus = orderId;
-            
-            document.getElementById('newOrderStatus').value = order.status;
-            document.getElementById('editStatusModal').classList.remove('hidden');
-        }
-
-        function closeEditStatusModal() {
-            document.getElementById('editStatusModal').classList.add('hidden');
-            editingOrderIdForStatus = -1;
-        }
-
-        document.getElementById('editStatusForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (editingOrderIdForStatus > 0) {
-                const order = orders.find(o => o.id === editingOrderIdForStatus);
-                const newStatus = document.getElementById('newOrderStatus').value;
-                
-                order.status = newStatus;
-                applyFilters();
-                
-                if (document.getElementById('orderDetailsModal').classList.contains('hidden') === false) {
-                    showOrderDetails(editingOrderIdForStatus);
-                }
-                
-                closeEditStatusModal();
-            }
-        });
-
-        function showOrderDetails(orderId) {
-            const order = orders.find(o => o.id === orderId);
-            const content = document.getElementById('orderDetailsContent');
-            const statusInfo = getStatusInfo(order.status);
-            
-            content.innerHTML = `
-                <div class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <p class="text-sm font-medium text-gray-700">N° Commande</p>
-                            <p class="text-lg font-semibold text-blue-600">${order.number}</p>
-                        </div>
-                        <div class="bg-green-50 p-4 rounded-lg">
-                            <p class="text-sm font-medium text-gray-700">Fournisseur</p>
-                            <p class="text-lg font-semibold text-green-600">${order.supplier}</p>
-                        </div>
-                        <div class="bg-yellow-50 p-4 rounded-lg">
-                            <p class="text-sm font-medium text-gray-700">Date</p>
-                            <p class="text-lg font-semibold text-yellow-600">${new Date(order.date).toLocaleDateString('fr-FR')}</p>
-                        </div>
-                        <div class="bg-purple-50 p-4 rounded-lg">
-                            <p class="text-sm font-medium text-gray-700">Statut</p>
-                            <span class="inline-block px-3 py-1 text-sm font-semibold rounded-full ${statusInfo.class}">
-                                ${statusInfo.label}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div class="border-t pt-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h4 class="text-lg font-medium text-gray-900">
-                                <i class="fas fa-list mr-2"></i>Lignes de commande
-                            </h4>
-                            <button onclick="editOrderStatus(${order.id})" class="bg-accent hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                                <i class="fas fa-edit mr-1"></i>Modifier statut
-                            </button>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full bg-white border border-gray-200 rounded-lg responsive-table">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix unitaire</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-200">
-                                    ${order.lines.map((line, index) => `
-                                        <tr class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 text-sm font-medium text-gray-900" data-label="Produit">${line.product}</td>
-                                            <td class="px-4 py-3 text-sm text-gray-600" data-label="Quantité">${line.quantity}</td>
-                                            <td class="px-4 py-3 text-sm text-gray-600" data-label="Prix unitaire">${formatCurrency(line.price)}</td>
-                                            <td class="px-4 py-3 text-sm font-medium text-gray-900" data-label="Total">${formatCurrency(line.total)}</td>
-                                            <td class="px-4 py-3 text-sm" data-label="Actions">
-                                                <button onclick="editLineInOrder(${order.id}, ${index})" class="text-blue-600 hover:text-blue-800" title="Modifier">
-                                                    <i class="fas fa-edit"></i>
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="mt-6 p-4 bg-gray-50 rounded-lg">
-                            <div class="flex justify-between items-center">
-                                <span class="text-lg font-semibold text-gray-900">Total de la commande:</span>
-                                <span class="text-2xl font-bold text-primary">${formatCurrency(order.total)}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('orderDetailsModal').classList.remove('hidden');
-        }
-
-        function editLineInOrder(orderId, lineIndex) {
-            const order = orders.find(o => o.id === orderId);
-            const line = order.lines[lineIndex];
-            
-            editingOrderId = orderId;
-            editingLineIndex = lineIndex;
-            
-            document.getElementById('editProductName').value = line.product;
-            document.getElementById('editQuantity').value = line.quantity;
-            document.getElementById('editPrice').value = line.price;
-            
-            document.getElementById('editLineModal').classList.remove('hidden');
-        }
-
-        function closeOrderDetailsModal() {
-            document.getElementById('orderDetailsModal').classList.add('hidden');
-            editingOrderId = -1;
-        }
-
-        function deleteOrder(orderId) {
-            if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
-                orders = orders.filter(o => o.id !== orderId);
-                applyFilters();
-            }
-        }
-
-        document.getElementById('newOrderForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (currentOrderLines.length === 0 || currentOrderLines.some(line => !line.product || line.quantity <= 0 || line.price <= 0)) {
-                alert('Veuillez ajouter au moins une ligne de commande valide');
-                return;
-            }
-            
-            const newOrder = {
-                id: orders.length + 1,
-                number: `CMD-${String(orders.length + 1).padStart(3, '0')}`,
-                date: document.getElementById('orderDate').value,
-                supplier: document.getElementById('orderSupplier').value,
-                status: document.getElementById('orderStatus').value,
-                lines: [...currentOrderLines],
-                total: currentOrderLines.reduce((sum, line) => sum + line.total, 0)
-            };
-            
-            orders.push(newOrder);
-            applyFilters();
-            closeNewOrderModal();
-        });
-
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.classList.toggle('-translate-x-full');
-        }
-
-        function logout() {
-            if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-                localStorage.removeItem('tossin_user');
-                window.location.href = 'login.html';
-            }
-        }
-
-        document.getElementById('searchInput').addEventListener('input', applyFilters);
-        document.getElementById('statusFilter').addEventListener('change', applyFilters);
-
-        document.addEventListener('click', function(e) {
-            const sidebar = document.getElementById('sidebar');
-            const menuButton = e.target.closest('button');
-            
-            if (window.innerWidth < 1024 && !sidebar.contains(e.target) && !menuButton) {
-                sidebar.classList.add('-translate-x-full');
-            }
-        });
-
-        renderOrders();
+        }).mount('#app');
     </script>
 </body>
+
 </html>
