@@ -30,7 +30,7 @@ function addNewClaim($data)
         $date_of_claim = $data['date_of_claim'] ?? date('Y-m-d');
         $due_date = $data['due_date'] ?? null;
         $notes = $data['notes'] ?? '';
-        $status = 'pending';
+        $status = 'Actif';
 
         // Exécuter la requête
         $stmt->execute([
@@ -317,6 +317,175 @@ function deleteProduct()
     }
 }
 
+// Supprimer une commande
+function deleteOrder()
+{
+    global $pdo;
+
+    // Récupérer le body JSON envoyé par Axios
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (empty($data['id'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'ID de la commande manquant'
+        ]);
+        return;
+    }
+
+    $orderId = intval($data['id']);
+
+    try {
+        // Supprimer d'abord les produits associés à la commande (clé étrangère)
+        $stmtProducts = $pdo->prepare("DELETE FROM products WHERE order_id = ?");
+        $stmtProducts->execute([$orderId]);
+
+        // Supprimer ensuite la commande
+        $stmtOrder = $pdo->prepare("DELETE FROM orders WHERE id = ?");
+        $stmtOrder->execute([$orderId]);
+
+        if ($stmtOrder->rowCount() > 0) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Commande supprimée avec succès'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Commande introuvable'
+            ]);
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur serveur : ' . $e->getMessage()
+        ]);
+    }
+}
+
+//mise à jour du statut de la commande
+function updateOrderStatus()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+    $orderId = $data['id'] ?? null;
+    $status  = $data['status'] ?? null;
+
+    if (!$orderId || !$status) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs obligatoires manquants : id, status'
+        ]);
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare("UPDATE orders SET status = :status WHERE id = :id");
+        $stmt->execute([
+            ':status' => $status,
+            ':id'     => $orderId
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Statut mis à jour avec succès',
+            'order_id' => $orderId,
+            'new_status' => $status
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la mise à jour : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+
+// mettre à jour un produit existant
+function updateProduct()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+    $productId = $_GET['id'] ?? null;
+
+    if (!$productId || empty($data['name']) || !isset($data['quantity']) || !isset($data['price'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs obligatoires manquants : id, name, quantity, price'
+        ]);
+        return;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // Récupérer l'order_id du produit avant mise à jour
+        $stmt = $pdo->prepare("SELECT order_id FROM products WHERE id = :id");
+        $stmt->execute([':id' => $productId]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$product) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Produit introuvable'
+            ]);
+            return;
+        }
+
+        $orderId = $product['order_id'];
+
+        // Mettre à jour le produit
+        $stmt = $pdo->prepare("
+            UPDATE products
+            SET name = :name,
+                quantity = :quantity,
+                price = :price
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            ':name'     => $data['name'],
+            ':quantity' => $data['quantity'],
+            ':price'    => $data['price'],
+            ':id'       => $productId
+        ]);
+
+        // Recalculer le total de la commande
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(price * quantity), 0) AS total
+            FROM products
+            WHERE order_id = :order_id
+        ");
+        $stmt->execute([':order_id' => $orderId]);
+        $newTotal = $stmt->fetchColumn();
+
+        // Mettre à jour le total dans orders
+        $stmt = $pdo->prepare("UPDATE orders SET total = :total WHERE id = :order_id");
+        $stmt->execute([
+            ':total'    => $newTotal,
+            ':order_id' => $orderId
+        ]);
+
+        $pdo->commit();
+
+        echo json_encode([
+            'success'    => true,
+            'message'    => 'Produit mis à jour et commande recalculée',
+            'product_id' => $productId,
+            'new_total'  => $newTotal
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la mise à jour du produit : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
 //ajouter un nouveau produit
 function newProduct()
 {
@@ -410,4 +579,55 @@ function getAllProducts()
     $stmt = $pdo->query("SELECT * FROM products ORDER BY id DESC");
     $products = $stmt->fetchAll();
     echo json_encode($products);
+}
+
+// Connexion d'un utilisateur
+
+function login($data)
+{
+    global $pdo;
+
+    if (empty($data['username']) || empty($data['password'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Nom d\'utilisateur et mot de passe requis'
+        ]);
+        return;
+    }
+
+    $username = $data['username'];
+    $password = $data['password'];
+
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ?");
+    $stmt->execute([$username]);
+    $user = $stmt->fetch();
+
+    if ($user && password_verify($password, $user['password'])) {
+        session_start();
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['username'] = $user['username'];
+
+        echo json_encode([
+            'success' => true,
+            'redirect' => 'http://127.0.0.1/tossin/index.php'
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Nom d’utilisateur ou mot de passe incorrect'
+        ]);
+    }
+}
+
+// logout
+function logout()
+{
+    session_start();
+    session_unset();
+    session_destroy();
+
+    echo json_encode([
+        'success' => true,
+        'redirect' => 'http://127.0.0.1/tossin/login.php'
+    ]);
 }

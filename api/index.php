@@ -29,6 +29,18 @@ switch ($action) {
         deleteProduct();
         break;
 
+    case 'deleteOrder':
+        deleteOrder();
+        break;
+
+    case 'updateProduct':
+        updateProduct();
+        break;
+
+    case 'updateOrderStatus':
+        updateOrderStatus();
+        break;
+
     case 'newProduct':
         newProduct();
         break;
@@ -55,6 +67,17 @@ switch ($action) {
                 'error' => 'Aucune donnée reçue pour le paiement.'
             ]);
         }
+        break;
+
+
+    case 'login':
+        // Récupérer les données POST
+        $data = json_decode(file_get_contents("php://input"), true);
+        login($data);
+        break;
+
+    case 'logout':
+        logout();
         break;
 
     default:

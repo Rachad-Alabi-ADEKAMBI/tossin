@@ -1,3 +1,12 @@
+<?php
+if (!isset($_SESSION['user_id'])) {
+    // Redirection vers la page de login
+    header('Location: login.php');
+    exit;
+}
+?>
+
+
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -103,23 +112,33 @@
                 border: 1px solid #ccc !important;
             }
 
-            /* Adding horizontal table layout for print to save space */
-            .print-table {
-                width: 100% !important;
-                border-collapse: collapse !important;
+            /* Changing print layout to display products one by one instead of horizontal table */
+            .print-products {
+                display: block !important;
             }
 
-            .print-table th,
-            .print-table td {
+            .print-product-item {
+                display: block !important;
                 border: 1px solid #000 !important;
-                padding: 8px !important;
-                text-align: left !important;
-                font-size: 12px !important;
+                margin-bottom: 10px !important;
+                padding: 10px !important;
+                page-break-inside: avoid !important;
             }
 
-            .print-table th {
-                background-color: #f0f0f0 !important;
+            .print-product-row {
+                display: flex !important;
+                justify-content: space-between !important;
+                margin-bottom: 5px !important;
+            }
+
+            .print-product-label {
                 font-weight: bold !important;
+                width: 40% !important;
+            }
+
+            .print-product-value {
+                width: 60% !important;
+                text-align: right !important;
             }
 
             .print-header {
@@ -130,6 +149,11 @@
                 margin-top: 20px !important;
                 border-top: 2px solid #000 !important;
                 padding-top: 10px !important;
+            }
+
+            /* Hide the table for print and show the product list instead */
+            .print-table {
+                display: none !important;
             }
         }
 
@@ -209,10 +233,9 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
                                 <select v-model="statusFilter" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                     <option value="all">Tous</option>
-                                    <option value="en-attente">En attente</option>
-                                    <option value="en-cours">En cours</option>
-                                    <option value="livree">Livrée</option>
-                                    <option value="annulee">Annulée</option>
+                                    <option value="En_attente">En attente</option>
+                                    <option value="En_cours">En cours</option>
+                                    <option value="Livrée">Livrée</option>
                                 </select>
                             </div>
                             <div class="flex items-end">
@@ -346,10 +369,9 @@
                                         <i class="fas fa-info-circle mr-1"></i>Statut
                                     </label>
                                     <select v-model="newOrder.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                        <option value="en-attente">En attente</option>
-                                        <option value="en-cours">En cours</option>
-                                        <option value="livree">Livrée</option>
-                                        <option value="annulee">Annulée</option>
+                                        <option value="En_attente">En attente</option>
+                                        <option value="En_cours">En cours</option>
+                                        <option value="Livrée">Livrée</option>
                                     </select>
                                 </div>
                             </div>
@@ -385,7 +407,7 @@
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire (XOF)
                                             </label>
-                                            <input v-model.number="line.price" type="number" step="100" min="0" required
+                                            <input v-model.number="line.price" type="number" step="0.01" min="0" required
                                                 @input="updateLineTotal(index)"
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
                                         </div>
@@ -464,7 +486,7 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
                                     <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire (XOF)
                                 </label>
-                                <input v-model.number="editingLine.price" type="number" required min="0" step="100"
+                                <input v-model.number="editingLine.price" type="number" required min="0" step="0.01"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
 
@@ -500,10 +522,9 @@
                                     <i class="fas fa-info-circle mr-1"></i>Nouveau statut
                                 </label>
                                 <select v-model="editingOrder.status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                    <option value="en-attente">En attente</option>
-                                    <option value="en-cours">En cours</option>
-                                    <option value="livree">Livrée</option>
-                                    <option value="annulee">Annulée</option>
+                                    <option value="En_attente">En attente</option>
+                                    <option value="En_cours">En cours</option>
+                                    <option value="Livrée">Livrée</option>
                                 </select>
                             </div>
 
@@ -529,7 +550,6 @@
                                 <i class="fas fa-eye mr-2"></i>Détails de la commande
                             </h3>
                             <div class="flex space-x-2">
-                                <!-- Adding print button -->
                                 <button @click="printOrderDetails" class="no-print bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
                                     <i class="fas fa-print mr-1"></i>Imprimer
                                 </button>
@@ -566,7 +586,6 @@
                                     <h4 class="text-lg font-medium text-gray-900">
                                         <i class="fas fa-list mr-2"></i>Lignes de commande
                                     </h4>
-                                    <!-- Adding no-print class to hide action buttons during printing -->
                                     <div class="flex space-x-2 no-print">
                                         <button @click="addNewProductLine" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
                                             <i class="fas fa-plus mr-1"></i>Ajouter ligne
@@ -577,7 +596,7 @@
                                     </div>
                                 </div>
                                 <div class="overflow-x-auto">
-                                    <!-- Adding print-table class for better print formatting -->
+                                    <!-- Regular table view for screen -->
                                     <table class="min-w-full bg-white border border-gray-200 rounded-lg responsive-table print-table">
                                         <thead class="bg-gray-50">
                                             <tr>
@@ -585,71 +604,67 @@
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix unitaire</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                                                <!-- Adding no-print class to hide Actions column during printing -->
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase no-print">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-200">
                                             <tr v-for="(line, index) in selectedOrder.lines" :key="index" class="hover:bg-gray-50">
-                                                <td class="px-4 py-3 text-sm font-medium text-gray-900" data-label="Produit">
-                                                    <input v-if="editingDetailLineIndex === index"
-                                                        v-model="editingDetailLine.product"
-                                                        type="text"
-                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent no-print"
-                                                        @keyup.enter="saveDetailLineEdit(index)"
-                                                        @keyup.escape="cancelDetailLineEdit()">
-                                                    <span v-else>{{ line.product }}</span>
+                                                <td class="px-4 py-3 text-sm">
+                                                    <div v-if="line.editing">
+                                                        <input v-model="line.product" type="text" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                    </div>
+                                                    <div v-else>{{ line.product }}</div>
                                                 </td>
-                                                <td class="px-4 py-3 text-sm text-gray-600" data-label="Quantité">
-                                                    <input v-if="editingDetailLineIndex === index"
-                                                        v-model.number="editingDetailLine.quantity"
-                                                        type="number"
-                                                        min="1"
-                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent no-print"
-                                                        @keyup.enter="saveDetailLineEdit(index)"
-                                                        @keyup.escape="cancelDetailLineEdit()">
-                                                    <span v-else>{{ line.quantity }}</span>
+                                                <td class="px-4 py-3 text-sm">
+                                                    <div v-if="line.editing">
+                                                        <input v-model.number="line.quantity" type="number" min="1" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                    </div>
+                                                    <div v-else>{{ line.quantity }}</div>
                                                 </td>
-                                                <td class="px-4 py-3 text-sm text-gray-600" data-label="Prix unitaire">
-                                                    <input v-if="editingDetailLineIndex === index"
-                                                        v-model.number="editingDetailLine.price"
-                                                        type="number"
-                                                        min="0"
-                                                        step="100"
-                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent no-print"
-                                                        @keyup.enter="saveDetailLineEdit(index)"
-                                                        @keyup.escape="cancelDetailLineEdit()">
-                                                    <span v-else>{{ formatCurrency(line.price) }}</span>
+                                                <td class="px-4 py-3 text-sm">
+                                                    <div v-if="line.editing">
+                                                        <input v-model.number="line.price" type="number" step="0.01" min="0" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                    </div>
+                                                    <div v-else>{{ formatCurrency(line.price) }}</div>
                                                 </td>
-                                                <td class="px-4 py-3 text-sm font-medium text-gray-900" data-label="Total">
-                                                    <span v-if="editingDetailLineIndex === index">
-                                                        {{ formatCurrency(editingDetailLine.quantity * editingDetailLine.price) }}
-                                                    </span>
-                                                    <span v-else>{{ formatCurrency(line.total) }}</span>
-                                                </td>
-                                                <!-- Adding no-print class to hide action buttons during printing -->
-                                                <td class="px-4 py-3 text-sm font-medium no-print" data-label="Actions">
-                                                    <div v-if="editingDetailLineIndex === index" class="flex space-x-2">
-                                                        <button @click="saveDetailLineEdit(index)"
-                                                            class="text-green-600 hover:text-green-800"
-                                                            title="Valider">
+                                                <td class="px-4 py-3 text-sm font-medium">{{ formatCurrency(line.quantity * line.price) }}</td>
+                                                <td class="px-4 py-3 text-sm no-print">
+                                                    <div v-if="line.editing" class="flex space-x-1">
+                                                        <button @click="validateProductEdit(index)" class="text-green-600 hover:text-green-800" title="Valider">
                                                             <i class="fas fa-check"></i>
                                                         </button>
-                                                        <button @click="cancelDetailLineEdit()"
-                                                            class="text-red-600 hover:text-red-800"
-                                                            title="Annuler">
+                                                        <button @click="cancelProductEdit(index)" class="text-gray-600 hover:text-gray-800" title="Annuler">
                                                             <i class="fas fa-times"></i>
                                                         </button>
                                                     </div>
-                                                    <div v-else class="flex space-x-2">
-                                                        <button @click="startDetailLineEdit(index)"
-                                                            class="text-blue-600 hover:text-blue-800"
-                                                            title="Modifier">
-                                                            <i class="fas fa-pen"></i>
+                                                    <div v-else class="flex space-x-1">
+                                                        <button @click="editProductLine(index)" class="text-blue-600 hover:text-blue-800" title="Modifier">
+                                                            <i class="fas fa-edit"></i>
                                                         </button>
-                                                        <button @click="deleteProductLine(index)"
-                                                            class="text-red-600 hover:text-red-800"
-                                                            title="Supprimer le produit">
+                                                        <button @click="deleteProductLine(index)" class="text-red-600 hover:text-red-800" title="Supprimer">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <!-- New product line row -->
+                                            <tr v-if="newProductLine.visible" class="bg-green-50">
+                                                <td class="px-4 py-3 text-sm">
+                                                    <input v-model="newProductLine.product" type="text" placeholder="Nom du produit" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                </td>
+                                                <td class="px-4 py-3 text-sm">
+                                                    <input v-model.number="newProductLine.quantity" type="number" min="1" placeholder="Quantité" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                </td>
+                                                <td class="px-4 py-3 text-sm">
+                                                    <input v-model.number="newProductLine.price" type="number" step="0.01" min="0" placeholder="Prix" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                </td>
+                                                <td class="px-4 py-3 text-sm font-medium">{{ formatCurrency(newProductLine.quantity * newProductLine.price || 0) }}</td>
+                                                <td class="px-4 py-3 text-sm no-print">
+                                                    <div class="flex space-x-1">
+                                                        <button @click="validateNewLine" class="text-green-600 hover:text-green-800" title="Valider">
+                                                            <i class="fas fa-check"></i>
+                                                        </button>
+                                                        <button @click="cancelNewLine" class="text-gray-600 hover:text-gray-800" title="Annuler">
                                                             <i class="fas fa-times"></i>
                                                         </button>
                                                     </div>
@@ -657,8 +672,30 @@
                                             </tr>
                                         </tbody>
                                     </table>
+
+                                    <!-- Print-only product list (displayed one by one) -->
+                                    <div class="print-products hidden">
+                                        <div v-for="(line, index) in selectedOrder.lines" :key="index" class="print-product-item">
+                                            <div class="print-product-row">
+                                                <span class="print-product-label">Produit:</span>
+                                                <span class="print-product-value">{{ line.product }}</span>
+                                            </div>
+                                            <div class="print-product-row">
+                                                <span class="print-product-label">Quantité:</span>
+                                                <span class="print-product-value">{{ line.quantity }}</span>
+                                            </div>
+                                            <div class="print-product-row">
+                                                <span class="print-product-label">Prix unitaire:</span>
+                                                <span class="print-product-value">{{ formatCurrency(line.price) }}</span>
+                                            </div>
+                                            <div class="print-product-row">
+                                                <span class="print-product-label">Total:</span>
+                                                <span class="print-product-value">{{ formatCurrency(line.quantity * line.price) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <!-- Adding print-summary class for better print formatting -->
+
                                 <div class="mt-6 p-4 bg-gray-50 rounded-lg print-summary">
                                     <div class="flex justify-between items-center">
                                         <span class="text-lg font-semibold text-gray-900">Total de la commande:</span>
@@ -681,6 +718,9 @@
         createApp({
             data() {
                 return {
+                    loading: false,
+                    orders: [],
+                    filteredOrders: [],
                     searchTerm: '',
                     statusFilter: 'all',
                     currentPage: 1,
@@ -690,126 +730,78 @@
                     showEditStatusModal: false,
                     showOrderDetailsModal: false,
                     selectedOrder: null,
-                    editingLineIndex: -1,
                     editingOrder: null,
-                    editingDetailLineIndex: -1,
-                    editingDetailLine: {
-                        product: '',
-                        quantity: 0,
-                        price: 0
-                    },
-                    loading: false,
-
-                    orders: [],
-                    allProducts: [],
-
+                    editingLine: null,
+                    editingLineIndex: null,
                     newOrder: {
                         supplier: '',
-                        date: new Date().toISOString().split('T')[0],
-                        status: 'en-attente',
+                        date: '',
+                        status: 'En_attente',
                         lines: []
                     },
-
-                    editingLine: {
+                    newProductLine: {
+                        visible: false,
                         product: '',
-                        quantity: 0,
+                        quantity: 1,
                         price: 0
                     }
-                };
+                }
             },
-
-            async mounted() {
-                // Fermer la sidebar sur mobile
-                document.addEventListener('click', (e) => {
-                    if (window.innerWidth < 1024 && !e.target.closest('#sidebar') && !e.target.closest('button')) {
-                        this.sidebarOpen = false;
-                    }
-                });
-
-                await this.loadOrders();
-                await this.loadProducts();
-            },
-
             computed: {
-                filteredOrders() {
-                    return this.orders.filter(order => {
-                        const matchesSearch = order.number.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                            order.supplier.toLowerCase().includes(this.searchTerm.toLowerCase());
-                        const matchesStatus = this.statusFilter === 'all' || order.status.toLowerCase().replace(' ', '-') === this.statusFilter;
-
-                        return matchesSearch && matchesStatus;
-                    });
+                paginatedOrders() {
+                    const start = (this.currentPage - 1) * this.itemsPerPage;
+                    const end = start + this.itemsPerPage;
+                    return this.filteredOrders.slice(start, end);
                 },
-
+                totalPages() {
+                    return Math.ceil(this.filteredOrders.length / this.itemsPerPage);
+                },
                 totalItems() {
                     return this.filteredOrders.length;
                 },
-
-                totalPages() {
-                    return Math.ceil(this.totalItems / this.itemsPerPage);
-                },
-
                 startItem() {
                     return (this.currentPage - 1) * this.itemsPerPage + 1;
                 },
-
                 endItem() {
-                    return Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                    const end = this.currentPage * this.itemsPerPage;
+                    return end > this.totalItems ? this.totalItems : end;
                 },
-
-                paginatedOrders() {
-                    const start = (this.currentPage - 1) * this.itemsPerPage;
-                    return this.filteredOrders.slice(start, start + this.itemsPerPage);
-                },
-
                 visiblePages() {
                     const pages = [];
-                    const total = this.totalPages;
-                    const current = this.currentPage;
-                    for (let i = 1; i <= total; i++) {
-                        if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) {
-                            pages.push(i);
-                        }
+                    const start = Math.max(1, this.currentPage - 2);
+                    const end = Math.min(this.totalPages, this.currentPage + 2);
+
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
                     }
                     return pages;
                 },
-
                 orderTotal() {
-                    return this.newOrder.lines.reduce((sum, line) => sum + (line.total || 0), 0);
+                    return this.newOrder.lines.reduce((total, line) => total + (line.total || 0), 0);
                 },
-
                 selectedOrderTotal() {
                     if (!this.selectedOrder || !this.selectedOrder.lines) return 0;
-                    return this.selectedOrder.lines.reduce((sum, line) => sum + (line.total || 0), 0);
+                    return this.selectedOrder.lines.reduce((total, line) => total + (line.quantity * line.price), 0);
                 }
             },
-
             methods: {
                 async loadOrders() {
+                    this.loading = true;
                     try {
-                        this.loading = true;
                         const response = await axios.get('http://127.0.0.1/tossin/api/index.php?action=allOrders');
                         this.orders = response.data.map(order => ({
-                            ...order,
-                            number: `CMD-${String(order.id).padStart(3, '0')}`,
+                            id: order.id,
+                            number: `CMD-${order.id.toString().padStart(4, '0')}`,
                             date: order.date_of_insertion,
                             supplier: order.seller,
-                            status: order.status.toLowerCase().replace(' ', '-'), // Ensure consistent status format
                             total: parseFloat(order.total),
-                            lines: [] // Will be populated after loading products
+                            status: order.status,
+                            lines: []
                         }));
 
                         // Load products for each order
-                        for (let order of this.orders) {
-                            order.lines = this.allProducts.filter(product => product.order_id === order.id)
-                                .map(product => ({
-                                    id: product.id,
-                                    product: product.name,
-                                    quantity: product.quantity,
-                                    price: parseFloat(product.price),
-                                    total: product.quantity * parseFloat(product.price)
-                                }));
-                        }
+                        await this.loadProducts();
+                        this.applyFilters();
                     } catch (error) {
                         console.error('Erreur lors du chargement des commandes:', error);
                         alert('Erreur lors du chargement des commandes');
@@ -817,149 +809,101 @@
                         this.loading = false;
                     }
                 },
-
                 async loadProducts() {
                     try {
                         const response = await axios.get('http://127.0.0.1/tossin/api/index.php?action=allProducts');
-                        this.allProducts = response.data;
-                        // After loading products, update the lines for existing orders
+                        const products = response.data;
+
+                        // Group products by order_id
                         this.orders.forEach(order => {
-                            order.lines = this.allProducts.filter(product => product.order_id === order.id)
-                                .map(product => ({
-                                    id: product.id,
-                                    product: product.name,
-                                    quantity: product.quantity,
-                                    price: parseFloat(product.price),
-                                    total: product.quantity * parseFloat(product.price)
-                                }));
+                            order.lines = products.filter(product => product.order_id == order.id).map(product => ({
+                                id: product.id,
+                                product: product.name,
+                                quantity: product.quantity,
+                                price: parseFloat(product.price),
+                                editing: false,
+                                originalData: null
+                            }));
                         });
                     } catch (error) {
                         console.error('Erreur lors du chargement des produits:', error);
                     }
                 },
+                applyFilters() {
+                    let filtered = [...this.orders];
 
-                async createNewOrder() {
-                    try {
-                        this.loading = true;
-                        const orderData = {
-                            seller: this.newOrder.supplier,
-                            total: this.orderTotal,
-                            status: this.newOrder.status,
-                            lines: this.newOrder.lines.map(line => ({
-                                product: line.product,
-                                quantity: line.quantity,
-                                price: line.price
-                            }))
-                        };
-
-                        const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=newOrder', orderData);
-
-                        if (response.data.success) {
-                            await this.loadOrders();
-                            await this.loadProducts(); // Reload products to ensure new lines are associated
-                            this.closeNewOrderModal();
-                            alert('Commande créée avec succès !');
-                        } else {
-                            alert('Erreur lors de la création de la commande: ' + (response.data.message || 'Erreur inconnue'));
-                        }
-                    } catch (error) {
-                        console.error('Erreur lors de la création de la commande:', error);
-                        alert('Erreur lors de la création de la commande');
-                    } finally {
-                        this.loading = false;
+                    if (this.searchTerm) {
+                        const term = this.searchTerm.toLowerCase();
+                        filtered = filtered.filter(order =>
+                            order.number.toLowerCase().includes(term) ||
+                            order.supplier.toLowerCase().includes(term)
+                        );
                     }
-                },
 
-                async deleteProductFromBackend(productId) {
-                    try {
-                        const response = await axios.delete(`http://127.0.0.1/tossin/api/index.php?action=deleteProduct&id=${productId}`);
-
-                        if (response.data.success) {
-                            // Reload data to reflect changes
-                            await this.loadOrders();
-                            await this.loadProducts();
-                        } else {
-                            alert('Erreur lors de la suppression du produit');
-                        }
-                    } catch (error) {
-                        console.error('Erreur lors de la suppression du produit:', error);
-                        alert('Erreur lors de la suppression du produit');
+                    if (this.statusFilter !== 'all') {
+                        filtered = filtered.filter(order => order.status === this.statusFilter);
                     }
-                },
 
+                    this.filteredOrders = filtered;
+                    this.currentPage = 1;
+                },
                 formatDate(dateString) {
-                    if (!dateString) return '';
-                    return new Date(dateString).toLocaleDateString('fr-FR');
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('fr-FR');
                 },
-
                 formatCurrency(amount) {
-                    if (typeof amount !== 'number') return '0 XOF';
                     return new Intl.NumberFormat('fr-FR', {
                         style: 'currency',
                         currency: 'XOF',
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
                     }).format(amount);
                 },
-
                 getStatusInfo(status) {
                     const statusMap = {
-                        'en-attente': {
+                        'En_attente': {
                             label: 'En attente',
-                            class: 'text-yellow-600 bg-yellow-100'
+                            class: 'bg-yellow-100 text-yellow-800'
                         },
-                        'en-cours': {
+                        'En_cours': {
                             label: 'En cours',
-                            class: 'text-blue-600 bg-blue-100'
+                            class: 'bg-blue-100 text-blue-800'
                         },
-                        'livree': {
+                        'Livrée': {
                             label: 'Livrée',
-                            class: 'text-green-600 bg-green-100'
-                        },
-                        'annulee': {
-                            label: 'Annulée',
-                            class: 'text-red-600 bg-red-100'
+                            class: 'bg-green-100 text-green-800'
                         }
                     };
                     return statusMap[status] || {
                         label: status,
-                        class: 'text-gray-600 bg-gray-100'
+                        class: 'bg-gray-100 text-gray-800'
                     };
                 },
-
-                applyFilters() {
-                    this.currentPage = 1;
-                },
-
                 previousPage() {
-                    if (this.currentPage > 1) this.currentPage--;
+                    if (this.currentPage > 1) {
+                        this.currentPage--;
+                    }
                 },
-
                 nextPage() {
-                    if (this.currentPage < this.totalPages) this.currentPage++;
+                    if (this.currentPage < this.totalPages) {
+                        this.currentPage++;
+                    }
                 },
-
                 goToPage(page) {
                     this.currentPage = page;
                 },
-
                 openNewOrderModal() {
-                    this.showNewOrderModal = true;
-                    this.newOrder.date = new Date().toISOString().split('T')[0];
-                    this.newOrder.lines = [];
-                    this.addOrderLine();
-                },
-
-                closeNewOrderModal() {
-                    this.showNewOrderModal = false;
                     this.newOrder = {
                         supplier: '',
                         date: new Date().toISOString().split('T')[0],
-                        status: 'en-attente',
+                        status: 'En_attente',
                         lines: []
                     };
+                    this.showNewOrderModal = true;
                 },
-
+                closeNewOrderModal() {
+                    this.showNewOrderModal = false;
+                },
                 addOrderLine() {
                     this.newOrder.lines.push({
                         product: '',
@@ -968,290 +912,277 @@
                         total: 0
                     });
                 },
-
                 removeOrderLine(index) {
                     this.newOrder.lines.splice(index, 1);
                 },
-
                 updateLineTotal(index) {
                     const line = this.newOrder.lines[index];
-                    line.total = (line.quantity || 0) * (line.price || 0);
+                    line.total = line.quantity * line.price;
                 },
-
                 editOrderLineInModal(index) {
-                    this.editingLineIndex = index;
-                    const line = this.newOrder.lines[index];
                     this.editingLine = {
-                        ...line
+                        ...this.newOrder.lines[index]
                     };
+                    this.editingLineIndex = index;
                     this.showEditLineModal = true;
                 },
-
                 closeEditLineModal() {
                     this.showEditLineModal = false;
-                    this.editingLineIndex = -1;
+                    this.editingLine = null;
+                    this.editingLineIndex = null;
                 },
-
                 saveEditLine() {
-                    if (this.editingLineIndex >= 0) {
-                        const line = this.editingLine;
-                        line.total = line.quantity * line.price;
+                    if (this.editingLineIndex !== null) {
                         this.newOrder.lines[this.editingLineIndex] = {
-                            ...line
+                            ...this.editingLine
                         };
+                        this.updateLineTotal(this.editingLineIndex);
                         this.closeEditLineModal();
                     }
                 },
-
-                startDetailLineEdit(index) {
-                    this.editingDetailLineIndex = index;
-                    const line = this.selectedOrder.lines[index];
-                    this.editingDetailLine = {
-                        product: line.product,
-                        quantity: line.quantity,
-                        price: line.price
-                    };
-                },
-
-                async saveDetailLineEdit(index) {
-                    if (this.editingDetailLineIndex === index) {
-                        const line = this.selectedOrder.lines[index];
-                        const updatedData = {
-                            product: this.editingDetailLine.product,
-                            quantity: this.editingDetailLine.quantity,
-                            price: this.editingDetailLine.price
+                async addNewOrder() {
+                    try {
+                        const orderData = {
+                            seller: this.newOrder.supplier,
+                            total: this.orderTotal,
+                            status: this.newOrder.status,
+                            lines: this.newOrder.lines
                         };
 
-                        // If the line has an ID, it's an existing product - update it
-                        if (line.id) {
-                            try {
-                                const response = await axios.put(`http://127.0.0.1/tossin/api/index.php?action=updateProduct&id=${line.id}`, updatedData);
+                        const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=newOrder', orderData);
 
-                                if (response.data.success) {
-                                    // Update the line in selectedOrder
-                                    line.product = this.editingDetailLine.product;
-                                    line.quantity = this.editingDetailLine.quantity;
-                                    line.price = this.editingDetailLine.price;
-                                    line.total = this.editingDetailLine.quantity * this.editingDetailLine.price;
-
-                                    // Update the line in the main orders array
-                                    const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
-                                    if (orderIndex >= 0) {
-                                        this.orders[orderIndex].lines[index] = {
-                                            ...line
-                                        };
-                                        // Update the order total
-                                        this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, l) => sum + l.total, 0);
-                                        this.selectedOrder.total = this.orders[orderIndex].total;
-                                    }
-                                } else {
-                                    alert('Erreur lors de la mise à jour du produit');
-                                    return;
-                                }
-                            } catch (error) {
-                                console.error('Erreur lors de la mise à jour du produit:', error);
-                                alert('Erreur lors de la mise à jour du produit');
-                                return;
-                            }
+                        if (response.data.success) {
+                            alert('Commande créée avec succès!');
+                            this.closeNewOrderModal();
+                            await this.loadOrders();
                         } else {
-                            try {
-                                const newProductData = {
-                                    order_id: this.selectedOrder.id,
-                                    name: this.editingDetailLine.product,
-                                    quantity: this.editingDetailLine.quantity,
-                                    price: this.editingDetailLine.price
-                                };
-
-                                const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=newProduct', newProductData);
-
-                                if (response.data.success) {
-                                    // Update the line with the new ID from backend
-                                    line.id = response.data.product_id;
-                                    line.product = this.editingDetailLine.product;
-                                    line.quantity = this.editingDetailLine.quantity;
-                                    line.price = this.editingDetailLine.price;
-                                    line.total = this.editingDetailLine.quantity * this.editingDetailLine.price;
-
-                                    // Update the line in the main orders array
-                                    const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
-                                    if (orderIndex >= 0) {
-                                        this.orders[orderIndex].lines[index] = {
-                                            ...line
-                                        };
-                                        // Update the order total
-                                        this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, l) => sum + l.total, 0);
-                                        this.selectedOrder.total = this.orders[orderIndex].total;
-                                    }
-                                } else {
-                                    alert('Erreur lors de la création du produit');
-                                    return;
-                                }
-                            } catch (error) {
-                                console.error('Erreur lors de la création du produit:', error);
-                                alert('Erreur lors de la création du produit');
-                                return;
-                            }
+                            alert('Erreur lors de la création de la commande');
                         }
-
-                        this.cancelDetailLineEdit();
+                    } catch (error) {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors de la création de la commande');
                     }
                 },
-
-                async addNewOrder() {
-                    if (this.newOrder.lines.length === 0 || this.newOrder.lines.some(line => !line.product || line.quantity <= 0 || line.price <= 0)) {
-                        alert('Veuillez ajouter au moins une ligne de commande valide');
-                        return;
-                    }
-
-                    await this.createNewOrder();
-                },
-
                 showOrderDetails(order) {
                     this.selectedOrder = {
-                        ...order
+                        ...order,
+                        lines: [...order.lines]
                     };
-                    // Ensure lines are loaded correctly if they were not initially
-                    if (this.selectedOrder.lines.length === 0) {
-                        this.selectedOrder.lines = this.allProducts.filter(product => product.order_id === this.selectedOrder.id)
-                            .map(product => ({
-                                id: product.id,
-                                product: product.name,
-                                quantity: product.quantity,
-                                price: parseFloat(product.price),
-                                total: product.quantity * parseFloat(product.price)
-                            }));
-                    }
                     this.showOrderDetailsModal = true;
                 },
-
                 closeOrderDetailsModal() {
                     this.showOrderDetailsModal = false;
                     this.selectedOrder = null;
-                    this.cancelDetailLineEdit();
                 },
-
                 editOrderStatus(order) {
                     this.editingOrder = {
                         ...order
                     };
                     this.showEditStatusModal = true;
                 },
-
                 closeEditStatusModal() {
                     this.showEditStatusModal = false;
                     this.editingOrder = null;
                 },
+                async saveEditStatus() {
+                    try {
+                        const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=updateOrderStatus', {
+                            id: this.editingOrder.id,
+                            status: this.editingOrder.status
+                        });
 
-                saveEditStatus() {
-                    if (this.editingOrder) {
-                        const order = this.orders.find(o => o.id === this.editingOrder.id);
-                        if (order) {
-                            order.status = this.editingOrder.status;
-                        }
-                        this.closeEditStatusModal();
-                        if (this.selectedOrder && this.selectedOrder.id === this.editingOrder.id) {
-                            this.selectedOrder.status = this.editingOrder.status;
-                        }
-                    }
-                },
-
-                deleteOrder(orderId) {
-                    if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
-                        axios.delete(`http://127.0.0.1/tossin/api/index.php?action=deleteOrder&id=${orderId}`)
-                            .then(response => {
-                                if (response.data.success) {
-                                    this.orders = this.orders.filter(o => o.id !== orderId);
-                                    this.applyFilters();
-                                    alert('Commande supprimée avec succès !');
-                                } else {
-                                    alert('Erreur lors de la suppression de la commande');
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Erreur lors de la suppression de la commande:', error);
-                                alert('Erreur lors de la suppression de la commande');
-                            });
-                    }
-                },
-
-                async deleteProductLine(index) {
-                    if (confirm('Êtes-vous sûr de vouloir supprimer ce produit de la commande ?')) {
-                        const productId = this.selectedOrder.lines[index].id;
-
-                        if (productId) {
-                            // Delete from backend
-                            await this.deleteProductFromBackend(productId);
-
-                            // Update local data
-                            this.selectedOrder.lines.splice(index, 1);
-
-                            // Update the order in the main orders array
-                            const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
-                            if (orderIndex >= 0) {
-                                this.orders[orderIndex].lines.splice(index, 1);
-                                // Update the order total
-                                this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, line) => sum + line.total, 0);
-                                this.selectedOrder.total = this.orders[orderIndex].total;
+                        if (response.data.success) {
+                            const orderIndex = this.orders.findIndex(o => o.id === this.editingOrder.id);
+                            if (orderIndex !== -1) {
+                                this.orders[orderIndex].status = this.editingOrder.status;
                             }
+                            if (this.selectedOrder && this.selectedOrder.id === this.editingOrder.id) {
+                                this.selectedOrder.status = this.editingOrder.status;
+                            }
+                            this.applyFilters();
+                            this.closeEditStatusModal();
+                            alert('Statut modifié avec succès!');
                         } else {
-                            // For new lines without ID, just remove locally
-                            this.selectedOrder.lines.splice(index, 1);
-
-                            const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
-                            if (orderIndex >= 0) {
-                                this.orders[orderIndex].lines.splice(index, 1);
-                                this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, line) => sum + line.total, 0);
-                                this.selectedOrder.total = this.orders[orderIndex].total;
-                            }
+                            alert('Erreur lors de la modification du statut');
                         }
-
-                        // Cancel any ongoing edit
-                        this.cancelDetailLineEdit();
+                    } catch (error) {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors de la modification du statut');
                     }
                 },
-                cancelDetailLineEdit() {
-                    this.editingDetailLineIndex = -1;
-                    this.editingDetailLine = {
-                        product: '',
-                        quantity: 0,
-                        price: 0
-                    };
+                async deleteOrder(orderId) {
+                    if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
+                        try {
+                            const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=deleteOrder', {
+                                id: orderId
+                            });
+
+                            if (response.data.success) {
+                                await this.loadOrders();
+                                alert('Commande supprimée avec succès!');
+                            } else {
+                                alert('Erreur lors de la suppression de la commande');
+                                console.error('Erreur backend:', response.data.message || 'Réponse invalide');
+                            }
+                        } catch (error) {
+                            console.error('Erreur lors de la suppression de la commande:', error);
+                            alert('Erreur lors de la suppression de la commande');
+                        }
+                    }
                 },
 
                 addNewProductLine() {
-                    if (this.selectedOrder) {
-                        const newLine = {
-                            product: '',
-                            quantity: 1,
-                            price: 0,
-                            total: 0
-                        };
+                    this.newProductLine = {
+                        visible: true,
+                        product: '',
+                        quantity: 1,
+                        price: 0
+                    };
+                },
+                async validateNewLine() {
+                    if (!this.newProductLine.product || !this.newProductLine.quantity || !this.newProductLine.price) {
+                        alert('Veuillez remplir tous les champs');
+                        return;
+                    }
 
-                        // Only add to selectedOrder.lines, not to the main orders array yet
-                        this.selectedOrder.lines.push(newLine);
+                    try {
+                        const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=newProduct', {
+                            order_id: this.selectedOrder.id,
+                            name: this.newProductLine.product,
+                            quantity: this.newProductLine.quantity,
+                            price: this.newProductLine.price
+                        });
 
-                        // Start editing the new line immediately
-                        const newIndex = this.selectedOrder.lines.length - 1;
-                        this.startDetailLineEdit(newIndex);
+                        if (response.data.success) {
+                            const newLine = {
+                                id: response.data.product_id,
+                                product: this.newProductLine.product,
+                                quantity: this.newProductLine.quantity,
+                                price: this.newProductLine.price,
+                                editing: false,
+                                originalData: null
+                            };
+
+                            this.selectedOrder.lines.push(newLine);
+
+                            // Update the main orders array
+                            const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                            if (orderIndex !== -1) {
+                                this.orders[orderIndex].lines.push(newLine);
+                                this.orders[orderIndex].total = this.selectedOrderTotal;
+                            }
+
+                            this.cancelNewLine();
+                            alert('Produit ajouté avec succès!');
+                        } else {
+                            alert('Erreur lors de l\'ajout du produit');
+                        }
+                    } catch (error) {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors de l\'ajout du produit');
                     }
                 },
+                cancelNewLine() {
+                    this.newProductLine = {
+                        visible: false,
+                        product: '',
+                        quantity: 1,
+                        price: 0
+                    };
+                },
+                editProductLine(index) {
+                    const line = this.selectedOrder.lines[index];
+                    line.originalData = {
+                        product: line.product,
+                        quantity: line.quantity,
+                        price: line.price
+                    };
+                    line.editing = true;
+                },
+                async validateProductEdit(index) {
+                    const line = this.selectedOrder.lines[index];
 
+                    try {
+                        const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=updateProduct', {
+                            id: line.id,
+                            name: line.product,
+                            quantity: line.quantity,
+                            price: line.price
+                        });
+
+                        if (response.data.success) {
+                            line.editing = false;
+                            line.originalData = null;
+
+                            // Update the main orders array
+                            const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                            if (orderIndex !== -1) {
+                                const productIndex = this.orders[orderIndex].lines.findIndex(l => l.id === line.id);
+                                if (productIndex !== -1) {
+                                    this.orders[orderIndex].lines[productIndex] = {
+                                        ...line
+                                    };
+                                    this.orders[orderIndex].total = this.selectedOrderTotal;
+                                }
+                            }
+
+                            alert('Produit modifié avec succès!');
+                        } else {
+                            alert('Erreur lors de la modification du produit');
+                        }
+                    } catch (error) {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors de la modification du produit');
+                    }
+                },
+                cancelProductEdit(index) {
+                    const line = this.selectedOrder.lines[index];
+                    if (line.originalData) {
+                        line.product = line.originalData.product;
+                        line.quantity = line.originalData.quantity;
+                        line.price = line.originalData.price;
+                        line.originalData = null;
+                    }
+                    line.editing = false;
+                },
+                async deleteProductLine(index) {
+                    if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
+                        const line = this.selectedOrder.lines[index];
+
+                        try {
+                            const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=deleteProduct', {
+                                id: line.id
+                            });
+
+                            if (response.data.success) {
+                                this.selectedOrder.lines.splice(index, 1);
+
+                                // Update the main orders array
+                                const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                                if (orderIndex !== -1) {
+                                    const productIndex = this.orders[orderIndex].lines.findIndex(l => l.id === line.id);
+                                    if (productIndex !== -1) {
+                                        this.orders[orderIndex].lines.splice(productIndex, 1);
+                                        this.orders[orderIndex].total = this.selectedOrderTotal;
+                                    }
+                                }
+
+                                alert('Produit supprimé avec succès!');
+                            } else {
+                                alert('Erreur lors de la suppression du produit');
+                            }
+                        } catch (error) {
+                            console.error('Erreur:', error);
+                            alert('Erreur lors de la suppression du produit');
+                        }
+                    }
+                },
                 printOrderDetails() {
-                    // Cancel any ongoing edit before printing
-                    this.cancelDetailLineEdit();
-
-                    // Small delay to ensure the edit is cancelled
-                    setTimeout(() => {
-                        window.print();
-                    }, 100);
-                },
-
-                logout() {
-                    if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
-                        localStorage.removeItem('tossin_user');
-                        window.location.href = 'login.html';
-                    }
+                    window.print();
                 }
+            },
+            mounted() {
+                this.loadOrders();
             }
         }).mount('#app');
     </script>

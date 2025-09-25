@@ -1,9 +1,14 @@
 <?php
-
+if (!isset($_SESSION['user_id'])) {
+    // Redirection vers la page de login
+    header('Location: login.php');
+    exit;
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,8 +29,9 @@
         }
     </script>
 </head>
+
 <body class="bg-gray-50 min-h-screen">
-   <?php include 'sidebar.php'; ?>
+    <?php include 'sidebar.php'; ?>
 
     <div class="lg:ml-64 min-h-screen">
         <header class="bg-white shadow-sm border-b">
@@ -147,11 +153,12 @@
         document.addEventListener('click', function(e) {
             const sidebar = document.getElementById('sidebar');
             const menuButton = e.target.closest('button');
-            
+
             if (window.innerWidth < 1024 && !sidebar.contains(e.target) && !menuButton) {
                 sidebar.classList.add('-translate-x-full');
             }
         });
     </script>
 </body>
+
 </html>
