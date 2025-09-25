@@ -243,6 +243,147 @@ function newOrder()
     }
 }
 
+// supprimer un produit grâce à son id
+function deleteProduct()
+{
+    global $pdo;
+
+    // Récupérer l'ID envoyé (DELETE ne transmet pas de body avec Axios par défaut, donc utiliser query param ou raw input)
+    $data = json_decode(file_get_contents("php://input"), true);
+    $productId = $data['id'] ?? null;
+
+    if (!$productId) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'ID du produit manquant'
+        ]);
+        return;
+    }
+
+    try {
+        // Démarrer transaction
+        $pdo->beginTransaction();
+
+        // Récupérer l'order_id du produit avant suppression
+        $stmt = $pdo->prepare("SELECT order_id FROM products WHERE id = :id");
+        $stmt->execute([':id' => $productId]);
+        $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$order) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Produit introuvable'
+            ]);
+            return;
+        }
+
+        $orderId = $order['order_id'];
+
+        // Supprimer le produit
+        $stmt = $pdo->prepare("DELETE FROM products WHERE id = :id");
+        $stmt->execute([':id' => $productId]);
+
+        // Recalculer le total de la commande
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(price * quantity), 0) AS total
+            FROM products
+            WHERE order_id = :order_id
+        ");
+        $stmt->execute([':order_id' => $orderId]);
+        $newTotal = $stmt->fetchColumn();
+
+        // Mettre à jour le total dans orders
+        $stmt = $pdo->prepare("UPDATE orders SET total = :total WHERE id = :order_id");
+        $stmt->execute([
+            ':total'    => $newTotal,
+            ':order_id' => $orderId
+        ]);
+
+        // Commit
+        $pdo->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Produit supprimé et commande mise à jour',
+            'order_id' => $orderId,
+            'new_total' => $newTotal
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la suppression : ' . $e->getMessage()
+        ]);
+    }
+}
+
+//ajouter un nouveau produit
+function newProduct()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (!$data || empty($data['order_id']) || empty($data['name']) || !isset($data['quantity']) || !isset($data['price'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs obligatoires manquants : order_id, name, quantity, price'
+        ]);
+        return;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // Insérer le produit
+        $stmt = $pdo->prepare("
+            INSERT INTO products (date_of_insertion, order_id, name, quantity, price)
+            VALUES (NOW(), :order_id, :name, :quantity, :price)
+        ");
+        $stmt->execute([
+            ':order_id' => $data['order_id'],
+            ':name'     => $data['name'],
+            ':quantity' => $data['quantity'],
+            ':price'    => $data['price']
+        ]);
+
+        $productId = $pdo->lastInsertId();
+
+        // Recalculer le total de la commande
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(price * quantity), 0) AS total
+            FROM products
+            WHERE order_id = :order_id
+        ");
+        $stmt->execute([':order_id' => $data['order_id']]);
+        $newTotal = $stmt->fetchColumn();
+
+        // Mettre à jour la commande
+        $stmt = $pdo->prepare("UPDATE orders SET total = :total WHERE id = :order_id");
+        $stmt->execute([
+            ':total'    => $newTotal,
+            ':order_id' => $data['order_id']
+        ]);
+
+        $pdo->commit();
+
+        echo json_encode([
+            'success'    => true,
+            'message'    => 'Produit ajouté et commande mise à jour',
+            'product_id' => $productId,
+            'new_total'  => $newTotal
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de l\'ajout du produit : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+
 
 // Récupérer toutes les claims
 function getAllPayments()

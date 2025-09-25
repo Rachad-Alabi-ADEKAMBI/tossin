@@ -25,6 +25,14 @@ switch ($action) {
         newOrder();
         break;
 
+    case 'deleteProduct':
+        deleteProduct();
+        break;
+
+    case 'newProduct':
+        newProduct();
+        break;
+
     case 'newClaim':
         $data = json_decode(file_get_contents('php://input'), true);
         if ($data) {

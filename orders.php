@@ -75,6 +75,64 @@
             --tw-ring-color: #2563EB;
         }
 
+        /* Adding print styles to hide action elements during printing */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            body {
+                background: white !important;
+            }
+
+            .modal-content {
+                box-shadow: none !important;
+                border: 1px solid #000 !important;
+            }
+
+            .bg-gray-50,
+            .bg-blue-50,
+            .bg-green-50,
+            .bg-yellow-50,
+            .bg-purple-50 {
+                background: white !important;
+                border: 1px solid #ccc !important;
+            }
+
+            /* Adding horizontal table layout for print to save space */
+            .print-table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+
+            .print-table th,
+            .print-table td {
+                border: 1px solid #000 !important;
+                padding: 8px !important;
+                text-align: left !important;
+                font-size: 12px !important;
+            }
+
+            .print-table th {
+                background-color: #f0f0f0 !important;
+                font-weight: bold !important;
+            }
+
+            .print-header {
+                margin-bottom: 20px !important;
+            }
+
+            .print-summary {
+                margin-top: 20px !important;
+                border-top: 2px solid #000 !important;
+                padding-top: 10px !important;
+            }
+        }
+
         @media (max-width: 768px) {
             .responsive-table {
                 display: block;
@@ -465,18 +523,24 @@
             <!-- Modal Détails Commande -->
             <div v-if="showOrderDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
                 <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto modal-content">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-eye mr-2"></i>Détails de la commande
                             </h3>
-                            <button @click="closeOrderDetailsModal" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
+                            <div class="flex space-x-2">
+                                <!-- Adding print button -->
+                                <button @click="printOrderDetails" class="no-print bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                    <i class="fas fa-print mr-1"></i>Imprimer
+                                </button>
+                                <button @click="closeOrderDetailsModal" class="no-print text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div v-if="selectedOrder">
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 print-header">
                                 <div class="bg-blue-50 p-4 rounded-lg">
                                     <p class="text-sm font-medium text-gray-700">N° Commande</p>
                                     <p class="text-lg font-semibold text-blue-600">{{ selectedOrder.number }}</p>
@@ -502,8 +566,8 @@
                                     <h4 class="text-lg font-medium text-gray-900">
                                         <i class="fas fa-list mr-2"></i>Lignes de commande
                                     </h4>
-                                    <div class="flex space-x-2">
-                                        <!-- Added button to add new product line in order details -->
+                                    <!-- Adding no-print class to hide action buttons during printing -->
+                                    <div class="flex space-x-2 no-print">
                                         <button @click="addNewProductLine" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
                                             <i class="fas fa-plus mr-1"></i>Ajouter ligne
                                         </button>
@@ -513,61 +577,58 @@
                                     </div>
                                 </div>
                                 <div class="overflow-x-auto">
-                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg responsive-table">
+                                    <!-- Adding print-table class for better print formatting -->
+                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg responsive-table print-table">
                                         <thead class="bg-gray-50">
                                             <tr>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix unitaire</th>
                                                 <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                                                <!-- Adding Actions column for inline editing -->
-                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                                <!-- Adding no-print class to hide Actions column during printing -->
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase no-print">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody class="divide-y divide-gray-200">
                                             <tr v-for="(line, index) in selectedOrder.lines" :key="index" class="hover:bg-gray-50">
-                                                <!-- Adding inline editing for product name -->
                                                 <td class="px-4 py-3 text-sm font-medium text-gray-900" data-label="Produit">
                                                     <input v-if="editingDetailLineIndex === index"
                                                         v-model="editingDetailLine.product"
                                                         type="text"
-                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent no-print"
                                                         @keyup.enter="saveDetailLineEdit(index)"
                                                         @keyup.escape="cancelDetailLineEdit()">
                                                     <span v-else>{{ line.product }}</span>
                                                 </td>
-                                                <!-- Adding inline editing for quantity -->
                                                 <td class="px-4 py-3 text-sm text-gray-600" data-label="Quantité">
                                                     <input v-if="editingDetailLineIndex === index"
                                                         v-model.number="editingDetailLine.quantity"
                                                         type="number"
                                                         min="1"
-                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent no-print"
                                                         @keyup.enter="saveDetailLineEdit(index)"
                                                         @keyup.escape="cancelDetailLineEdit()">
                                                     <span v-else>{{ line.quantity }}</span>
                                                 </td>
-                                                <!-- Adding inline editing for price -->
                                                 <td class="px-4 py-3 text-sm text-gray-600" data-label="Prix unitaire">
                                                     <input v-if="editingDetailLineIndex === index"
                                                         v-model.number="editingDetailLine.price"
                                                         type="number"
                                                         min="0"
                                                         step="100"
-                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                        class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-primary focus:border-transparent no-print"
                                                         @keyup.enter="saveDetailLineEdit(index)"
                                                         @keyup.escape="cancelDetailLineEdit()">
                                                     <span v-else>{{ formatCurrency(line.price) }}</span>
                                                 </td>
                                                 <td class="px-4 py-3 text-sm font-medium text-gray-900" data-label="Total">
-                                                    <!-- Show calculated total during editing -->
                                                     <span v-if="editingDetailLineIndex === index">
                                                         {{ formatCurrency(editingDetailLine.quantity * editingDetailLine.price) }}
                                                     </span>
                                                     <span v-else>{{ formatCurrency(line.total) }}</span>
                                                 </td>
-                                                <!-- Adding edit and validate buttons -->
-                                                <td class="px-4 py-3 text-sm font-medium" data-label="Actions">
+                                                <!-- Adding no-print class to hide action buttons during printing -->
+                                                <td class="px-4 py-3 text-sm font-medium no-print" data-label="Actions">
                                                     <div v-if="editingDetailLineIndex === index" class="flex space-x-2">
                                                         <button @click="saveDetailLineEdit(index)"
                                                             class="text-green-600 hover:text-green-800"
@@ -586,7 +647,6 @@
                                                             title="Modifier">
                                                             <i class="fas fa-pen"></i>
                                                         </button>
-                                                        <!-- Adding delete button for product lines -->
                                                         <button @click="deleteProductLine(index)"
                                                             class="text-red-600 hover:text-red-800"
                                                             title="Supprimer le produit">
@@ -598,10 +658,10 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                                <!-- Adding print-summary class for better print formatting -->
+                                <div class="mt-6 p-4 bg-gray-50 rounded-lg print-summary">
                                     <div class="flex justify-between items-center">
                                         <span class="text-lg font-semibold text-gray-900">Total de la commande:</span>
-                                        <!-- Using computed total that updates automatically -->
                                         <span class="text-2xl font-bold text-primary">{{ formatCurrency(selectedOrderTotal) }}</span>
                                     </div>
                                 </div>
@@ -812,7 +872,7 @@
 
                 async deleteProductFromBackend(productId) {
                     try {
-                        const response = await axios.delete(` `);
+                        const response = await axios.delete(`http://127.0.0.1/tossin/api/index.php?action=deleteProduct&id=${productId}`);
 
                         if (response.data.success) {
                             // Reload data to reflect changes
@@ -953,37 +1013,88 @@
                     };
                 },
 
-                saveDetailLineEdit(index) {
+                async saveDetailLineEdit(index) {
                     if (this.editingDetailLineIndex === index) {
-                        // Update the line in selectedOrder
                         const line = this.selectedOrder.lines[index];
-                        line.product = this.editingDetailLine.product;
-                        line.quantity = this.editingDetailLine.quantity;
-                        line.price = this.editingDetailLine.price;
-                        line.total = this.editingDetailLine.quantity * this.editingDetailLine.price;
+                        const updatedData = {
+                            product: this.editingDetailLine.product,
+                            quantity: this.editingDetailLine.quantity,
+                            price: this.editingDetailLine.price
+                        };
 
-                        // Update the line in the main orders array
-                        const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
-                        if (orderIndex >= 0) {
-                            this.orders[orderIndex].lines[index] = {
-                                ...line
-                            };
-                            // Update the order total
-                            this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, l) => sum + l.total, 0);
-                            this.selectedOrder.total = this.orders[orderIndex].total;
+                        // If the line has an ID, it's an existing product - update it
+                        if (line.id) {
+                            try {
+                                const response = await axios.put(`http://127.0.0.1/tossin/api/index.php?action=updateProduct&id=${line.id}`, updatedData);
+
+                                if (response.data.success) {
+                                    // Update the line in selectedOrder
+                                    line.product = this.editingDetailLine.product;
+                                    line.quantity = this.editingDetailLine.quantity;
+                                    line.price = this.editingDetailLine.price;
+                                    line.total = this.editingDetailLine.quantity * this.editingDetailLine.price;
+
+                                    // Update the line in the main orders array
+                                    const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                                    if (orderIndex >= 0) {
+                                        this.orders[orderIndex].lines[index] = {
+                                            ...line
+                                        };
+                                        // Update the order total
+                                        this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, l) => sum + l.total, 0);
+                                        this.selectedOrder.total = this.orders[orderIndex].total;
+                                    }
+                                } else {
+                                    alert('Erreur lors de la mise à jour du produit');
+                                    return;
+                                }
+                            } catch (error) {
+                                console.error('Erreur lors de la mise à jour du produit:', error);
+                                alert('Erreur lors de la mise à jour du produit');
+                                return;
+                            }
+                        } else {
+                            try {
+                                const newProductData = {
+                                    order_id: this.selectedOrder.id,
+                                    name: this.editingDetailLine.product,
+                                    quantity: this.editingDetailLine.quantity,
+                                    price: this.editingDetailLine.price
+                                };
+
+                                const response = await axios.post('http://127.0.0.1/tossin/api/index.php?action=newProduct', newProductData);
+
+                                if (response.data.success) {
+                                    // Update the line with the new ID from backend
+                                    line.id = response.data.product_id;
+                                    line.product = this.editingDetailLine.product;
+                                    line.quantity = this.editingDetailLine.quantity;
+                                    line.price = this.editingDetailLine.price;
+                                    line.total = this.editingDetailLine.quantity * this.editingDetailLine.price;
+
+                                    // Update the line in the main orders array
+                                    const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                                    if (orderIndex >= 0) {
+                                        this.orders[orderIndex].lines[index] = {
+                                            ...line
+                                        };
+                                        // Update the order total
+                                        this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, l) => sum + l.total, 0);
+                                        this.selectedOrder.total = this.orders[orderIndex].total;
+                                    }
+                                } else {
+                                    alert('Erreur lors de la création du produit');
+                                    return;
+                                }
+                            } catch (error) {
+                                console.error('Erreur lors de la création du produit:', error);
+                                alert('Erreur lors de la création du produit');
+                                return;
+                            }
                         }
 
                         this.cancelDetailLineEdit();
                     }
-                },
-
-                cancelDetailLineEdit() {
-                    this.editingDetailLineIndex = -1;
-                    this.editingDetailLine = {
-                        product: '',
-                        quantity: 0,
-                        price: 0
-                    };
                 },
 
                 async addNewOrder() {
@@ -1078,7 +1189,7 @@
                             const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
                             if (orderIndex >= 0) {
                                 this.orders[orderIndex].lines.splice(index, 1);
-                                // Update the order total automatically
+                                // Update the order total
                                 this.orders[orderIndex].total = this.orders[orderIndex].lines.reduce((sum, line) => sum + line.total, 0);
                                 this.selectedOrder.total = this.orders[orderIndex].total;
                             }
@@ -1098,30 +1209,41 @@
                         this.cancelDetailLineEdit();
                     }
                 },
+                cancelDetailLineEdit() {
+                    this.editingDetailLineIndex = -1;
+                    this.editingDetailLine = {
+                        product: '',
+                        quantity: 0,
+                        price: 0
+                    };
+                },
 
                 addNewProductLine() {
                     if (this.selectedOrder) {
                         const newLine = {
-                            product: 'Nouveau produit',
+                            product: '',
                             quantity: 1,
                             price: 0,
                             total: 0
                         };
 
+                        // Only add to selectedOrder.lines, not to the main orders array yet
                         this.selectedOrder.lines.push(newLine);
-
-                        // Update the order in the main orders array
-                        const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
-                        if (orderIndex >= 0) {
-                            this.orders[orderIndex].lines.push({
-                                ...newLine
-                            });
-                        }
 
                         // Start editing the new line immediately
                         const newIndex = this.selectedOrder.lines.length - 1;
                         this.startDetailLineEdit(newIndex);
                     }
+                },
+
+                printOrderDetails() {
+                    // Cancel any ongoing edit before printing
+                    this.cancelDetailLineEdit();
+
+                    // Small delay to ensure the edit is cancelled
+                    setTimeout(() => {
+                        window.print();
+                    }, 100);
                 },
 
                 logout() {
