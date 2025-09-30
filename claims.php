@@ -181,6 +181,93 @@ if (!isset($_SESSION['user_id'])) {
                 background-color: #f9f9f9;
             }
         }
+
+        /* Added responsive table styles for payment history */
+        .responsive-table {
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 768px) {
+            .responsive-table thead {
+                display: none;
+            }
+
+            .responsive-table tbody,
+            .responsive-table tr,
+            .responsive-table td {
+                display: block;
+            }
+
+            .responsive-table tr {
+                border: 1px solid #e5e7eb;
+                margin-bottom: 1rem;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                background: white;
+            }
+
+            .responsive-table td {
+                border: none;
+                padding: 0.5rem 0;
+                position: relative;
+                padding-left: 50%;
+            }
+
+            .responsive-table td:before {
+                content: attr(data-label);
+                position: absolute;
+                left: 0;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: 600;
+                color: #374151;
+            }
+
+            table,
+            thead,
+            tbody,
+            th,
+            td,
+            tr {
+                display: block;
+            }
+
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+
+            tr {
+                border: 1px solid #ccc;
+                margin-bottom: 10px;
+                padding: 10px;
+                border-radius: 8px;
+                background: white;
+            }
+
+            td {
+                border: none;
+                position: relative;
+                padding-left: 50% !important;
+                padding-top: 10px;
+                padding-bottom: 10px;
+            }
+
+            td:before {
+                content: attr(data-label) ": ";
+                position: absolute;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: bold;
+                color: #374151;
+            }
+        }
     </style>
 </head>
 
@@ -285,8 +372,8 @@ if (!isset($_SESSION['user_id'])) {
                                             {{ formatCurrency(claim.amount) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Montant restant'">
-                                            <span :class="claim.remaining_amount > 0 ? 'text-red-600' : 'text-green-600'">
-                                                {{ formatCurrency(claim.remaining_amount) }}
+                                            <span :class="getRemainingAmount(claim.id) > 0 ? 'text-red-600' : 'text-green-600'">
+                                                {{ formatCurrency(getRemainingAmount(claim.id)) }}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Statut'">
@@ -299,9 +386,7 @@ if (!isset($_SESSION['user_id'])) {
                                             <button @click="showPaymentHistory(claim)" class="text-primary hover:text-secondary mr-3" title="Historique">
                                                 <i class="fas fa-history"></i>
                                             </button>
-                                            <button @click="openNewPaymentModal(claim)" class="text-green-600 hover:text-green-800 mr-3" title="Nouveau paiement">
-                                                <i class="fas fa-plus-circle"></i>
-                                            </button>
+                                            <!-- Removed the + icon for adding payments from the list -->
                                             <button @click="deleteClaim(claim.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -423,6 +508,7 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
             </div>
 
+            <!-- Updated payment history modal with responsive table and new payment button -->
             <div v-if="showPaymentHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
                 <div class="flex items-center justify-center min-h-screen p-4">
                     <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
@@ -451,17 +537,27 @@ if (!isset($_SESSION['user_id'])) {
                                     </div>
                                     <div class="bg-green-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant payé</p>
-                                        <p class="text-lg font-semibold text-green-600">{{ formatCurrency(selectedClaim.amount - selectedClaim.remaining_amount) }}</p>
+                                        <!-- Using computed totalPaid instead of backend calculation -->
+                                        <p class="text-lg font-semibold text-green-600">{{ formatCurrency(totalPaid) }}</p>
                                     </div>
                                     <div class="bg-red-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant restant</p>
-                                        <p class="text-lg font-semibold text-red-600">{{ formatCurrency(selectedClaim.remaining_amount) }}</p>
+                                        <!-- Using computed remainingBalance instead of backend calculation -->
+                                        <p class="text-lg font-semibold text-red-600">{{ formatCurrency(remainingBalance) }}</p>
                                     </div>
                                 </div>
                             </div>
 
+                            <!-- Added new payment button inside the modal -->
+                            <div class="mb-4">
+                                <button @click="openNewPaymentModal" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-plus mr-2"></i>Nouveau paiement
+                                </button>
+                            </div>
+
                             <div class="overflow-x-auto">
-                                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                                <!-- Added responsive-table class and data-label attributes -->
+                                <table class="min-w-full bg-white border border-gray-200 rounded-lg responsive-table">
                                     <thead class="bg-gray-50">
                                         <tr>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -469,11 +565,13 @@ if (!isset($_SESSION['user_id'])) {
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Moyen</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Justificatif</th>
+                                            <!-- Added Actions column for edit and delete -->
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200">
                                         <tr v-if="payments.length === 0">
-                                            <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                                            <td colspan="6" class="px-4 py-8 text-center text-gray-500">
                                                 <i class="fas fa-inbox text-4xl mb-2"></i>
                                                 <p>Aucun paiement enregistré</p>
                                             </td>
@@ -490,6 +588,15 @@ if (!isset($_SESSION['user_id'])) {
                                                     </a>
                                                 </div>
                                                 <p v-else>Aucun justificatif disponible</p>
+                                            </td>
+                                            <!-- Added edit and delete buttons -->
+                                            <td class="px-4 py-3 text-sm" data-label="Actions">
+                                                <button @click="editPayment(payment)" class="text-blue-600 hover:text-blue-800 mr-3" title="Modifier">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button @click="deletePayment(payment.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
 
@@ -572,6 +679,84 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
                 </div>
             </div>
+
+            <!-- Added edit payment modal -->
+            <div v-if="showEditPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-60">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-edit mr-2"></i>Modifier le Paiement
+                            </h3>
+                            <button @click="closeEditPaymentModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="saveEditPayment" class="space-y-4" enctype="multipart/form-data">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Montant (XOF)
+                                </label>
+                                <input v-model.number="editingPayment.amount" type="number" required min="0"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <p class="text-xs text-gray-500 mt-1">Solde restant (sans ce paiement): {{ formatCurrency(remainingBalance + parseFloat(editingPayment.originalAmount)) }}</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-calendar mr-1"></i>Date de paiement
+                                </label>
+                                <input v-model="editingPayment.date" type="date" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-credit-card mr-1"></i>Moyen de paiement
+                                </label>
+                                <select v-model="editingPayment.payment_method" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Especes">Espèces</option>
+                                    <option value="Mobile_money">Mobile Money</option>
+                                    <option value="Cheque">Chèque</option>
+                                    <option value="Virement">Virement bancaire</option>
+                                    <option value="Carte_bancaire">Carte bancaire</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-sticky-note mr-1"></i>Notes
+                                </label>
+                                <textarea v-model="editingPayment.notes" rows="2"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-image mr-1"></i>Photo (facultatif)
+                                </label>
+                                <div v-if="editingPayment.existingFile" class="mb-2">
+                                    <p class="text-xs text-gray-600 mb-1">Fichier actuel:</p>
+                                    <img :src="getImgUrl(editingPayment.existingFile)" alt="Justificatif actuel" class="w-20 h-20 object-cover rounded">
+                                </div>
+                                <input type="file" @change="handleEditFileUpload" accept="image/*" class="w-full">
+                                <p class="text-xs text-gray-500 mt-1">Laissez vide pour conserver le fichier actuel</p>
+                            </div>
+
+                            <div class="flex space-x-3 pt-4">
+                                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-save mr-2"></i>Sauvegarder
+                                </button>
+                                <button type="button" @click="closeEditPaymentModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Annuler
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -626,7 +811,9 @@ if (!isset($_SESSION['user_id'])) {
                         date: new Date().toISOString().split('T')[0],
                         method: '',
                         notes: ''
-                    }
+                    },
+                    showEditPaymentModal: false,
+                    editingPayment: null,
                 };
             },
 
@@ -650,14 +837,16 @@ if (!isset($_SESSION['user_id'])) {
                             claim.client_phone.toString().includes(this.searchTerm) ||
                             (claim.notes && claim.notes.toLowerCase().includes(this.searchTerm.toLowerCase()));
 
+                        const remainingAmount = this.getRemainingAmount(claim.id);
+
                         let matchesStatus = true;
                         if (this.statusFilter !== 'all') {
                             if (this.statusFilter === 'overdue') {
-                                matchesStatus = this.isOverdue(claim) && parseFloat(claim.remaining_amount) > 0;
+                                matchesStatus = this.isOverdue(claim) && remainingAmount > 0;
                             } else if (this.statusFilter === 'paid') {
-                                matchesStatus = parseFloat(claim.remaining_amount) === 0;
+                                matchesStatus = remainingAmount === 0;
                             } else if (this.statusFilter === 'pending') {
-                                matchesStatus = parseFloat(claim.remaining_amount) > 0 && !this.isOverdue(claim);
+                                matchesStatus = remainingAmount > 0 && !this.isOverdue(claim);
                             }
                         }
 
@@ -675,8 +864,8 @@ if (!isset($_SESSION['user_id'])) {
                             case 'due_date':
                                 return new Date(a.due_date) - new Date(b.due_date);
                             case 'overdue':
-                                const aOverdue = this.isOverdue(a) && parseFloat(a.remaining_amount) > 0;
-                                const bOverdue = this.isOverdue(b) && parseFloat(b.remaining_amount) > 0;
+                                const aOverdue = this.isOverdue(a) && this.getRemainingAmount(a.id) > 0;
+                                const bOverdue = this.isOverdue(b) && this.getRemainingAmount(b.id) > 0;
                                 return bOverdue - aOverdue;
                             default:
                                 return 0;
@@ -717,6 +906,14 @@ if (!isset($_SESSION['user_id'])) {
                         }
                     }
                     return pages;
+                },
+
+                totalPaid() {
+                    return this.payments.reduce((total, payment) => total + parseFloat(payment.amount), 0);
+                },
+                remainingBalance() {
+                    if (!this.selectedClaim) return 0;
+                    return parseFloat(this.selectedClaim.amount) - this.totalPaid;
                 }
             },
 
@@ -743,8 +940,22 @@ if (!isset($_SESSION['user_id'])) {
                     return new Intl.NumberFormat('fr-FR').format(amount) + ' XOF';
                 },
 
+                getRemainingAmount(claimId) {
+                    const claim = this.claims.find(c => c.id === claimId);
+                    if (!claim) return 0;
+
+                    // Sum all payments for this claim
+                    const totalPaid = this.payments
+                        .filter(p => p.claim_id === claimId)
+                        .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+                    return parseFloat(claim.amount) - totalPaid;
+                },
+
                 getStatusInfo(claim) {
-                    if (parseFloat(claim.remaining_amount) === 0) {
+                    const remainingAmount = this.getRemainingAmount(claim.id);
+
+                    if (remainingAmount === 0) {
                         return {
                             label: 'Soldé',
                             class: 'text-green-800 bg-green-100 border border-green-200'
@@ -763,7 +974,7 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 isOverdue(claim) {
-                    return new Date(claim.due_date) < new Date() && parseFloat(claim.remaining_amount) > 0;
+                    return new Date(claim.due_date) < new Date() && this.getRemainingAmount(claim.id) > 0;
                 },
 
                 toggleSidebar() {
@@ -796,8 +1007,8 @@ if (!isset($_SESSION['user_id'])) {
 
                     this.filteredClaims.forEach(claim => {
                         totalInitial += parseFloat(claim.amount);
-                        totalRemaining += parseFloat(claim.remaining_amount);
-                        totalPaid += parseFloat(claim.amount) - parseFloat(claim.remaining_amount);
+                        totalRemaining += this.getRemainingAmount(claim.id);
+                        totalPaid += parseFloat(claim.amount) - this.getRemainingAmount(claim.id);
                     });
 
                     let printContent = `
@@ -857,7 +1068,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <td>${this.formatDate(claim.date_of_claim)}</td>
                                 <td class="${this.isOverdue(claim) ? 'overdue' : ''}">${this.formatDate(claim.due_date)}</td>
                                 <td>${this.formatCurrency(claim.amount)}</td>
-                                <td class="${parseFloat(claim.remaining_amount) > 0 ? 'overdue' : 'paid'}">${this.formatCurrency(claim.remaining_amount)}</td>
+                                <td class="${this.getRemainingAmount(claim.id) > 0 ? 'overdue' : 'paid'}">${this.formatCurrency(this.getRemainingAmount(claim.id))}</td>
                                 <td class="${statusClass}">${statusInfo.label}</td>
                             </tr>`;
                     });
@@ -879,7 +1090,8 @@ if (!isset($_SESSION['user_id'])) {
                     const printWindow = window.open('', '_blank');
                     const currentDate = new Date().toLocaleDateString('fr-FR');
 
-                    const totalPaid = parseFloat(this.selectedClaim.amount) - parseFloat(this.selectedClaim.remaining_amount);
+                    // Use computed remainingBalance for accuracy
+                    const totalPaid = this.selectedClaim.amount - this.remainingBalance;
 
                     let printContent = `
                         <!DOCTYPE html>
@@ -915,7 +1127,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <h3>Résumé financier:</h3>
                                 <p><strong>Montant initial:</strong> ${this.formatCurrency(this.selectedClaim.amount)}</p>
                                 <p><strong>Montant payé:</strong> ${this.formatCurrency(totalPaid)}</p>
-                                <p><strong>Montant restant:</strong> ${this.formatCurrency(this.selectedClaim.remaining_amount)}</p>
+                                <p><strong>Montant restant:</strong> ${this.formatCurrency(this.remainingBalance)}</p>
                             </div>
                             
                             <table>
@@ -1039,7 +1251,9 @@ if (!isset($_SESSION['user_id'])) {
                             // Filtrage des paiements correspondant à la créance sélectionnée
                             this.payments = response.data.filter(payment => payment.claim_id === claim.id);
 
-                            console.log('Paiements filtrés :', this.payments);
+                            console.log('[v0] Paiements filtrés :', this.payments);
+                            console.log('[v0] Total payé calculé:', this.totalPaid);
+                            console.log('[v0] Montant restant calculé:', this.remainingBalance);
                         })
                         .catch(error => {
                             console.error('Erreur lors de la récupération des paiements :', error.response?.data || error.message);
@@ -1055,19 +1269,17 @@ if (!isset($_SESSION['user_id'])) {
                     this.selectedClient = null;
                 },
 
-                openNewPaymentModal(claim) {
-                    this.selectedClaim = claim;
+                openNewPaymentModal() {
                     this.showNewPaymentModal = true;
                     this.newPayment.date = new Date().toISOString().split('T')[0];
                 },
 
                 closeNewPaymentModal() {
                     this.showNewPaymentModal = false;
-                    this.selectedClient = null;
                     this.newPayment = {
                         amount: 0,
                         date: new Date().toISOString().split('T')[0],
-                        method: '',
+                        payment_method: '',
                         notes: '',
                         file: null
                     };
@@ -1078,7 +1290,7 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 addNewPayment() {
-                    if (this.newPayment.amount > this.selectedClaim.remaining_amount) {
+                    if (this.newPayment.amount > this.remainingBalance) {
                         alert('Le montant du paiement ne peut pas dépasser le montant restant');
                         return;
                     }
@@ -1122,11 +1334,100 @@ if (!isset($_SESSION['user_id'])) {
 
                             this.closeNewPaymentModal();
                             alert("Nouveau paiement ajouté avec succès !");
-                            this.fetchClaims(); // Ajout des parenthèses
+                            this.showPaymentHistory(this.selectedClaim);
                         })
                         .catch(error => {
                             console.error('Erreur lors de l’ajout du paiement :', error.response?.data || error.message);
                             alert('Une erreur est survenue lors de l’ajout du paiement : ' + (error.response?.data?.error || error.message));
+                        });
+                },
+
+                editPayment(payment) {
+                    this.editingPayment = {
+                        id: payment.id,
+                        amount: payment.amount,
+                        originalAmount: payment.amount,
+                        date: payment.date_of_insertion.split(' ')[0],
+                        payment_method: payment.payment_method,
+                        notes: payment.notes || '',
+                        existingFile: payment.file || '',
+                        file: null
+                    };
+                    this.showEditPaymentModal = true;
+                },
+
+                closeEditPaymentModal() {
+                    this.showEditPaymentModal = false;
+                    this.editingPayment = null;
+                },
+
+                handleEditFileUpload(event) {
+                    this.editingPayment.file = event.target.files[0] || null;
+                },
+
+                saveEditPayment() {
+                    const maxAllowed = this.remainingBalance + parseFloat(this.editingPayment.originalAmount);
+
+                    if (this.editingPayment.amount > maxAllowed) {
+                        alert(`Le montant du paiement ne peut pas dépasser ${this.formatCurrency(maxAllowed)}`);
+                        return;
+                    }
+
+                    if (this.editingPayment.amount <= 0) {
+                        alert('Le montant doit être supérieur à 0');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('id', this.editingPayment.id);
+                    formData.append('amount', this.editingPayment.amount);
+                    formData.append('date_of_insertion', this.editingPayment.date);
+                    formData.append('payment_method', this.editingPayment.payment_method);
+                    formData.append('notes', this.editingPayment.notes);
+
+                    if (this.editingPayment.file) {
+                        formData.append('file', this.editingPayment.file);
+                    }
+
+                    api.post('?action=updatePayment', formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        })
+                        .then(response => {
+                            if (response.data.success) {
+                                alert('Paiement modifié avec succès!');
+                                this.closeEditPaymentModal();
+                                this.showPaymentHistory(this.selectedClaim);
+                            } else {
+                                alert('Erreur lors de la modification du paiement: ' + (response.data.error || 'Erreur inconnue'));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la modification du paiement:', error);
+                            alert('Erreur lors de la modification du paiement: ' + error.message);
+                        });
+                },
+
+                deletePayment(paymentId) {
+                    if (!confirm('Êtes-vous sûr de vouloir supprimer ce paiement ?')) {
+                        return;
+                    }
+
+                    api.post('?action=deletePayment', {
+                            id: paymentId
+                        })
+                        .then(response => {
+                            if (response.data.success) {
+                                alert('Paiement supprimé avec succès!');
+                                this.showPaymentHistory(this.selectedClaim);
+                            } else {
+                                alert('Erreur lors de la suppression du paiement: ' + (response.data.error || 'Erreur inconnue'));
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la suppression du paiement:', error);
+                            alert('Erreur lors de la suppression du paiement: ' + error.message);
                         });
                 },
 

@@ -26,8 +26,8 @@ function addNewClaim($data)
 
     try {
         $sql = "INSERT INTO claims 
-            (client_name, client_phone, amount, remaining_amount, date_of_claim, due_date, notes, status)
-            VALUES (:client_name, :client_phone, :amount, :remaining_amount, :date_of_claim, :due_date, :notes, :status)";
+            (client_name, client_phone, amount date_of_claim, due_date, notes, status)
+            VALUES (:client_name, :client_phone, :amount, :date_of_claim, :due_date, :notes, :status)";
 
         $stmt = $pdo->prepare($sql);
 
@@ -46,7 +46,6 @@ function addNewClaim($data)
             ':client_name' => $client_name,
             ':client_phone' => $client_phone,
             ':amount' => $amount,
-            ':remaining_amount' => $remaining_amount,
             ':date_of_claim' => $date_of_claim,
             ':due_date' => $due_date,
             ':notes' => $notes,
@@ -59,7 +58,6 @@ function addNewClaim($data)
             'client_name' => $client_name,
             'client_phone' => $client_phone,
             'amount' => $amount,
-            'remaining_amount' => $remaining_amount,
             'date_of_claim' => $date_of_claim,
             'due_date' => $due_date,
             'notes' => $notes,
