@@ -10,6 +10,15 @@ function getAllClaims()
     echo json_encode($claims);
 }
 
+// Récupérer toutes les claims
+function getAllOrdersPayments()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM orders_payments ORDER BY id DESC");
+    $claims = $stmt->fetchAll();
+    echo json_encode($claims);
+}
+
 // Ajouter une nouvelle claim
 function addNewClaim($data)
 {
@@ -175,6 +184,77 @@ function newPayment($data, $file = null)
     }
 }
 
+function newOrderPayment()
+{
+    global $pdo;
+
+    // Récupérer les données envoyées
+    $data = $_POST ?? [];
+    $file = $_FILES['file'] ?? null;
+
+    // Vérification des champs obligatoires
+    if (empty($data['order_id']) || !isset($data['amount'])) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Aucune donnée reçue ou champs obligatoires manquants : order_id ou amount.'
+        ]);
+        return;
+    }
+
+    $amount = floatval($data['amount']);
+    $order_id = intval($data['order_id']);
+    $notes = $data['notes'] ?? '';
+    $date_of_insertion = $data['date_of_insertion'] ?? date('Y-m-d H:i:s');
+
+    // Gestion du fichier si fourni
+    $fileName = null;
+    if ($file && isset($file['error']) && $file['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = __DIR__ . '/uploads/order_payments/';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
+            echo json_encode(['success' => false, 'error' => 'Impossible de créer le dossier d\'upload.']);
+            return;
+        }
+        $fileName = time() . '_' . basename($file['name']);
+        if (!move_uploaded_file($file['tmp_name'], $uploadDir . $fileName)) {
+            echo json_encode(['success' => false, 'error' => 'Erreur lors de l\'upload du fichier.']);
+            return;
+        }
+    }
+
+    try {
+        $stmt = $pdo->prepare("INSERT INTO orders_payments 
+            (date_of_insertion, amount, order_id, notes, file) 
+            VALUES (:date_of_insertion, :amount, :order_id, :notes, :file)");
+
+        $stmt->execute([
+            ':date_of_insertion' => $date_of_insertion,
+            ':amount' => $amount,
+            ':order_id' => $order_id,
+            ':notes' => $notes,
+            ':file' => $fileName
+        ]);
+
+        $newPayment = [
+            'id' => $pdo->lastInsertId(),
+            'date_of_insertion' => $date_of_insertion,
+            'amount' => $amount,
+            'order_id' => $order_id,
+            'notes' => $notes,
+            'file' => $fileName
+        ];
+
+        echo json_encode(['success' => true, 'payment' => $newPayment]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erreur lors de l\'insertion du paiement : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+
+
 // ajouter une nouvelle commande
 function newOrder()
 {
@@ -242,6 +322,41 @@ function newOrder()
         ]);
     }
 }
+
+// Supprimer une créance
+function deleteClaim()
+{
+    global $pdo;
+
+    // Lire les données JSON envoyées par Axios
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (!$data || !isset($data['id'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'ID de la créance manquant'
+        ]);
+        return;
+    }
+
+    $claimId = $data['id'];
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM claims WHERE id = :id");
+        $stmt->execute([':id' => $claimId]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Créance supprimée avec succès'
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la suppression: ' . $e->getMessage()
+        ]);
+    }
+}
+
 
 // supprimer un produit grâce à son id
 function deleteProduct()
@@ -409,7 +524,7 @@ function updateProduct()
     global $pdo;
 
     $data = json_decode(file_get_contents("php://input"), true);
-    $productId = $_GET['id'] ?? null;
+    $productId = $data['id'] ?? null; // <-- corrige ici
 
     if (!$productId || empty($data['name']) || !isset($data['quantity']) || !isset($data['price'])) {
         echo json_encode([
@@ -484,6 +599,7 @@ function updateProduct()
         ]);
     }
 }
+
 
 
 //ajouter un nouveau produit
@@ -582,7 +698,6 @@ function getAllProducts()
 }
 
 // Connexion d'un utilisateur
-
 function login($data)
 {
     global $pdo;
@@ -626,8 +741,6 @@ function logout()
     session_unset();
     session_destroy();
 
-    echo json_encode([
-        'success' => true,
-        'redirect' => 'http://127.0.0.1/tossin/login.php'
-    ]);
+    header('Location: ../login.php');
+    exit; // Important pour arrêter le script après la redirection
 }

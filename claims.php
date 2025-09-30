@@ -1,4 +1,6 @@
 <?php
+session_start(); // <-- à mettre en tout premier
+
 if (!isset($_SESSION['user_id'])) {
     // Redirection vers la page de login
     header('Location: login.php');
@@ -578,6 +580,11 @@ if (!isset($_SESSION['user_id'])) {
             createApp
         } = Vue;
 
+        // Crée une instance Axios avec une baseURL
+        const api = axios.create({
+            baseURL: 'http://127.0.0.1/tossin/api/index.php'
+        });
+
         createApp({
             data() {
                 return {
@@ -715,7 +722,7 @@ if (!isset($_SESSION['user_id'])) {
 
             methods: {
                 fetchClaims() {
-                    axios.get('http://127.0.0.1/tossin/api/index.php?action=allClaims')
+                    api.get('?action=allClaims')
                         .then(response => {
                             // si l'API renvoie un tableau directement
                             this.claims = response.data;
@@ -979,7 +986,7 @@ if (!isset($_SESSION['user_id'])) {
                         status: 'pending'
                     };
 
-                    axios.post('http://127.0.0.1/tossin/api/index.php?action=newClaim', payload)
+                    api.post('?action=newClaim', payload)
                         .then(response => {
                             if (response.data.error) {
                                 // Si le backend renvoie une erreur
@@ -1021,7 +1028,7 @@ if (!isset($_SESSION['user_id'])) {
                     this.selectedClaim = claim;
 
                     // Filtrer les paiements déjà chargés par claim_id
-                    axios.get('http://127.0.0.1/tossin/api/index.php?action=allPayments')
+                    api.get('?action=allPayments')
                         .then(response => {
                             if (!response.data || !Array.isArray(response.data)) {
                                 console.error('Données de paiement invalides :', response.data);
@@ -1091,7 +1098,7 @@ if (!isset($_SESSION['user_id'])) {
                         formData.append('file', this.newPayment.file);
                     }
 
-                    axios.post('http://127.0.0.1/tossin/api/index.php?action=newPayment', formData, {
+                    api.post('?action=newPayment', formData, {
                             headers: {
                                 'Content-Type': 'multipart/form-data'
                             }
@@ -1125,10 +1132,30 @@ if (!isset($_SESSION['user_id'])) {
 
                 deleteClaim(claimId) {
                     if (confirm('Êtes-vous sûr de vouloir supprimer cette créance ?')) {
+                        // Suppression optimiste côté client
                         const index = this.claims.findIndex(c => c.id === claimId);
                         if (index !== -1) this.claims.splice(index, 1);
+
+                        // Requête API pour supprimer côté serveur
+                        api.post('?action=deleteClaim', {
+                                id: claimId
+                            })
+                            .then(response => {
+                                if (response.data.success) {
+                                    alert("Créance supprimée avec succès !");
+                                } else {
+                                    alert("Erreur lors de la suppression côté serveur : " + response.data.error);
+                                    this.fetchClaims(); // rollback si erreur
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Erreur axios deleteClaim:', error);
+                                alert("Impossible de supprimer la créance côté serveur.");
+                                this.fetchClaims(); // rollback
+                            });
                     }
                 },
+
 
                 logout() {
                     if (confirm('Êtes-vous sûr de vouloir vous déconnecter ?')) {
