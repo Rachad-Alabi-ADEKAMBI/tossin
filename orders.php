@@ -709,17 +709,21 @@
             </div>
 
             <!-- Modal Payment History -->
-            <div v-if="showPaymentHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50" style="z-index: 9998;">
-
-                <div class="flex items-center justify-center min-h-screen p-4">
+            <div v-if="showPaymentHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50" style="z-index: 9997;">
+                <div class="flex items-center justify-center min-h-screen p-4 overflow-auto">
                     <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-history mr-2"></i>Historique des Paiements
                             </h3>
-                            <button @click="closePaymentHistoryModal" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
+                            <div class="flex space-x-2">
+                                <button @click="printPaymentHistory" class="no-print bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                    <i class="fas fa-print mr-1"></i>Imprimer
+                                </button>
+                                <button @click="closePaymentHistoryModal" class="no-print text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
                         </div>
 
                         <div v-if="selectedOrder">
@@ -741,7 +745,7 @@
                                 </div>
                             </div>
 
-                            <div class="mb-4">
+                            <div class="mb-4 no-print">
                                 <button @click="openNewPaymentModal" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
                                     <i class="fas fa-plus mr-2"></i>Nouveau paiement
                                 </button>
@@ -755,26 +759,35 @@
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Justificatif</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase no-print">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-gray-200">
                                         <tr v-if="orderPayments.length === 0">
-                                            <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                                            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
                                                 <i class="fas fa-inbox text-4xl mb-2"></i>
                                                 <p>Aucun paiement enregistré</p>
                                             </td>
                                         </tr>
                                         <tr v-for="payment in orderPayments" :key="payment.id" class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 text-sm text-gray-900">{{ formatDate(payment.date_of_insertion) }}</td>
-                                            <td class="px-4 py-3 text-sm font-medium text-green-600">{{ formatCurrency(payment.amount, selectedOrder.currency) }}</td>
-                                            <td class="px-4 py-3 text-sm text-gray-600">{{ payment.notes || '-' }}</td>
-                                            <td class="px-4 py-3 text-sm text-gray-600">
+                                            <td class="px-4 py-3 text-sm text-gray-900" :data-label="'Date'">{{ formatDate(payment.date_of_insertion) }}</td>
+                                            <td class="px-4 py-3 text-sm font-medium text-green-600" :data-label="'Montant'">{{ formatCurrency(payment.amount, selectedOrder.currency) }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-600" :data-label="'Notes'">{{ payment.notes || '-' }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-600" :data-label="'Justificatif'">
                                                 <div v-if="payment.file && payment.file !== ''">
                                                     <a :href="getImgUrl(payment.file)" target="_blank">
-                                                        <img :src="getImgUrl(payment.file)" alt="Justificatif" style="width: 80px; height: 80px; object-fit: cover;">
+                                                        <img :src="getImgUrl(payment.file)" alt="Justificatif" class="w-20 h-20 object-cover rounded">
                                                     </a>
                                                 </div>
                                                 <p v-else>Aucun justificatif</p>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm no-print" :data-label="'Actions'">
+                                                <button @click="editPayment(payment)" class="text-blue-600 hover:text-blue-800 mr-3" title="Modifier">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button @click="deletePayment(payment.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -784,6 +797,7 @@
                     </div>
                 </div>
             </div>
+
 
             <!-- Modal New Payment -->
             <div v-if="showNewPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-60" style="z-index: 9999;">
@@ -843,6 +857,70 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Modal Edit Payment -->
+            <div v-if="showEditPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-70" style="z-index: 9998;">
+                <div class="fixed inset-0 bg-gray-600 bg-opacity-50 z-60 flex items-center justify-center p-4 overflow-auto">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-edit mr-2"></i>Modifier le Paiement
+                            </h3>
+                            <button @click="closeEditPaymentModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <form @submit.prevent="saveEditPayment" class="space-y-4" enctype="multipart/form-data">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Montant
+                                </label>
+                                <input v-model.number="editingPayment.amount" type="number" step="0.01" required min="0"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <p class="text-xs text-gray-500 mt-1">Solde restant (sans ce paiement): {{ formatCurrency(remainingBalance + parseFloat(editingPayment.originalAmount), selectedOrder.currency) }}</p>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-calendar mr-1"></i>Date de paiement
+                                </label>
+                                <input v-model="editingPayment.date" type="date" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-sticky-note mr-1"></i>Notes
+                                </label>
+                                <textarea v-model="editingPayment.notes" rows="2"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-image mr-1"></i>Photo (facultatif)
+                                </label>
+                                <div v-if="editingPayment.existingFile" class="mb-2">
+                                    <p class="text-xs text-gray-600 mb-1">Fichier actuel:</p>
+                                    <img :src="getImgUrl(editingPayment.existingFile)" alt="Justificatif actuel" class="w-20 h-20 object-cover rounded">
+                                </div>
+                                <input type="file" @change="handleEditFileUpload" accept="image/*" class="w-full">
+                                <p class="text-xs text-gray-500 mt-1">Laissez vide pour conserver le fichier actuel</p>
+                            </div>
+
+                            <div class="flex space-x-3 pt-4">
+                                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-save mr-2"></i>Sauvegarder
+                                </button>
+                                <button type="button" @click="closeEditPaymentModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Annuler
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -873,11 +951,13 @@
                     showOrderDetailsModal: false,
                     showPaymentHistoryModal: false,
                     showNewPaymentModal: false,
+                    showEditPaymentModal: false,
                     orderPayments: [],
                     selectedOrder: null,
                     editingOrder: null,
                     editingLine: null,
                     editingLineIndex: null,
+                    editingPayment: null,
                     newOrder: {
                         supplier: '',
                         date: '',
@@ -1461,7 +1541,223 @@
                 getImgUrl(fileName) {
                     if (!fileName || fileName === '') return '';
                     return `http://127.0.0.1/tossin/api/uploads/order_payments/${fileName}`;
+                },
+                editPayment(payment) {
+                    this.editingPayment = {
+                        id: payment.id,
+                        amount: payment.amount,
+                        originalAmount: payment.amount,
+                        date: payment.date_of_insertion.split(' ')[0], // Extract date only
+                        notes: payment.notes || '',
+                        existingFile: payment.file || '',
+                        file: null
+                    };
+                    this.showEditPaymentModal = true;
+                },
+                closeEditPaymentModal() {
+                    this.showEditPaymentModal = false;
+                    this.editingPayment = null;
+                },
+                handleEditFileUpload(event) {
+                    this.editingPayment.file = event.target.files[0] || null;
+                },
+                async saveEditPayment() {
+                    const maxAllowed = this.remainingBalance + parseFloat(this.editingPayment.originalAmount);
+
+                    if (this.editingPayment.amount > maxAllowed) {
+                        alert(`Le montant du paiement ne peut pas dépasser ${this.formatCurrency(maxAllowed, this.selectedOrder.currency)}`);
+                        return;
+                    }
+
+                    if (this.editingPayment.amount <= 0) {
+                        alert('Le montant doit être supérieur à 0');
+                        return;
+                    }
+
+                    const formData = new FormData();
+                    formData.append('id', this.editingPayment.id);
+                    formData.append('amount', this.editingPayment.amount);
+                    formData.append('date_of_insertion', this.editingPayment.date);
+                    formData.append('notes', this.editingPayment.notes);
+
+                    if (this.editingPayment.file) {
+                        formData.append('file', this.editingPayment.file);
+                    }
+
+                    try {
+                        const response = await api.post('?action=updateOrderPayment', formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
+                        });
+
+                        console.log('[v0] Edit payment response:', response.data);
+
+                        if (response.data.success) {
+                            alert('Paiement modifié avec succès!');
+                            this.closeEditPaymentModal();
+                            // Reload payment history
+                            await this.showPaymentHistory(this.selectedOrder);
+                        } else {
+                            alert('Erreur lors de la modification du paiement: ' + (response.data.error || 'Erreur inconnue'));
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors de la modification du paiement:', error);
+                        alert('Erreur lors de la modification du paiement: ' + error.message);
+                    }
+                },
+                async deletePayment(paymentId) {
+                    if (!confirm('Êtes-vous sûr de vouloir supprimer ce paiement ?')) {
+                        return;
+                    }
+
+                    try {
+                        const response = await api.post('?action=deleteOrderPayment', {
+                            id: paymentId
+                        });
+
+                        console.log('[v0] Delete payment response:', response.data);
+
+                        if (response.data.success) {
+                            alert('Paiement supprimé avec succès!');
+                            // Reload payment history
+                            await this.showPaymentHistory(this.selectedOrder);
+                        } else {
+                            alert('Erreur lors de la suppression du paiement: ' + (response.data.error || 'Erreur inconnue'));
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors de la suppression du paiement:', error);
+                        alert('Erreur lors de la suppression du paiement: ' + error.message);
+                    }
+                },
+                // CHANGE: Added printPaymentHistory method
+                printPaymentHistory() {
+                    const printWindow = window.open('', '_blank');
+
+                    const paymentsRows = this.orderPayments.map(payment => `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${this.formatDate(payment.date_of_insertion)}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; font-weight: bold; color: #059669;">${this.formatCurrency(payment.amount, this.selectedOrder.currency)}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${payment.notes || '-'}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${payment.file && payment.file !== '' ? 'Oui' : 'Non'}</td>
+                        </tr>
+                    `).join('');
+
+                    const htmlContent = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Historique des Paiements - ${this.selectedOrder.number}</title>
+                            <style>
+                                body {
+                                    font-family: Arial, sans-serif;
+                                    margin: 20px;
+                                }
+                                h1 {
+                                    color: #1f2937;
+                                    border-bottom: 2px solid #2563EB;
+                                    padding-bottom: 10px;
+                                }
+                                .info-section {
+                                    margin: 20px 0;
+                                    display: grid;
+                                    grid-template-columns: repeat(3, 1fr);
+                                    gap: 15px;
+                                }
+                                .info-box {
+                                    border: 1px solid #ddd;
+                                    padding: 15px;
+                                    border-radius: 8px;
+                                }
+                                .info-box .label {
+                                    font-size: 12px;
+                                    color: #6b7280;
+                                    margin-bottom: 5px;
+                                }
+                                .info-box .value {
+                                    font-size: 18px;
+                                    font-weight: bold;
+                                }
+                                .blue { color: #2563EB; }
+                                .green { color: #059669; }
+                                .red { color: #DC2626; }
+                                table {
+                                    width: 100%;
+                                    border-collapse: collapse;
+                                    margin-top: 20px;
+                                }
+                                th {
+                                    background-color: #f3f4f6;
+                                    border: 1px solid #ddd;
+                                    padding: 12px;
+                                    text-align: left;
+                                    font-weight: bold;
+                                    color: #374151;
+                                }
+                                td {
+                                    border: 1px solid #ddd;
+                                    padding: 8px;
+                                }
+                                tr:nth-child(even) {
+                                    background-color: #f9fafb;
+                                }
+                                .footer {
+                                    margin-top: 30px;
+                                    text-align: center;
+                                    font-size: 12px;
+                                    color: #6b7280;
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <h1>Historique des Paiements</h1>
+                            <h2>Commande ${this.selectedOrder.number}</h2>
+                            
+                            <div class="info-section">
+                                <div class="info-box">
+                                    <div class="label">Montant total</div>
+                                    <div class="value blue">${this.formatCurrency(this.selectedOrder.total, this.selectedOrder.currency)}</div>
+                                </div>
+                                <div class="info-box">
+                                    <div class="label">Montant payé</div>
+                                    <div class="value green">${this.formatCurrency(this.totalPaid, this.selectedOrder.currency)}</div>
+                                </div>
+                                <div class="info-box">
+                                    <div class="label">Solde restant</div>
+                                    <div class="value red">${this.formatCurrency(this.remainingBalance, this.selectedOrder.currency)}</div>
+                                </div>
+                            </div>
+
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Montant</th>
+                                        <th>Notes</th>
+                                        <th>Justificatif</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${paymentsRows}
+                                </tbody>
+                            </table>
+
+                            <div class="footer">
+                                <p>Document généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+                            </div>
+                        </body>
+                        </html>
+                    `;
+
+                    printWindow.document.write(htmlContent);
+                    printWindow.document.close();
+                    printWindow.focus();
+
+                    setTimeout(() => {
+                        printWindow.print();
+                    }, 250);
                 }
+
             },
             mounted() {
                 this.loadOrders();

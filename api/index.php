@@ -33,6 +33,14 @@ switch ($action) {
         newOrderPayment();
         break;
 
+    case 'deleteOrderPayment':
+        deleteOrderPayment();
+        break;
+
+    case 'updateOrderPayment':
+        updateOrderPayment();
+        break;
+
     case 'deleteProduct':
         deleteProduct();
         break;

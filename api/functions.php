@@ -184,6 +184,7 @@ function newPayment($data, $file = null)
     }
 }
 
+//ajouter un paiement pour commande
 function newOrderPayment()
 {
     global $pdo;
@@ -252,6 +253,149 @@ function newOrderPayment()
     }
 }
 
+// Modifier un paiement pour commande
+function updateOrderPayment()
+{
+    global $pdo;
+
+    // Récupérer les données envoyées
+    $data = $_POST ?? [];
+    $file = $_FILES['file'] ?? null;
+
+    // Vérification des champs obligatoires
+    if (empty($data['id']) || !isset($data['amount'])) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Aucune donnée reçue ou champs obligatoires manquants : id ou amount.'
+        ]);
+        return;
+    }
+
+    $payment_id = intval($data['id']);
+    $amount = floatval($data['amount']);
+    $notes = $data['notes'] ?? '';
+    $date_of_insertion = $data['date_of_insertion'] ?? date('Y-m-d H:i:s');
+
+    try {
+        // Vérifier si le paiement existe
+        $stmt = $pdo->prepare("SELECT * FROM orders_payments WHERE id = :id");
+        $stmt->execute([':id' => $payment_id]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$payment) {
+            echo json_encode(['success' => false, 'error' => 'Paiement introuvable.']);
+            return;
+        }
+
+        $fileName = $payment['file']; // garder le fichier actuel par défaut
+
+        // Gestion du nouveau fichier si fourni
+        if ($file && isset($file['error']) && $file['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/uploads/order_payments/';
+            if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true)) {
+                echo json_encode(['success' => false, 'error' => 'Impossible de créer le dossier d\'upload.']);
+                return;
+            }
+            $fileName = time() . '_' . basename($file['name']);
+            if (!move_uploaded_file($file['tmp_name'], $uploadDir . $fileName)) {
+                echo json_encode(['success' => false, 'error' => 'Erreur lors de l\'upload du fichier.']);
+                return;
+            }
+        }
+
+        // Mise à jour du paiement
+        $update = $pdo->prepare("UPDATE orders_payments SET 
+            amount = :amount,
+            date_of_insertion = :date_of_insertion,
+            notes = :notes,
+            file = :file
+            WHERE id = :id");
+
+        $update->execute([
+            ':amount' => $amount,
+            ':date_of_insertion' => $date_of_insertion,
+            ':notes' => $notes,
+            ':file' => $fileName,
+            ':id' => $payment_id
+        ]);
+
+        // Retour JSON
+        $updatedPayment = [
+            'id' => $payment_id,
+            'amount' => $amount,
+            'date_of_insertion' => $date_of_insertion,
+            'notes' => $notes,
+            'file' => $fileName
+        ];
+
+        echo json_encode(['success' => true, 'payment' => $updatedPayment]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erreur lors de la modification du paiement : ' . $e->getMessage()
+        ]);
+    }
+}
+
+// Supprimer un paiement pour une commande
+function deleteOrderPayment()
+{
+    global $pdo;
+
+    // Récupérer l'ID du paiement à supprimer depuis POST ou JSON
+    $data = $_POST ?? [];
+    if (empty($data['id'])) {
+        $input = json_decode(file_get_contents('php://input'), true);
+        if ($input) $data = $input;
+    }
+
+    if (empty($data['id'])) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Aucun ID de paiement fourni.'
+        ]);
+        return;
+    }
+
+    $payment_id = intval($data['id']);
+
+    try {
+        // Vérifier si le paiement existe et récupérer le fichier associé
+        $stmt = $pdo->prepare("SELECT file FROM orders_payments WHERE id = :id");
+        $stmt->execute([':id' => $payment_id]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$payment) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Paiement introuvable.'
+            ]);
+            return;
+        }
+
+        // Supprimer le fichier associé si présent
+        if (!empty($payment['file'])) {
+            $filePath = __DIR__ . '/uploads/order_payments/' . $payment['file'];
+            if (file_exists($filePath)) {
+                @unlink($filePath); // supprimer sans générer d'erreur
+            }
+        }
+
+        // Supprimer le paiement dans la base
+        $stmt = $pdo->prepare("DELETE FROM orders_payments WHERE id = :id");
+        $stmt->execute([':id' => $payment_id]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Paiement supprimé avec succès.'
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erreur lors de la suppression du paiement : ' . $e->getMessage()
+        ]);
+    }
+}
 
 
 
