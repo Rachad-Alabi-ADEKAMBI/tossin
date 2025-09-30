@@ -399,7 +399,7 @@ function deleteOrderPayment()
 
 
 
-// ajouter une nouvelle commande
+// Ajouter une nouvelle commande
 function newOrder()
 {
     global $pdo;
@@ -407,10 +407,17 @@ function newOrder()
     // Lire les données JSON envoyées par Axios
     $data = json_decode(file_get_contents("php://input"), true);
 
-    if (!$data || empty($data['seller']) || !isset($data['total']) || empty($data['lines'])) {
+    if (
+        !$data ||
+        empty($data['seller']) ||
+        !isset($data['total']) ||
+        empty($data['lines']) ||
+        empty($data['currency']) ||
+        empty($data['status'])
+    ) {
         echo json_encode([
             'success' => false,
-            'message' => 'Champs obligatoires manquants : seller, total ou lines'
+            'message' => 'Champs obligatoires manquants : seller, total, status, currency ou lines'
         ]);
         return;
     }
@@ -421,13 +428,14 @@ function newOrder()
 
         // Insérer la commande dans la table orders
         $stmt = $pdo->prepare("
-            INSERT INTO orders (date_of_insertion, seller, total, status) 
-            VALUES (NOW(), :seller, :total, :status)
+            INSERT INTO orders (date_of_insertion, seller, total, status, currency) 
+            VALUES (NOW(), :seller, :total, :status, :currency)
         ");
         $stmt->execute([
-            ':seller' => $data['seller'],
-            ':total'  => $data['total'],
-            ':status' => $data['status']
+            ':seller'   => $data['seller'],
+            ':total'    => $data['total'],
+            ':status'   => $data['status'],
+            ':currency' => $data['currency']
         ]);
 
         // Récupérer l'ID de la commande nouvellement insérée
@@ -466,6 +474,7 @@ function newOrder()
         ]);
     }
 }
+
 
 // Supprimer une créance
 function deleteClaim()
