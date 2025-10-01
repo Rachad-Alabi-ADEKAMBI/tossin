@@ -74,13 +74,13 @@ switch ($action) {
         }
         break;
 
-    case 'newPayment':
+    case 'newClaimPayment':
         // FormData envoyé via POST
         $data = $_POST;
         $file = $_FILES['file'] ?? null;
 
         if ($data) {
-            newPayment($data, $file);
+            newClaimPayment($data, $file);
         } else {
             echo json_encode([
                 'success' => false,
@@ -88,6 +88,18 @@ switch ($action) {
             ]);
         }
         break;
+
+    case 'updateClaimPayment':
+        $data = $_POST;
+        $file = $_FILES['file'] ?? null;
+        updateClaimPayment($data, $file);
+        break;
+
+    case 'deleteClaimPayment':
+        // Passer les données POST à la fonction
+        deleteClaimPayment($_POST);
+        break;
+
 
 
     case 'login':

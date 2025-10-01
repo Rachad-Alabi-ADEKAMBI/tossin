@@ -335,7 +335,7 @@ if (!isset($_SESSION['user_id'])) {
                                     <tr>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date dette</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date remboursement</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Echéance</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant initial</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant restant</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
@@ -362,18 +362,18 @@ if (!isset($_SESSION['user_id'])) {
                                             {{ formatDate(claim.date_of_claim) }}
                                         </td>
                                         <!-- Date de remboursement en rouge si dépassée -->
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm" :data-label="'Date remboursement'" :class="isOverdue(claim) ? 'text-red-600 font-semibold' : 'text-gray-500'">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" :data-label="'Echéance'" :class="isOverdue(claim) ? 'text-red-600 font-semibold' : 'text-gray-500'">
                                             {{ formatDate(claim.due_date) }}
                                             <div v-if="isOverdue(claim)" class="text-xs text-red-500 mt-1">
                                                 <i class="fas fa-exclamation-triangle mr-1"></i>Échéance dépassée
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'Montant initial'">
-                                            {{ formatCurrency(claim.amount) }}
+                                            {{ formatCurrency(claim.amount, claim.currency) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Montant restant'">
                                             <span :class="getRemainingAmount(claim.id) > 0 ? 'text-red-600' : 'text-green-600'">
-                                                {{ formatCurrency(getRemainingAmount(claim.id)) }}
+                                                {{ formatCurrency(getRemainingAmount(claim.id), claim.currency) }}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Statut'">
@@ -469,10 +469,23 @@ if (!isset($_SESSION['user_id'])) {
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-money-bill-wave mr-1"></i>Montant (XOF)
+                                        <i class="fas fa-money-bill-wave mr-1"></i>Montant
                                     </label>
-                                    <input v-model.number="newClaim.amount" type="number" required min="0"
+                                    <input v-model.number="newClaim.amount" type="number" step="0.01" required min="0"
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-coins mr-1"></i>Devise
+                                    </label>
+                                    <select v-model="newClaim.currency" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="XOF">XOF (Franc CFA)</option>
+                                        <option value="N">N (Naira)</option>
+                                        <option value="GHC">GHC (Ghana Cedis)</option>
+                                        <option value="EUR">EUR (Euro)</option>
+                                        <option value="USD">USD (Dollar)</option>
+                                        <option value="GBP">GBP (Livre Sterling)</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -533,26 +546,32 @@ if (!isset($_SESSION['user_id'])) {
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                     <div class="bg-blue-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant initial</p>
-                                        <p class="text-lg font-semibold text-blue-600">{{ formatCurrency(selectedClaim.amount) }}</p>
+                                        <p class="text-lg font-semibold text-blue-600">{{ formatCurrency(selectedClaim.amount, selectedClaim.currency) }}</p>
                                     </div>
                                     <div class="bg-green-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant payé</p>
                                         <!-- Using computed totalPaid instead of backend calculation -->
-                                        <p class="text-lg font-semibold text-green-600">{{ formatCurrency(totalPaid) }}</p>
+                                        <p class="text-lg font-semibold text-green-600">{{ formatCurrency(totalPaid, selectedClaim.currency) }}</p>
                                     </div>
                                     <div class="bg-red-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant restant</p>
                                         <!-- Using computed remainingBalance instead of backend calculation -->
-                                        <p class="text-lg font-semibold text-red-600">{{ formatCurrency(remainingBalance) }}</p>
+                                        <p class="text-lg font-semibold text-red-600">{{ formatCurrency(remainingBalance, selectedClaim.currency) }}</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Added new payment button inside the modal -->
+                            <!-- Added condition to hide button when debt is fully paid -->
                             <div class="mb-4">
-                                <button @click="openNewPaymentModal" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+                                <!-- Show button only if there's remaining balance -->
+                                <button v-if="remainingBalance > 0" @click="openNewPaymentModal" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
                                     <i class="fas fa-plus mr-2"></i>Nouveau paiement
                                 </button>
+                                <!-- Show message when debt is fully paid -->
+                                <div v-else class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg flex items-center">
+                                    <i class="fas fa-check-circle mr-2 text-xl"></i>
+                                    <span class="font-medium">Cette dette est entièrement soldée</span>
+                                </div>
                             </div>
 
                             <div class="overflow-x-auto">
@@ -578,7 +597,7 @@ if (!isset($_SESSION['user_id'])) {
                                         </tr>
                                         <tr v-for="payment in payments" :key="payment.id" class="hover:bg-gray-50">
                                             <td class="px-4 py-3 text-sm text-gray-900" data-label="Date">{{ formatDate(payment.date_of_insertion) }}</td>
-                                            <td class="px-4 py-3 text-sm font-medium text-green-600" data-label="Montant">{{ formatCurrency(payment.amount) }}</td>
+                                            <td class="px-4 py-3 text-sm font-medium text-green-600" data-label="Montant">{{ formatCurrency(payment.amount, selectedClaim.currency) }}</td>
                                             <td class="px-4 py-3 text-sm text-gray-600" data-label="Moyen">{{ payment.payment_method }}</td>
                                             <td class="px-4 py-3 text-sm text-gray-600" data-label="Notes">{{ payment.notes || '-' }}</td>
                                             <td class="px-4 py-3 text-sm text-gray-600" data-label="Justificatif">
@@ -623,10 +642,12 @@ if (!isset($_SESSION['user_id'])) {
                         <form @submit.prevent="addNewPayment" class="space-y-4" enctype="multipart/form-data">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    <i class="fas fa-money-bill-wave mr-1"></i>Montant (XOF)
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Montant ({{ selectedClaim.currency }})
                                 </label>
                                 <input v-model.number="newPayment.amount"
                                     type="number"
+                                    step="0.01"
+                                    min="0"
                                     required
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
 
@@ -681,9 +702,10 @@ if (!isset($_SESSION['user_id'])) {
             </div>
 
             <!-- Added edit payment modal -->
-            <div v-if="showEditPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-60">
+            <div v-if="showEditPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50" style="z-index: 10000;">
                 <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 max-h-screen overflow-y-auto">
+
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-edit mr-2"></i>Modifier le Paiement
@@ -696,11 +718,11 @@ if (!isset($_SESSION['user_id'])) {
                         <form @submit.prevent="saveEditPayment" class="space-y-4" enctype="multipart/form-data">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    <i class="fas fa-money-bill-wave mr-1"></i>Montant (XOF)
+                                    <i class="fas fa-money-bill-wave mr-1"></i>Montant ({{ selectedClaim.currency }})
                                 </label>
-                                <input v-model.number="editingPayment.amount" type="number" required min="0"
+                                <input v-model.number="editingPayment.amount" type="number" step="0.01" required min="0"
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                <p class="text-xs text-gray-500 mt-1">Solde restant (sans ce paiement): {{ formatCurrency(remainingBalance + parseFloat(editingPayment.originalAmount)) }}</p>
+                                <p class="text-xs text-gray-500 mt-1">Solde restant (sans ce paiement): {{ formatCurrency(remainingBalance + parseFloat(editingPayment.originalAmount), selectedClaim.currency) }}</p>
                             </div>
 
                             <div>
@@ -770,6 +792,8 @@ if (!isset($_SESSION['user_id'])) {
             baseURL: 'http://127.0.0.1/tossin/api/index.php'
         });
 
+        const imgBaseUrl = 'http://127.0.0.1/tossin/api/uploads/order_payments/';
+
         createApp({
             data() {
                 return {
@@ -801,6 +825,7 @@ if (!isset($_SESSION['user_id'])) {
                         client_name: '',
                         client_phone: '',
                         amount: '',
+                        currency: 'XOF',
                         date_of_claim: new Date().toISOString().split('T')[0],
                         due_date: '',
                         notes: ''
@@ -809,7 +834,7 @@ if (!isset($_SESSION['user_id'])) {
                     newPayment: {
                         amount: '',
                         date: new Date().toISOString().split('T')[0],
-                        method: '',
+                        payment_method: '',
                         notes: ''
                     },
                     showEditPaymentModal: false,
@@ -936,8 +961,11 @@ if (!isset($_SESSION['user_id'])) {
                 formatDate(dateString) {
                     return new Date(dateString).toLocaleDateString('fr-FR');
                 },
-                formatCurrency(amount) {
-                    return new Intl.NumberFormat('fr-FR').format(amount) + ' XOF';
+                formatCurrency(amount, currency = 'XOF') {
+                    return new Intl.NumberFormat('fr-FR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    }).format(amount) + ' ' + currency;
                 },
 
                 getRemainingAmount(claimId) {
@@ -1125,9 +1153,9 @@ if (!isset($_SESSION['user_id'])) {
                             
                             <div class="summary">
                                 <h3>Résumé financier:</h3>
-                                <p><strong>Montant initial:</strong> ${this.formatCurrency(this.selectedClaim.amount)}</p>
-                                <p><strong>Montant payé:</strong> ${this.formatCurrency(totalPaid)}</p>
-                                <p><strong>Montant restant:</strong> ${this.formatCurrency(this.remainingBalance)}</p>
+                                <p><strong>Montant initial:</strong> ${this.formatCurrency(this.selectedClaim.amount, this.selectedClaim.currency)}</p>
+                                <p><strong>Montant payé:</strong> ${this.formatCurrency(totalPaid, this.selectedClaim.currency)}</p>
+                                <p><strong>Montant restant:</strong> ${this.formatCurrency(this.remainingBalance, this.selectedClaim.currency)}</p>
                             </div>
                             
                             <table>
@@ -1151,7 +1179,7 @@ if (!isset($_SESSION['user_id'])) {
                             printContent += `
                                 <tr>
                                     <td>${this.formatDate(payment.date_of_insertion)}</td>
-                                    <td class="amount">${this.formatCurrency(payment.amount)}</td>
+                                    <td class="amount">${this.formatCurrency(payment.amount, this.selectedClaim.currency)}</td>
                                     <td>${payment.payment_method}</td>
                                     <td>${payment.notes || '-'}</td>
                                 </tr>`;
@@ -1180,6 +1208,7 @@ if (!isset($_SESSION['user_id'])) {
                         client_name: '',
                         client_phone: '',
                         amount: 0,
+                        currency: 'XOF',
                         date_of_claim: new Date().toISOString().split('T')[0],
                         due_date: '',
                         notes: ''
@@ -1191,6 +1220,7 @@ if (!isset($_SESSION['user_id'])) {
                         client_name: this.newClaim.client_name,
                         client_phone: this.newClaim.client_phone,
                         amount: this.newClaim.amount,
+                        currency: this.newClaim.currency,
                         remaining_amount: this.newClaim.amount,
                         date_of_claim: this.newClaim.date_of_claim,
                         due_date: this.newClaim.due_date,
@@ -1214,6 +1244,7 @@ if (!isset($_SESSION['user_id'])) {
                                 client_name: '',
                                 client_phone: '',
                                 amount: 0,
+                                currency: 'XOF',
                                 date_of_claim: new Date().toISOString().split('T')[0],
                                 due_date: '',
                                 notes: ''
@@ -1233,7 +1264,7 @@ if (!isset($_SESSION['user_id'])) {
 
                 getImgUrl(fileName) {
                     if (!fileName || fileName === '') return '';
-                    return `http://127.0.0.1/tossin/api/uploads/payments/${fileName}`;
+                    return `${imgBaseUrl}${fileName}`;
                 },
 
                 showPaymentHistory(claim) {
@@ -1272,6 +1303,7 @@ if (!isset($_SESSION['user_id'])) {
                 openNewPaymentModal() {
                     this.showNewPaymentModal = true;
                     this.newPayment.date = new Date().toISOString().split('T')[0];
+                    this.showEditPaymentModal = false;
                 },
 
                 closeNewPaymentModal() {
@@ -1310,7 +1342,7 @@ if (!isset($_SESSION['user_id'])) {
                         formData.append('file', this.newPayment.file);
                     }
 
-                    api.post('?action=newPayment', formData, {
+                    api.post('?action=newClaimPayment', formData, {
                             headers: {
                                 'Content-Type': 'multipart/form-data'
                             }
@@ -1389,7 +1421,7 @@ if (!isset($_SESSION['user_id'])) {
                         formData.append('file', this.editingPayment.file);
                     }
 
-                    api.post('?action=updatePayment', formData, {
+                    api.post('?action=updateClaimPayment', formData, {
                             headers: {
                                 'Content-Type': 'multipart/form-data'
                             }
@@ -1414,8 +1446,13 @@ if (!isset($_SESSION['user_id'])) {
                         return;
                     }
 
-                    api.post('?action=deletePayment', {
-                            id: paymentId
+                    const formData = new FormData();
+                    formData.append('id', paymentId);
+
+                    api.post('?action=deleteClaimPayment', formData, {
+                            headers: {
+                                'Content-Type': 'multipart/form-data'
+                            }
                         })
                         .then(response => {
                             if (response.data.success) {
@@ -1430,6 +1467,7 @@ if (!isset($_SESSION['user_id'])) {
                             alert('Erreur lors de la suppression du paiement: ' + error.message);
                         });
                 },
+
 
                 deleteClaim(claimId) {
                     if (confirm('Êtes-vous sûr de vouloir supprimer cette créance ?')) {

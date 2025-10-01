@@ -26,8 +26,8 @@ function addNewClaim($data)
 
     try {
         $sql = "INSERT INTO claims 
-            (client_name, client_phone, amount date_of_claim, due_date, notes, status)
-            VALUES (:client_name, :client_phone, :amount, :date_of_claim, :due_date, :notes, :status)";
+            (client_name, client_phone, amount, date_of_claim, due_date, notes, status, currency)
+            VALUES (:client_name, :client_phone, :amount, :date_of_claim, :due_date, :notes, :status, :currency)";
 
         $stmt = $pdo->prepare($sql);
 
@@ -35,11 +35,11 @@ function addNewClaim($data)
         $client_name = $data['client_name'] ?? '';
         $client_phone = $data['client_phone'] ?? '';
         $amount = $data['amount'] ?? 0;
-        $remaining_amount = $amount; // initialement égal au montant
         $date_of_claim = $data['date_of_claim'] ?? date('Y-m-d');
         $due_date = $data['due_date'] ?? null;
         $notes = $data['notes'] ?? '';
         $status = 'Actif';
+        $currency = $data['currency'] ?? 'XOF'; // valeur par défaut
 
         // Exécuter la requête
         $stmt->execute([
@@ -49,7 +49,8 @@ function addNewClaim($data)
             ':date_of_claim' => $date_of_claim,
             ':due_date' => $due_date,
             ':notes' => $notes,
-            ':status' => $status
+            ':status' => $status,
+            ':currency' => $currency
         ]);
 
         // Récupérer l'id de la nouvelle claim et renvoyer le tout
@@ -61,18 +62,19 @@ function addNewClaim($data)
             'date_of_claim' => $date_of_claim,
             'due_date' => $due_date,
             'notes' => $notes,
-            'status' => $status
+            'status' => $status,
+            'currency' => $currency
         ];
 
         echo json_encode(['success' => true, 'claim' => $newClaim]);
     } catch (PDOException $e) {
-        // En cas d'erreur, renvoyer un message clair exploitable côté frontend
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
 }
 
-// Ajouter un nouveau paiement
-function newPayment($data, $file = null)
+
+// Ajouter un nouveau paiement pour creance
+function newClaimPayment($data, $file = null)
 {
     global $pdo;
 
@@ -110,7 +112,7 @@ function newPayment($data, $file = null)
         $pdo->beginTransaction();
 
         // Récupérer infos de la claim
-        $claimStmt = $pdo->prepare("SELECT amount, remaining_amount, client_name FROM claims WHERE id = :id");
+        $claimStmt = $pdo->prepare("SELECT amount, client_name FROM claims WHERE id = :id");
         $claimStmt->execute([':id' => $claim_id]);
         $claim = $claimStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -118,18 +120,23 @@ function newPayment($data, $file = null)
             throw new Exception("Aucune créance trouvée pour l'ID fourni.");
         }
 
-        if ($amount > $claim['remaining_amount']) {
-            throw new Exception("Le montant du paiement ({$amount}) ne peut pas dépasser le remaining_amount ({$claim['remaining_amount']}).");
+        // Calcul du total déjà payé
+        $paidStmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) AS total_paid FROM payments WHERE claim_id = :claim_id");
+        $paidStmt->execute([':claim_id' => $claim_id]);
+        $paid = $paidStmt->fetch(PDO::FETCH_ASSOC)['total_paid'];
+
+        $reste = $claim['amount'] - $paid;
+
+        if ($amount > $reste) {
+            throw new Exception("Le montant du paiement ({$amount}) dépasse le montant restant dû ({$reste}).");
         }
 
-        $initial_amount = $claim['amount'];
-        $remaining_amount = $claim['remaining_amount'] - $amount;
         $client_name = $claim['client_name'];
 
         // Insertion du paiement
         $sql = "INSERT INTO payments 
-                (date_of_insertion, amount, claim_id, payment_method, notes, file, initial_amount, remaining_amount, client_name)
-                VALUES (:date_of_insertion, :amount, :claim_id, :payment_method, :notes, :file, :initial_amount, :remaining_amount, :client_name)";
+                (date_of_insertion, amount, claim_id, payment_method, notes, file, client_name)
+                VALUES (:date_of_insertion, :amount, :claim_id, :payment_method, :notes, :file, :client_name)";
         $stmt = $pdo->prepare($sql);
 
         if (!$stmt->execute([
@@ -139,25 +146,17 @@ function newPayment($data, $file = null)
             ':payment_method' => $payment_method,
             ':notes' => $notes,
             ':file' => $fileName,
-            ':initial_amount' => $initial_amount,
-            ':remaining_amount' => $remaining_amount,
             ':client_name' => $client_name
         ])) {
             $errorInfo = $stmt->errorInfo();
             throw new Exception("Erreur PDO lors de l'insertion du paiement : " . $errorInfo[2]);
         }
 
-        // Mise à jour du remaining_amount dans claims
-        $update = $pdo->prepare("UPDATE claims SET remaining_amount = :remaining_amount WHERE id = :claim_id");
-        if (!$update->execute([
-            ':remaining_amount' => $remaining_amount,
-            ':claim_id' => $claim_id
-        ])) {
-            $errorInfo = $update->errorInfo();
-            throw new Exception("Erreur PDO lors de la mise à jour du remaining_amount : " . $errorInfo[2]);
-        }
-
         $pdo->commit();
+
+        // Recalcul du restant après insertion
+        $newPaid = $paid + $amount;
+        $newRemaining = $claim['amount'] - $newPaid;
 
         $newPayment = [
             'id' => $pdo->lastInsertId(),
@@ -167,9 +166,8 @@ function newPayment($data, $file = null)
             'payment_method' => $payment_method,
             'notes' => $notes,
             'file' => $fileName,
-            'initial_amount' => $initial_amount,
-            'remaining_amount' => $remaining_amount,
-            'client_name' => $client_name
+            'client_name' => $client_name,
+            'remaining' => $newRemaining
         ];
 
         echo json_encode(['success' => true, 'payment' => $newPayment]);
@@ -181,6 +179,190 @@ function newPayment($data, $file = null)
         ]);
     }
 }
+
+// Modifier un paiement pour créance
+function updateClaimPayment($data, $file = null)
+{
+    global $pdo;
+
+    if (empty($data['id']) || !isset($data['amount']) || empty($data['payment_method'])) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Champs obligatoires manquants : id, amount ou payment_method'
+        ]);
+        return;
+    }
+
+    $id = intval($data['id']);
+    $amount = floatval($data['amount']);
+    $payment_method = $data['payment_method'];
+    $notes = $data['notes'] ?? '';
+    $date_of_insertion = $data['date_of_insertion'] ?? date('Y-m-d H:i:s');
+
+    try {
+        $pdo->beginTransaction();
+
+        // Vérifier si le paiement existe
+        $stmt = $pdo->prepare("SELECT claim_id, amount, file FROM payments WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$payment) {
+            throw new Exception("Aucun paiement trouvé pour l'ID fourni.");
+        }
+
+        $claim_id = $payment['claim_id'];
+        $originalAmount = $payment['amount'];
+        $oldFile = $payment['file'];
+
+        // Récupérer la créance
+        $claimStmt = $pdo->prepare("SELECT amount, client_name FROM claims WHERE id = :id");
+        $claimStmt->execute([':id' => $claim_id]);
+        $claim = $claimStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$claim) {
+            throw new Exception("Aucune créance trouvée pour cet ID.");
+        }
+
+        // Calcul du total payé hors ce paiement
+        $paidStmt = $pdo->prepare("SELECT COALESCE(SUM(amount), 0) AS total_paid 
+                                   FROM payments 
+                                   WHERE claim_id = :claim_id AND id != :id");
+        $paidStmt->execute([':claim_id' => $claim_id, ':id' => $id]);
+        $paidWithoutCurrent = $paidStmt->fetch(PDO::FETCH_ASSOC)['total_paid'];
+
+        $maxAllowed = $claim['amount'] - $paidWithoutCurrent;
+
+        if ($amount > $maxAllowed) {
+            throw new Exception("Le montant du paiement ({$amount}) dépasse le montant restant autorisé ({$maxAllowed}).");
+        }
+
+        // Gestion fichier
+        $fileName = $oldFile;
+        if ($file && isset($file['error']) && $file['error'] === UPLOAD_ERR_OK) {
+            $uploadDir = __DIR__ . '/uploads/payments/';
+            if (!is_dir($uploadDir)) {
+                mkdir($uploadDir, 0755, true);
+            }
+            $fileName = time() . '_' . basename($file['name']);
+            if (!move_uploaded_file($file['tmp_name'], $uploadDir . $fileName)) {
+                throw new Exception("Erreur lors de l'upload du fichier.");
+            }
+        }
+
+        // Update paiement
+        $updateSql = "UPDATE payments 
+                      SET amount = :amount,
+                          date_of_insertion = :date_of_insertion,
+                          payment_method = :payment_method,
+                          notes = :notes,
+                          file = :file
+                      WHERE id = :id";
+
+        $updateStmt = $pdo->prepare($updateSql);
+        if (!$updateStmt->execute([
+            ':amount' => $amount,
+            ':date_of_insertion' => $date_of_insertion,
+            ':payment_method' => $payment_method,
+            ':notes' => $notes,
+            ':file' => $fileName,
+            ':id' => $id
+        ])) {
+            $errorInfo = $updateStmt->errorInfo();
+            throw new Exception("Erreur PDO lors de la mise à jour : " . $errorInfo[2]);
+        }
+
+        // Nouveau restant
+        $newRemaining = $claim['amount'] - ($paidWithoutCurrent + $amount);
+
+        // Mettre à jour le statut de la créance
+        $newStatus = ($newRemaining == 0) ? 'Soldé' : 'En cours';
+        $statusStmt = $pdo->prepare("UPDATE claims SET status = :status WHERE id = :id");
+        $statusStmt->execute([':status' => $newStatus, ':id' => $claim_id]);
+
+        $pdo->commit();
+
+        // Retourner le paiement mis à jour + nouveau restant + statut
+        $updatedPayment = [
+            'id' => $id,
+            'date_of_insertion' => $date_of_insertion,
+            'amount' => $amount,
+            'claim_id' => $claim_id,
+            'payment_method' => $payment_method,
+            'notes' => $notes,
+            'file' => $fileName,
+            'client_name' => $claim['client_name'],
+            'remaining' => $newRemaining,
+            'status' => $newStatus
+        ];
+
+        echo json_encode(['success' => true, 'payment' => $updatedPayment]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erreur lors de la mise à jour du paiement : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+// Supprimer un paiement pour créance
+function deleteClaimPayment($data)
+{
+    global $pdo;
+
+    if (empty($data['id'])) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'ID du paiement manquant'
+        ]);
+        return;
+    }
+
+    $id = intval($data['id']);
+
+    try {
+        $pdo->beginTransaction();
+
+        // Vérifier si le paiement existe
+        $stmt = $pdo->prepare("SELECT file FROM payments WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$payment) {
+            throw new Exception("Aucun paiement trouvé pour l'ID fourni.");
+        }
+
+        // Supprimer le fichier associé si présent
+        if (!empty($payment['file'])) {
+            $filePath = __DIR__ . '/uploads/payments/' . $payment['file'];
+            if (file_exists($filePath)) {
+                unlink($filePath);
+            }
+        }
+
+        // Supprimer le paiement
+        $deleteStmt = $pdo->prepare("DELETE FROM payments WHERE id = :id");
+        if (!$deleteStmt->execute([':id' => $id])) {
+            $errorInfo = $deleteStmt->errorInfo();
+            throw new Exception("Erreur PDO lors de la suppression : " . $errorInfo[2]);
+        }
+
+        $pdo->commit();
+
+        echo json_encode(['success' => true, 'message' => 'Paiement supprimé avec succès']);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erreur lors de la suppression du paiement : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+
 
 //ajouter un paiement pour commande
 function newOrderPayment()

@@ -363,8 +363,12 @@
                                         <i class="fas fa-money-bill mr-1"></i>Devise
                                     </label>
                                     <select v-model="newOrder.currency" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                        <option value="N">N</option>
-                                        <option value="XOF">XOF</option>
+                                        <option value="XOF">XOF (Franc CFA)</option>
+                                        <option value="N">N (Naira)</option>
+                                        <option value="GHC">GHC (Ghana Cedis)</option>
+                                        <option value="EUR">EUR (Euro)</option>
+                                        <option value="USD">USD (Dollar)</option>
+                                        <option value="GBP">GBP (Livre Sterling)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -1546,6 +1550,7 @@
                     if (!fileName || fileName === '') return '';
                     return `${imgBaseUrl}${fileName}`;
                 },
+
                 editPayment(payment) {
                     this.editingPayment = {
                         id: payment.id,
