@@ -248,6 +248,8 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Commande</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fournisseur</th>
+                                        <!-- Added Quantité column to display total quantity -->
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -263,6 +265,12 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" data-label="Fournisseur">
                                             {{ order.supplier }}
+                                        </td>
+                                        <!-- Display total quantity for each order -->
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-700" data-label="Quantité">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                <i class="fas fa-boxes mr-1"></i>{{ order.totalQuantity }}
+                                            </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-label="Total">
                                             {{ formatCurrency(order.total, order.currency) }}
@@ -313,7 +321,7 @@
                                             <i class="fas fa-chevron-left"></i>
                                         </button>
                                         <button v-for="page in visiblePages" :key="page" @click="goToPage(page)"
-                                            :class="['relative inline-flex items-center px-4 py-2 border text-sm font-medium', 
+                                            :class="['relative inline-flex items-center px-4 py-2 border text-sm font-medium',
                                                 page === currentPage ? 'z-10 bg-primary border-primary text-white' : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50']">
                                             {{ page }}
                                         </button>
@@ -404,7 +412,7 @@
                                         </div>
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                <i class="fas fa-sort-numeric-up mr-1"></i>Quantiteé
+                                                <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
                                             </label>
                                             <input v-model.number="line.quantity" type="number" min="1" required
                                                 @input="updateLineTotal(index)"
@@ -434,7 +442,14 @@
                                     </div>
                                 </div>
 
+                                <!-- Added quantity total display in order creation recap -->
                                 <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm font-medium text-gray-700">
+                                            <i class="fas fa-boxes mr-2"></i>Quantité totale:
+                                        </span>
+                                        <span class="text-lg font-semibold text-blue-600">{{ orderTotalQuantity }}</span>
+                                    </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-lg font-semibold text-gray-900">Total:</span>
                                         <span class="text-2xl font-bold text-primary">{{ formatCurrency(orderTotal, newOrder.currency) }}</span>
@@ -700,7 +715,14 @@
                                     </div>
                                 </div>
 
+                                <!-- Added quantity total display in order details recap -->
                                 <div class="mt-6 p-4 bg-gray-50 rounded-lg print-summary">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <span class="text-sm font-medium text-gray-700">
+                                            <i class="fas fa-boxes mr-2"></i>Quantité totale:
+                                        </span>
+                                        <span class="text-lg font-semibold text-blue-600">{{ selectedOrderTotalQuantity }}</span>
+                                    </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-lg font-semibold text-gray-900">Total de la commande:</span>
                                         <span class="text-2xl font-bold text-primary">{{ formatCurrency(selectedOrderTotal, selectedOrder.currency) }}</span>
@@ -1019,9 +1041,16 @@
                 orderTotal() {
                     return this.newOrder.lines.reduce((total, line) => total + (line.total || 0), 0);
                 },
+                orderTotalQuantity() {
+                    return this.newOrder.lines.reduce((total, line) => total + (parseFloat(line.quantity) || 0), 0);
+                },
                 selectedOrderTotal() {
                     if (!this.selectedOrder || !this.selectedOrder.lines) return 0;
                     return this.selectedOrder.lines.reduce((total, line) => total + (line.quantity * line.price), 0);
+                },
+                selectedOrderTotalQuantity() {
+                    if (!this.selectedOrder || !this.selectedOrder.lines) return 0;
+                    return this.selectedOrder.lines.reduce((total, line) => total + (parseFloat(line.quantity) || 0), 0);
                 },
                 totalPaid() {
                     return this.orderPayments.reduce((total, payment) => total + parseFloat(payment.amount), 0);
@@ -1043,7 +1072,8 @@
                             supplier: order.seller,
                             total: parseFloat(order.total),
                             status: order.status,
-                            currency: order.currency || 'N', // Added currency field
+                            currency: order.currency || 'N',
+                            totalQuantity: 0,
                             lines: []
                         }));
 
@@ -1072,6 +1102,8 @@
                                 editing: false,
                                 originalData: null
                             }));
+
+                            order.totalQuantity = order.lines.reduce((total, line) => total + (parseFloat(line.quantity) || 0), 0);
                         });
                     } catch (error) {
                         console.error('Erreur lors du chargement des produits:', error);
@@ -1317,6 +1349,7 @@
                             if (orderIndex !== -1) {
                                 this.orders[orderIndex].lines.push(newLine);
                                 this.orders[orderIndex].total = this.selectedOrderTotal;
+                                this.orders[orderIndex].totalQuantity = this.selectedOrderTotalQuantity;
                             }
 
                             this.cancelNewLine();
@@ -1400,6 +1433,7 @@
                                         ...line
                                     };
                                     this.orders[orderIndex].total = this.selectedOrderTotal;
+                                    this.orders[orderIndex].totalQuantity = this.selectedOrderTotalQuantity;
                                 }
                             }
 
@@ -1442,6 +1476,7 @@
                                     if (productIndex !== -1) {
                                         this.orders[orderIndex].lines.splice(productIndex, 1);
                                         this.orders[orderIndex].total = this.selectedOrderTotal;
+                                        this.orders[orderIndex].totalQuantity = this.selectedOrderTotalQuantity;
                                     }
                                 }
 

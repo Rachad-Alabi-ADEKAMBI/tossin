@@ -363,8 +363,12 @@
                                         <i class="fas fa-money-bill mr-1"></i>Devise
                                     </label>
                                     <select v-model="newOrder.currency" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                        <option value="N">N</option>
-                                        <option value="XOF">XOF</option>
+                                        <option value="XOF">XOF (Franc CFA)</option>
+                                        <option value="N">N (Naira)</option>
+                                        <option value="GHC">GHC (Ghana Cedis)</option>
+                                        <option value="EUR">EUR (Euro)</option>
+                                        <option value="USD">USD (Dollar)</option>
+                                        <option value="GBP">GBP (Livre Sterling)</option>
                                     </select>
                                 </div>
                                 <div>
@@ -752,7 +756,8 @@
                             </div>
 
                             <div class="overflow-x-auto">
-                                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                                <!-- Added responsive-table class and data-label attributes to make the payment history table responsive -->
+                                <table class="min-w-full bg-white border border-gray-200 rounded-lg responsive-table">
                                     <thead class="bg-gray-50">
                                         <tr>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -770,10 +775,10 @@
                                             </td>
                                         </tr>
                                         <tr v-for="payment in orderPayments" :key="payment.id" class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 text-sm text-gray-900" :data-label="'Date'">{{ formatDate(payment.date_of_insertion) }}</td>
-                                            <td class="px-4 py-3 text-sm font-medium text-green-600" :data-label="'Montant'">{{ formatCurrency(payment.amount, selectedOrder.currency) }}</td>
-                                            <td class="px-4 py-3 text-sm text-gray-600" :data-label="'Notes'">{{ payment.notes || '-' }}</td>
-                                            <td class="px-4 py-3 text-sm text-gray-600" :data-label="'Justificatif'">
+                                            <td class="px-4 py-3 text-sm text-gray-900" data-label="Date">{{ formatDate(payment.date_of_insertion) }}</td>
+                                            <td class="px-4 py-3 text-sm font-medium text-green-600" data-label="Montant">{{ formatCurrency(payment.amount, selectedOrder.currency) }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-600" data-label="Notes">{{ payment.notes || '-' }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-600" data-label="Justificatif">
                                                 <div v-if="payment.file && payment.file !== ''">
                                                     <a :href="getImgUrl(payment.file)" target="_blank">
                                                         <img :src="getImgUrl(payment.file)" alt="Justificatif" class="w-20 h-20 object-cover rounded">
@@ -781,7 +786,7 @@
                                                 </div>
                                                 <p v-else>Aucun justificatif</p>
                                             </td>
-                                            <td class="px-4 py-3 text-sm no-print" :data-label="'Actions'">
+                                            <td class="px-4 py-3 text-sm no-print" data-label="Actions">
                                                 <button @click="editPayment(payment)" class="text-blue-600 hover:text-blue-800 mr-3" title="Modifier">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
@@ -933,6 +938,9 @@
         const api = axios.create({
             baseURL: 'http://127.0.0.1/tossin/api/index.php'
         });
+
+        // Définition de la base pour tes images
+        const imgBaseUrl = 'http://127.0.0.1/tossin/api/uploads/order_payments/';
 
 
         createApp({
@@ -1540,8 +1548,9 @@
                 },
                 getImgUrl(fileName) {
                     if (!fileName || fileName === '') return '';
-                    return `http://127.0.0.1/tossin/api/uploads/order_payments/${fileName}`;
+                    return `${imgBaseUrl}${fileName}`;
                 },
+
                 editPayment(payment) {
                     this.editingPayment = {
                         id: payment.id,
