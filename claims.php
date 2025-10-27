@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Créances - Tossin</title>
+    <title>Gestion des Créances - Gbemiro</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -337,7 +337,6 @@ if (!isset($_SESSION['user_id'])) {
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date dette</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Echéance</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant initial</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant restant</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
@@ -371,11 +370,6 @@ if (!isset($_SESSION['user_id'])) {
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'Montant initial'">
                                             {{ formatCurrency(claim.amount, claim.currency) }}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Montant restant'">
-                                            <span :class="getRemainingAmount(claim.id) > 0 ? 'text-red-600' : 'text-green-600'">
-                                                {{ formatCurrency(getRemainingAmount(claim.id), claim.currency) }}
-                                            </span>
-                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Statut'">
                                             <!-- Amélioration des couleurs de statuts -->
                                             <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getStatusInfo(claim).class]">
@@ -387,6 +381,7 @@ if (!isset($_SESSION['user_id'])) {
                                                 <i class="fas fa-history"></i>
                                             </button>
                                             <!-- Removed the + icon for adding payments from the list -->
+                                            <!-- Added confirmation dialog before delete -->
                                             <button @click="deleteClaim(claim.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
                                                 <i class="fas fa-trash"></i>
                                             </button>
@@ -789,10 +784,10 @@ if (!isset($_SESSION['user_id'])) {
 
         // Crée une instance Axios avec une baseURL
         const api = axios.create({
-            baseURL: 'http://127.0.0.1/tossin/api/index.php'
+            baseURL: 'api/index.php'
         });
 
-        const imgBaseUrl = 'http://127.0.0.1/tossin/api/uploads/order_payments/';
+        const imgBaseUrl = 'api/uploads/order_payments/';
 
         createApp({
             data() {
@@ -1442,7 +1437,7 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 deletePayment(paymentId) {
-                    if (!confirm('Êtes-vous sûr de vouloir supprimer ce paiement ?')) {
+                    if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir supprimer ce paiement?')) {
                         return;
                     }
 
@@ -1470,29 +1465,29 @@ if (!isset($_SESSION['user_id'])) {
 
 
                 deleteClaim(claimId) {
-                    if (confirm('Êtes-vous sûr de vouloir supprimer cette créance ?')) {
-                        // Suppression optimiste côté client
-                        const index = this.claims.findIndex(c => c.id === claimId);
-                        if (index !== -1) this.claims.splice(index, 1);
-
-                        // Requête API pour supprimer côté serveur
-                        api.post('?action=deleteClaim', {
-                                id: claimId
-                            })
-                            .then(response => {
-                                if (response.data.success) {
-                                    alert("Créance supprimée avec succès !");
-                                } else {
-                                    alert("Erreur lors de la suppression côté serveur : " + response.data.error);
-                                    this.fetchClaims(); // rollback si erreur
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Erreur axios deleteClaim:', error);
-                                alert("Impossible de supprimer la créance côté serveur.");
-                                this.fetchClaims(); // rollback
-                            });
+                    if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir supprimer cette créance?')) {
+                        return;
                     }
+
+                    const index = this.claims.findIndex(c => c.id === claimId);
+                    if (index !== -1) this.claims.splice(index, 1);
+
+                    api.post('?action=deleteClaim', {
+                            id: claimId
+                        })
+                        .then(response => {
+                            if (response.data.success) {
+                                alert("Créance supprimée avec succès !");
+                            } else {
+                                alert("Erreur lors de la suppression côté serveur : " + response.data.error);
+                                this.fetchClaims(); // rollback si erreur
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur axios deleteClaim:', error);
+                            alert("Impossible de supprimer la créance côté serveur.");
+                            this.fetchClaims(); // rollback
+                        });
                 },
 
 

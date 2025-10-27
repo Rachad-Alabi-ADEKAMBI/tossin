@@ -10,7 +10,7 @@ function getAllClaims()
     echo json_encode($claims);
 }
 
-// Récupérer toutes les claims
+// Récupérer toutes les commandes
 function getAllOrdersPayments()
 {
     global $pdo;
@@ -19,6 +19,15 @@ function getAllOrdersPayments()
     echo json_encode($claims);
 }
 
+
+// Récupérer toutes les ventes
+function getAllSales()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM sales ORDER BY id DESC");
+    $sales = $stmt->fetchAll();
+    echo json_encode($sales);
+}
 // Ajouter une nouvelle claim
 function addNewClaim($data)
 {
@@ -623,7 +632,7 @@ function newOrder()
 
         // Insérer chaque produit de la commande dans la table products
         $stmtProduct = $pdo->prepare("
-            INSERT INTO products (date_of_insertion, name, quantity, price, order_id) 
+            INSERT INTO orders_products (date_of_insertion, name, quantity, price, order_id) 
             VALUES (NOW(), :name, :quantity, :price, :order_id)
         ");
 
@@ -643,6 +652,83 @@ function newOrder()
             'success' => true,
             'message' => 'Commande et produits insérés avec succès',
             'order_id' => $orderId
+        ]);
+    } catch (Exception $e) {
+        // Annuler en cas d'erreur
+        $pdo->rollBack();
+
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de l\'insertion: ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+// Ajouter une nouvelle commande
+function newSale()
+{
+    global $pdo;
+
+    // Lire les données JSON envoyées par Axios
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (
+        !$data ||
+        empty($data['buyer']) ||
+        !isset($data['total']) ||
+        empty($data['lines']) ||
+        empty($data['currency']) ||
+        empty($data['status'])
+    ) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs obligatoires manquants : buyer, total, status, currency ou lines'
+        ]);
+        return;
+    }
+
+    try {
+        // Démarrer une transaction
+        $pdo->beginTransaction();
+
+        // Insérer la commande dans la table orders
+        $stmt = $pdo->prepare("
+            INSERT INTO orders (date_of_insertion, buyer, total, status, currency) 
+            VALUES (NOW(), :buyer, :total, :status, :currency)
+        ");
+        $stmt->execute([
+            ':buyer'   => $data['buyer'],
+            ':total'    => $data['total'],
+            ':status'   => $data['status'],
+            ':currency' => $data['currency']
+        ]);
+
+        // Récupérer l'ID de la commande nouvellement insérée
+        $saleId = $pdo->lastInsertId();
+
+        // Insérer chaque produit de la commande dans la table products
+        $stmtProduct = $pdo->prepare("
+            INSERT INTO sales_products (date_of_insertion, name, quantity, price, sale_id) 
+            VALUES (NOW(), :name, :quantity, :price, :order_id)
+        ");
+
+        foreach ($data['lines'] as $line) {
+            $stmtProduct->execute([
+                ':name'     => $line['product'],
+                ':quantity' => $line['quantity'],
+                ':price'    => $line['price'],
+                ':sale_id' => $saleId
+            ]);
+        }
+
+        // Valider la transaction
+        $pdo->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Commande et produits insérés avec succès',
+            'order_id' => $saleId
         ]);
     } catch (Exception $e) {
         // Annuler en cas d'erreur
@@ -692,7 +778,7 @@ function deleteClaim()
 
 
 // supprimer un produit grâce à son id
-function deleteProduct()
+function deleteOrderProduct()
 {
     global $pdo;
 
@@ -713,7 +799,7 @@ function deleteProduct()
         $pdo->beginTransaction();
 
         // Récupérer l'order_id du produit avant suppression
-        $stmt = $pdo->prepare("SELECT order_id FROM products WHERE id = :id");
+        $stmt = $pdo->prepare("SELECT order_id FROM orders_products WHERE id = :id");
         $stmt->execute([':id' => $productId]);
         $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -728,13 +814,13 @@ function deleteProduct()
         $orderId = $order['order_id'];
 
         // Supprimer le produit
-        $stmt = $pdo->prepare("DELETE FROM products WHERE id = :id");
+        $stmt = $pdo->prepare("DELETE FROM orders_products WHERE id = :id");
         $stmt->execute([':id' => $productId]);
 
         // Recalculer le total de la commande
         $stmt = $pdo->prepare("
             SELECT COALESCE(SUM(price * quantity), 0) AS total
-            FROM products
+            FROM orders_products
             WHERE order_id = :order_id
         ");
         $stmt->execute([':order_id' => $orderId]);
@@ -785,7 +871,7 @@ function deleteOrder()
 
     try {
         // Supprimer d'abord les produits associés à la commande (clé étrangère)
-        $stmtProducts = $pdo->prepare("DELETE FROM products WHERE order_id = ?");
+        $stmtProducts = $pdo->prepare("DELETE FROM orders_products WHERE order_id = ?");
         $stmtProducts->execute([$orderId]);
 
         // Supprimer ensuite la commande
@@ -849,8 +935,6 @@ function updateOrderStatus()
     }
 }
 
-
-
 // mettre à jour un produit existant
 function updateProduct()
 {
@@ -871,7 +955,7 @@ function updateProduct()
         $pdo->beginTransaction();
 
         // Récupérer l'order_id du produit avant mise à jour
-        $stmt = $pdo->prepare("SELECT order_id FROM products WHERE id = :id");
+        $stmt = $pdo->prepare("SELECT order_id FROM orders_products WHERE id = :id");
         $stmt->execute([':id' => $productId]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -887,7 +971,7 @@ function updateProduct()
 
         // Mettre à jour le produit
         $stmt = $pdo->prepare("
-            UPDATE products
+            UPDATE orders_products
             SET name = :name,
                 quantity = :quantity,
                 price = :price
@@ -903,7 +987,7 @@ function updateProduct()
         // Recalculer le total de la commande
         $stmt = $pdo->prepare("
             SELECT COALESCE(SUM(price * quantity), 0) AS total
-            FROM products
+            FROM orders_products
             WHERE order_id = :order_id
         ");
         $stmt->execute([':order_id' => $orderId]);
@@ -933,10 +1017,8 @@ function updateProduct()
     }
 }
 
-
-
-//ajouter un nouveau produit
-function newProduct()
+//ajouter un nouveau produit pour les commandes
+function newOrderProduct()
 {
     global $pdo;
 
@@ -955,7 +1037,7 @@ function newProduct()
 
         // Insérer le produit
         $stmt = $pdo->prepare("
-            INSERT INTO products (date_of_insertion, order_id, name, quantity, price)
+            INSERT INTO orders_products (date_of_insertion, order_id, name, quantity, price)
             VALUES (NOW(), :order_id, :name, :quantity, :price)
         ");
         $stmt->execute([
@@ -970,7 +1052,7 @@ function newProduct()
         // Recalculer le total de la commande
         $stmt = $pdo->prepare("
             SELECT COALESCE(SUM(price * quantity), 0) AS total
-            FROM products
+            FROM orders_products
             WHERE order_id = :order_id
         ");
         $stmt->execute([':order_id' => $data['order_id']]);
@@ -1000,7 +1082,70 @@ function newProduct()
     }
 }
 
+//ajouter un nouveau produit pour les ventes
+function newSaleProduct()
+{
+    global $pdo;
 
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (!$data || empty($data['sale _id']) || empty($data['name']) || !isset($data['quantity']) || !isset($data['price'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs obligatoires manquants : sale_id, name, quantity, price'
+        ]);
+        return;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // Insérer le produit
+        $stmt = $pdo->prepare("
+            INSERT INTO sales_products (date_of_insertion, sale_id, name, quantity, price)
+            VALUES (NOW(), :sale_id, :name, :quantity, :price)
+        ");
+        $stmt->execute([
+            ':sale_id' => $data['sale_id'],
+            ':name'     => $data['name'],
+            ':quantity' => $data['quantity'],
+            ':price'    => $data['price']
+        ]);
+
+        $productId = $pdo->lastInsertId();
+
+        // Recalculer le total de la commande
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(price * quantity), 0) AS total
+            FROM sales_products
+            WHERE sale_id = :sale_id
+        ");
+        $stmt->execute([':sale_id' => $data['sale_id']]);
+        $newTotal = $stmt->fetchColumn();
+
+        // Mettre à jour la commande
+        $stmt = $pdo->prepare("UPDATE sales SET total = :total WHERE id = :sale_id");
+        $stmt->execute([
+            ':total'    => $newTotal,
+            ':sale_id' => $data['sale_id']
+        ]);
+
+        $pdo->commit();
+
+        echo json_encode([
+            'success'    => true,
+            'message'    => 'Produit ajouté et commande mise à jour',
+            'product_id' => $productId,
+            'new_total'  => $newTotal
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de l\'ajout du produit : ' . $e->getMessage()
+        ]);
+    }
+}
 
 
 // Récupérer toutes les claims
@@ -1021,11 +1166,20 @@ function getAllOrders()
     echo json_encode($orders);
 }
 
-// Récupérer toutes les produits
-function getAllProducts()
+// Récupérer toutes les produits d'une commande
+function getAllOrdersProducts()
 {
     global $pdo;
-    $stmt = $pdo->query("SELECT * FROM products ORDER BY id DESC");
+    $stmt = $pdo->query("SELECT * FROM orders_products ORDER BY id DESC");
+    $products = $stmt->fetchAll();
+    echo json_encode($products);
+}
+
+// Récupérer toutes les produits d'une vente
+function getAllSalesProducts()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM sales_products ORDER BY id DESC");
     $products = $stmt->fetchAll();
     echo json_encode($products);
 }
@@ -1057,7 +1211,7 @@ function login($data)
 
         echo json_encode([
             'success' => true,
-            'redirect' => 'http://127.0.0.1/tossin/index.php'
+            'redirect' => 'http://127.0.0.1/Gbemiro/index.php'
         ]);
     } else {
         echo json_encode([

@@ -648,20 +648,20 @@
                                                 </td>
                                                 <td class="px-4 py-3 text-sm font-medium" data-label="Total">{{ formatCurrency(line.quantity * line.price, selectedOrder.currency) }}</td>
                                                 <td v-if="selectedOrder.status !== 'Livrée'" class="px-4 py-3 text-sm no-print" data-label="Actions">
-                                                    <div v-if="line.editing" class="flex space-x-1">
-                                                        <button @click="validateProductEdit(index)" class="text-green-600 hover:text-green-800" title="Valider">
-                                                            <i class="fas fa-check"></i>
+                                                    <div v-if="line.editing" class="flex space-x-3">
+                                                        <button @click="validateProductEdit(index)" class="px-3 py-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors" title="Valider">
+                                                            <i class="fas fa-check text-lg"></i>
                                                         </button>
-                                                        <button @click="cancelProductEdit(index)" class="text-gray-600 hover:text-gray-800" title="Annuler">
-                                                            <i class="fas fa-times"></i>
+                                                        <button @click="cancelProductEdit(index)" class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors" title="Annuler">
+                                                            <i class="fas fa-times text-lg"></i>
                                                         </button>
                                                     </div>
-                                                    <div v-else class="flex space-x-1">
-                                                        <button @click="editProductLine(index)" class="text-blue-600 hover:text-blue-800" title="Modifier">
-                                                            <i class="fas fa-edit"></i>
+                                                    <div v-else class="flex space-x-3">
+                                                        <button @click="editProductLine(index)" class="px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors" title="Modifier">
+                                                            <i class="fas fa-edit text-lg"></i>
                                                         </button>
-                                                        <button @click="deleteProductLine(index)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                            <i class="fas fa-times"></i>
+                                                        <button @click="deleteOrderItem(line.id)" class="px-3 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors" title="Supprimer">
+                                                            <i class="fas fa-trash text-lg"></i>
                                                         </button>
                                                     </div>
                                                 </td>
@@ -679,12 +679,12 @@
                                                 </td>
                                                 <td class="px-4 py-3 text-sm font-medium" data-label="Total">{{ formatCurrency(newProductLine.quantity * newProductLine.price || 0, selectedOrder.currency) }}</td>
                                                 <td class="px-4 py-3 text-sm no-print" data-label="Actions">
-                                                    <div class="flex space-x-1">
-                                                        <button @click="validateNewLine" class="text-green-600 hover:text-green-800" title="Valider">
-                                                            <i class="fas fa-check"></i>
+                                                    <div class="flex space-x-3">
+                                                        <button @click="validateNewLine" class="px-3 py-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors" title="Valider">
+                                                            <i class="fas fa-check text-lg"></i>
                                                         </button>
-                                                        <button @click="cancelNewLine" class="text-gray-600 hover:text-gray-800" title="Annuler">
-                                                            <i class="fas fa-times"></i>
+                                                        <button @click="cancelNewLine" class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors" title="Annuler">
+                                                            <i class="fas fa-times text-lg"></i>
                                                         </button>
                                                     </div>
                                                 </td>
@@ -958,11 +958,11 @@
 
         // Crée une instance Axios avec une baseURL
         const api = axios.create({
-            baseURL: 'http://127.0.0.1/tossin/api/index.php'
+            baseURL: 'api/index.php'
         });
 
         // Définition de la base pour tes images
-        const imgBaseUrl = 'http://127.0.0.1/tossin/api/uploads/order_payments/';
+        const imgBaseUrl = 'api/uploads/order_payments/';
 
 
         createApp({
@@ -1089,7 +1089,7 @@
                 },
                 async loadProducts() {
                     try {
-                        const response = await api.get('?action=allProducts');
+                        const response = await api.get('?action=allOrdersProducts');
                         const products = response.data;
 
                         // Group products by order_id
@@ -1291,24 +1291,56 @@
                         alert('Erreur lors de la modification du statut');
                     }
                 },
-                async deleteOrder(orderId) {
-                    if (confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) {
-                        try {
-                            const response = await api.post('?action=deleteOrder', {
-                                id: orderId
-                            });
-
-                            if (response.data.success) {
-                                await this.loadOrders();
-                                alert('Commande supprimée avec succès!');
-                            } else {
-                                alert('Erreur lors de la suppression de la commande');
-                            }
-                        } catch (error) {
-                            console.error('Erreur:', error);
-                            alert('Erreur lors de la suppression de la commande');
-                        }
+                // Added confirmation dialog to deleteOrder function
+                deleteOrder(orderId) {
+                    if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir supprimer cette commande?')) {
+                        return;
                     }
+
+                    api.post('?action=deleteOrder', {
+                            id: orderId
+                        })
+                        .then(response => {
+                            if (response.data.success) {
+                                alert('Commande supprimée avec succès!');
+                                this.loadOrders();
+                            } else {
+                                alert('Erreur lors de la suppression: ' + response.data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la suppression:', error);
+                            alert('Erreur lors de la suppression de la commande');
+                        });
+                },
+
+                // Added confirmation dialog to deleteOrderItem function
+                deleteOrderItem(itemId) {
+                    if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir supprimer cet article?')) {
+                        return;
+                    }
+
+                    api.post('?action=deleteOrderProduct', {
+                            id: itemId
+                        })
+                        .then(response => {
+                            if (response.data.success) {
+                                alert('Article supprimé avec succès!');
+                                // Refresh order details
+                                // Reload the details of the currently viewed order
+                                if (this.selectedOrder && this.selectedOrder.id) {
+                                    this.showOrderDetails(this.selectedOrder); // Re-fetches details to refresh the list
+                                }
+                                // Also update the main orders list to reflect potential total changes
+                                this.loadOrders();
+                            } else {
+                                alert('Erreur lors de la suppression: ' + response.data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la suppression:', error);
+                            alert('Erreur lors de la suppression de l\'article');
+                        });
                 },
                 addNewProductLine() {
                     this.newProductLine = {
@@ -1457,39 +1489,7 @@
                     }
                     line.editing = false;
                 },
-                async deleteProductLine(index) {
-                    if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
-                        const line = this.selectedOrder.lines[index];
-
-                        try {
-                            const response = await api.post('?action=deleteProduct', {
-                                id: line.id
-                            });
-
-                            if (response.data.success) {
-                                this.selectedOrder.lines.splice(index, 1);
-
-                                // Update the main orders array
-                                const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
-                                if (orderIndex !== -1) {
-                                    const productIndex = this.orders[orderIndex].lines.findIndex(l => l.id === line.id);
-                                    if (productIndex !== -1) {
-                                        this.orders[orderIndex].lines.splice(productIndex, 1);
-                                        this.orders[orderIndex].total = this.selectedOrderTotal;
-                                        this.orders[orderIndex].totalQuantity = this.selectedOrderTotalQuantity;
-                                    }
-                                }
-
-                                alert('Produit supprimé avec succès!');
-                            } else {
-                                alert('Erreur lors de la suppression du produit');
-                            }
-                        } catch (error) {
-                            console.error('Erreur:', error);
-                            alert('Erreur lors de la suppression du produit');
-                        }
-                    }
-                },
+                // Removed deleteProductLine method as deleteOrderItem handles it now.
                 printOrderDetails() {
                     window.print();
                 },

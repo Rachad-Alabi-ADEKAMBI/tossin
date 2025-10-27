@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tossin - Tableau de Bord</title>
+    <title>Gbemiro - Tableau de Bord</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Added Vue.js and axios for dynamic dashboard -->
@@ -151,7 +151,7 @@ if (!isset($_SESSION['user_id'])) {
 
         // Crée une instance Axios avec une baseURL
         const api = axios.create({
-            baseURL: 'http://127.0.0.1/tossin/api/index.php'
+            baseURL: 'http://127.0.0.1/Gbemiro/api/index.php'
         });
 
         createApp({

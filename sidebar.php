@@ -4,7 +4,7 @@
     <div class="flex items-center justify-center h-16 bg-primary">
         <div class="flex items-center space-x-2">
             <i class="fas fa-building text-white text-2xl"></i>
-            <span class="text-white text-xl font-bold">Tossin</span>
+            <span class="text-white text-xl font-bold">Gbemiro</span>
         </div>
     </div>
 
@@ -21,6 +21,17 @@
             <i class="fas fa-shopping-cart mr-3"></i>
             <span>Commandes</span>
         </a>
+
+        <a href="expenses.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+            <i class="fas fa-wallet mr-3"></i>
+            <span>Dépenses</span>
+        </a>
+
+        <a href="sales.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+            <i class="fas fa-file-invoice-dollar mr-3"></i>
+            <span>Factures</span>
+        </a>
+
     </nav>
 </div>
 

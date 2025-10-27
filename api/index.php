@@ -9,6 +9,10 @@ switch ($action) {
         getAllClaims();
         break;
 
+    case 'allSales':
+        getAllSales();
+        break;
+
     case 'allPayments':
         getAllPayments();
         break;
@@ -17,8 +21,12 @@ switch ($action) {
         getAllOrders();
         break;
 
-    case 'allProducts':
-        getAllProducts();
+    case 'allOrdersProducts':
+        getAllOrdersProducts();
+        break;
+
+    case 'allSalesProducts':
+        getAllSalesProducts();
         break;
 
     case 'allOrdersPayments':
@@ -27,6 +35,10 @@ switch ($action) {
 
     case 'newOrder':
         newOrder();
+        break;
+
+    case 'newSale':
+        newSale();
         break;
 
     case 'newOrderPayment':
@@ -41,8 +53,8 @@ switch ($action) {
         updateOrderPayment();
         break;
 
-    case 'deleteProduct':
-        deleteProduct();
+    case 'deleteOrderProduct':
+        deleteOrderProduct();
         break;
 
     case 'deleteOrder':
@@ -57,8 +69,12 @@ switch ($action) {
         updateOrderStatus();
         break;
 
-    case 'newProduct':
-        newProduct();
+    case 'newOrderProduct':
+        newOrderProduct();
+        break;
+
+    case 'newSaleProduct':
+        newSaleProduct();
         break;
 
     case 'deleteClaim':

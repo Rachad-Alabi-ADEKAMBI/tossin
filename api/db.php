@@ -2,8 +2,8 @@
 // db.php
 
 $host = 'localhost';      // serveur MySQL
-$db   = 'tossin'; // nom de la base de données
-$user = 'root';// nom d'utilisateur MySQL
+$db   = 'gbemiro'; // nom de la base de données
+$user = 'root'; // nom d'utilisateur MySQL
 $pass = '';   // mot de passe MySQL
 $charset = 'utf8mb4';     // jeu de caractères
 
