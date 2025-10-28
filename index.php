@@ -52,24 +52,22 @@ if (!isset($_SESSION['user_id'])) {
                                 <i class="fas fa-sign-out-alt"></i>
                             </a>
                         </div>
-
-
                     </div>
                 </div>
             </div>
         </header>
 
         <main class="p-6">
-            <!-- Made statistics cards dynamic with Vue.js data -->
+            <!-- Replaced total amount cards with count cards for sales, claims, expenses, and orders -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Total Créances</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(totalCreances) }}</p>
+                            <p class="text-sm font-medium text-gray-600">Nombre de Ventes</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ nombreVentes }}</p>
                         </div>
                         <div class="bg-blue-100 p-3 rounded-full">
-                            <i class="fas fa-money-bill-wave text-blue-600 text-xl"></i>
+                            <i class="fas fa-receipt text-blue-600 text-xl"></i>
                         </div>
                     </div>
                 </div>
@@ -77,11 +75,11 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Commandes du mois</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ commandesDuMois }}</p>
+                            <p class="text-sm font-medium text-gray-600">Nombre de Créances</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ nombreCreances }}</p>
                         </div>
                         <div class="bg-green-100 p-3 rounded-full">
-                            <i class="fas fa-shopping-cart text-green-600 text-xl"></i>
+                            <i class="fas fa-money-bill-wave text-green-600 text-xl"></i>
                         </div>
                     </div>
                 </div>
@@ -89,11 +87,11 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-yellow-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Échéances dépassées</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ echeancesDepassees }}</p>
+                            <p class="text-sm font-medium text-gray-600">Nombre de Dépenses</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ nombreDepenses }}</p>
                         </div>
                         <div class="bg-yellow-100 p-3 rounded-full">
-                            <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                            <i class="fas fa-wallet text-yellow-600 text-xl"></i>
                         </div>
                     </div>
                 </div>
@@ -101,18 +99,17 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-600">Commandes en cours</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ commandesEnCours }}</p>
+                            <p class="text-sm font-medium text-gray-600">Nombre de Commandes</p>
+                            <p class="text-2xl font-bold text-gray-900">{{ nombreCommandes }}</p>
                         </div>
                         <div class="bg-purple-100 p-3 rounded-full">
-                            <i class="fas fa-truck text-purple-600 text-xl"></i>
+                            <i class="fas fa-shopping-cart text-purple-600 text-xl"></i>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
                 <!-- Made recent activity dynamic with latest orders and claims
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Activité récente</h3>
@@ -160,35 +157,26 @@ if (!isset($_SESSION['user_id'])) {
                     loading: true,
                     orders: [],
                     claims: [],
+                    sales: [],
+                    expenses: [],
                     recentActivities: []
                 }
             },
             computed: {
-                totalCreances() {
-                    return this.claims.reduce((total, claim) => total + parseFloat(claim.amount || 0), 0);
+                nombreVentes() {
+                    return this.sales.length;
                 },
 
-                // Nombre de créances dont la date due est dépassée
-                echeancesDepassees() {
-                    const today = new Date();
-                    return this.claims
-                        .filter(claim => claim.due_date && claim.due_date !== '0000-00-00')
-                        .filter(claim => new Date(claim.due_date) < today)
-                        .length; // <- ici on compte le nombre au lieu de sommer les montants
+                nombreCreances() {
+                    return this.claims.length;
                 },
 
-                commandesDuMois() {
-                    const currentMonth = new Date().getMonth();
-                    const currentYear = new Date().getFullYear();
-
-                    return this.orders.filter(order => {
-                        const orderDate = new Date(order.date_of_insertion);
-                        return orderDate.getMonth() === currentMonth && orderDate.getFullYear() === currentYear;
-                    }).length;
+                nombreDepenses() {
+                    return this.expenses.length;
                 },
 
-                commandesEnCours() {
-                    return this.orders.filter(order => order.status === 'En_cours').length;
+                nombreCommandes() {
+                    return this.orders.length;
                 }
             },
             methods: {
@@ -218,6 +206,26 @@ if (!isset($_SESSION['user_id'])) {
                     } catch (error) {
                         console.error('Erreur lors du chargement des créances:', error);
                         this.claims = [];
+                    }
+                },
+
+                async fetchSales() {
+                    try {
+                        const response = await api.get('?action=allSales');
+                        this.sales = response.data || [];
+                    } catch (error) {
+                        console.error('Erreur lors du chargement des ventes:', error);
+                        this.sales = [];
+                    }
+                },
+
+                async fetchExpenses() {
+                    try {
+                        const response = await api.get('?action=allExpenses');
+                        this.expenses = response.data || [];
+                    } catch (error) {
+                        console.error('Erreur lors du chargement des dépenses:', error);
+                        this.expenses = [];
                     }
                 },
 
@@ -263,7 +271,9 @@ if (!isset($_SESSION['user_id'])) {
                     try {
                         await Promise.all([
                             this.fetchOrders(),
-                            this.fetchClaims()
+                            this.fetchClaims(),
+                            this.fetchSales(),
+                            this.fetchExpenses()
                         ]);
                         this.generateRecentActivities();
                     } catch (error) {

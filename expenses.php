@@ -251,20 +251,20 @@ if (!isset($_SESSION['user_id'])) {
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Date'">
-                                            {{ formatDate(expense.date) }}
+                                            {{ formatDate(expense.created_at) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600" :data-label="'Montant'">
                                             {{ formatCurrency(expense.amount, expense.currency) }}
                                         </td>
                                         <td class="px-6 py-4 text-sm text-gray-500" :data-label="'Description'">
-                                            {{ expense.description || '-' }}
+                                            {{ expense.notes || '-' }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
                                             <button @click="editExpense(expense)" class="text-blue-600 hover:text-blue-800 mr-3" title="Modifier">
-                                                <i class="fas fa-edit"></i>
+                                                <i class="fas fa-edit fa-lg"></i>
                                             </button>
                                             <button @click="deleteExpense(expense.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash fa-lg"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -387,7 +387,7 @@ if (!isset($_SESSION['user_id'])) {
         } = Vue;
 
         const api = axios.create({
-            baseURL: 'http://127.0.0.1/Gbemiro/api/index.php'
+            baseURL: 'api/index.php'
         });
 
         createApp({
@@ -420,7 +420,7 @@ if (!isset($_SESSION['user_id'])) {
                     let filtered = this.expenses.filter(expense => {
                         const matchesSearch =
                             expense.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                            (expense.description && expense.description.toLowerCase().includes(this.searchTerm.toLowerCase()));
+                            (expense.notes && expense.notes.toLowerCase().includes(this.searchTerm.toLowerCase()));
 
                         const matchesCurrency = this.currencyFilter === 'all' || expense.currency === this.currencyFilter;
 
@@ -434,7 +434,7 @@ if (!isset($_SESSION['user_id'])) {
                             case 'amount':
                                 return parseFloat(b.amount) - parseFloat(a.amount);
                             case 'date':
-                                return new Date(b.date) - new Date(a.date);
+                                return new Date(b.created_at) - new Date(a.created_at);
                             default:
                                 return 0;
                         }
@@ -569,14 +569,13 @@ if (!isset($_SESSION['user_id'])) {
                         printContent += `
                             <tr>
                                 <td>${expense.name}</td>
-                                <td>${this.formatDate(expense.date)}</td>
+                                <td>${this.formatDate(expense.created_at)}</td>
                                 <td>${this.formatCurrency(expense.amount, expense.currency)}</td>
-                                <td>${expense.description || '-'}</td>
+                                <td>${expense.notes || '-'}</td>
                             </tr>`;
                     });
 
-                    printContent += `
-                                </tbody>
+                    printContent += `</tbody>
                             </table>
                         </body>
                         </html>`;
@@ -609,8 +608,8 @@ if (!isset($_SESSION['user_id'])) {
                         name: expense.name,
                         amount: expense.amount,
                         currency: expense.currency,
-                        date: expense.date,
-                        description: expense.description || ''
+                        date: expense.created_at.split(' ')[0],
+                        description: expense.notes || ''
                     };
                     this.showExpenseModal = true;
                 },
@@ -618,7 +617,11 @@ if (!isset($_SESSION['user_id'])) {
                 saveExpense() {
                     const action = this.editingExpense ? 'updateExpense' : 'newExpense';
                     const payload = {
-                        ...this.expenseForm,
+                        name: this.expenseForm.name,
+                        amount: this.expenseForm.amount,
+                        currency: this.expenseForm.currency,
+                        created_at: this.expenseForm.date,
+                        notes: this.expenseForm.description,
                         ...(this.editingExpense && {
                             id: this.editingExpense.id
                         })

@@ -10,6 +10,148 @@ function getAllClaims()
     echo json_encode($claims);
 }
 
+// Récupérer toutes les depenses
+function getAllExpenses()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM expenses ORDER BY id DESC");
+    $expenses = $stmt->fetchAll();
+    echo json_encode($expenses);
+}
+
+// Créer une nouvelle dépense
+function newExpense()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (empty($data['name']) || empty($data['amount']) || empty($data['currency'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs requis : name, amount, currency'
+        ]);
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO expenses (name, amount, currency, notes, created_at)
+            VALUES (:name, :amount, :currency, :notes, NOW())
+        ");
+        $stmt->execute([
+            ':name'     => $data['name'],
+            ':amount'   => $data['amount'],
+            ':currency' => $data['currency'],
+            ':notes'    => $data['notes'] ?? null
+        ]);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Dépense ajoutée avec succès',
+            'id'      => $pdo->lastInsertId()
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de l’ajout : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+// Mettre à jour une dépense
+function updateExpense()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (empty($data['id']) || empty($data['name']) || empty($data['amount']) || empty($data['currency'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs requis : id, name, amount, currency'
+        ]);
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE expenses
+            SET name = :name,
+                amount = :amount,
+                currency = :currency,
+                notes = :notes
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            ':name'     => $data['name'],
+            ':amount'   => $data['amount'],
+            ':currency' => $data['currency'],
+            ':notes'    => $data['notes'] ?? null,
+            ':id'       => $data['id']
+        ]);
+
+        if ($stmt->rowCount() > 0) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Dépense mise à jour avec succès'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Aucune modification ou dépense introuvable'
+            ]);
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la mise à jour : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
+// Supprimer une dépense
+function deleteExpense()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+    $expenseId = $data['id'] ?? null;
+
+    if (!$expenseId) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'ID de la dépense manquant'
+        ]);
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM expenses WHERE id = ?");
+        $stmt->execute([$expenseId]);
+
+        if ($stmt->rowCount() > 0) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Dépense supprimée avec succès'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Dépense introuvable'
+            ]);
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la suppression : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
 // Récupérer toutes les commandes
 function getAllOrdersPayments()
 {
@@ -859,6 +1001,80 @@ function deleteOrderProduct()
     }
 }
 
+//supprimer une ligne de produit de ventes
+// Supprimer un produit d'une vente grâce à son id
+function deleteSaleProduct()
+{
+    global $pdo;
+
+    // Récupérer l'ID envoyé (DELETE ne transmet pas de body avec Axios par défaut)
+    $data = json_decode(file_get_contents("php://input"), true);
+    $productId = $data['id'] ?? null;
+
+    if (!$productId) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'ID du produit manquant'
+        ]);
+        return;
+    }
+
+    try {
+        // Démarrer transaction
+        $pdo->beginTransaction();
+
+        // Récupérer l'id de la vente avant suppression
+        $stmt = $pdo->prepare("SELECT sale_id FROM sales_products WHERE id = :id");
+        $stmt->execute([':id' => $productId]);
+        $sale = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$sale) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Produit introuvable'
+            ]);
+            return;
+        }
+
+        $saleId = $sale['sale_id'];
+
+        // Supprimer le produit
+        $stmt = $pdo->prepare("DELETE FROM sales_products WHERE id = :id");
+        $stmt->execute([':id' => $productId]);
+
+        // Recalculer le total de la vente
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(price * quantity), 0) AS total
+            FROM sales_products
+            WHERE sale_id = :sale_id
+        ");
+        $stmt->execute([':sale_id' => $saleId]);
+        $newTotal = $stmt->fetchColumn();
+
+        // Mettre à jour le total dans sales
+        $stmt = $pdo->prepare("UPDATE sales SET total = :total WHERE id = :sale_id");
+        $stmt->execute([
+            ':total'    => $newTotal,
+            ':sale_id'  => $saleId
+        ]);
+
+        // Commit
+        $pdo->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Produit supprimé et vente mise à jour',
+            'sale_id' => $saleId,
+            'new_total' => $newTotal
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la suppression : ' . $e->getMessage()
+        ]);
+    }
+}
 
 
 

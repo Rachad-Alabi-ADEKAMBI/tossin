@@ -13,6 +13,10 @@ switch ($action) {
         getAllSales();
         break;
 
+    case 'allExpenses':
+        getAllExpenses();
+        break;
+
     case 'allPayments':
         getAllPayments();
         break;
@@ -35,6 +39,18 @@ switch ($action) {
 
     case 'newOrder':
         newOrder();
+        break;
+
+    case 'newExpense':
+        newExpense();
+        break;
+
+    case 'updateExpense':
+        updateExpense();
+        break;
+
+    case 'deleteExpense':
+        deleteExpense();
         break;
 
     case 'newSale':
@@ -60,6 +76,8 @@ switch ($action) {
     case 'deleteSaleProduct':
         deleteSaleProduct();
         break;
+
+
 
     case 'deleteOrder':
         deleteOrder();

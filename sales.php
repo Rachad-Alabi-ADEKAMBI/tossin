@@ -217,7 +217,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <tr v-for="sale in paginatedSales" :key="sale.id" class="hover:bg-gray-50">
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'N° Facture'">
-                                            {{ sale.invoice_number }}
+                                            {{ sale.id }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Client'">
                                             <div class="flex items-center">
@@ -245,13 +245,13 @@ if (!isset($_SESSION['user_id'])) {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
                                             <button @click="viewSaleDetails(sale)" class="text-blue-600 hover:text-blue-800 mr-3" title="Voir détails">
-                                                <i class="fas fa-eye fa-lg"></i>
+                                                <i class="fas fa-eye"></i>
                                             </button>
                                             <button @click="printInvoice(sale)" class="text-green-600 hover:text-green-800 mr-3" title="Imprimer facture">
-                                                <i class="fas fa-print fa-lg"></i>
+                                                <i class="fas fa-print"></i>
                                             </button>
                                             <button @click="deleteSale(sale.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                <i class="fas fa-trash fa-lg"></i>
+                                                <i class="fas fa-trash"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -463,7 +463,7 @@ if (!isset($_SESSION['user_id'])) {
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                             <div class="bg-blue-50 p-4 rounded-lg">
                                 <p class="text-sm font-medium text-gray-700">N° Facture</p>
-                                <p class="text-lg font-semibold text-blue-600">{{ selectedSale.invoice_number }}</p>
+                                <p class="text-lg font-semibold text-blue-600">{{ selectedSale.id }}</p>
                             </div>
                             <div class="bg-green-50 p-4 rounded-lg">
                                 <p class="text-sm font-medium text-gray-700">Client</p>
@@ -876,7 +876,7 @@ if (!isset($_SESSION['user_id'])) {
                     this.filteredSales.forEach(sale => {
                         printContent += `
                             <tr>
-                                <td>${sale.invoice_number}</td>
+                                <td>${sale.id}</td>
                                 <td>${sale.buyer}</td>
                                 <td>${this.formatDate(sale.date_of_insertion)}</td>
                                 <td>${this.formatCurrency(sale.total, sale.currency)}</td>
@@ -914,7 +914,7 @@ if (!isset($_SESSION['user_id'])) {
                         <!DOCTYPE html>
                         <html>
                         <head>
-                            <title>Facture ${sale.invoice_number} - Ets GBEMIRO</title>
+                            <title>Facture ${sale.id}</title>
                             <style>
                                 body { font-family: Arial, sans-serif; margin: 40px; }
                                 .invoice-header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid #2563EB; padding-bottom: 20px; }
@@ -935,8 +935,8 @@ if (!isset($_SESSION['user_id'])) {
                         </head>
                         <body>
                             <div class="invoice-header">
-                                <h1>ETS GBEMIRO</h1>
-                                <h2>Facture ${sale.invoice_number}</h2>
+                                <h1>GBEMIRO</h1>
+                                <h2>Facture ${sale.id}</h2>
                             </div>
                             
                             <div class="invoice-details">
@@ -1029,7 +1029,7 @@ if (!isset($_SESSION['user_id'])) {
                 addProductLine() {
                     this.saleForm.lines.push({
                         product: '',
-                        quantity: 1,
+                        quantity: '',
                         price: 0,
                         total: 0
                     });
@@ -1106,7 +1106,7 @@ if (!isset($_SESSION['user_id'])) {
                     this.newProductLine = {
                         visible: true,
                         product: '',
-                        quantity: 1,
+                        quantity: '',
                         price: 0
                     };
                 },
