@@ -859,6 +859,9 @@ function deleteOrderProduct()
     }
 }
 
+
+
+
 // Supprimer une commande
 function deleteOrder()
 {
@@ -904,6 +907,53 @@ function deleteOrder()
         ]);
     }
 }
+
+// Supprimer une vente
+function deleteSale()
+{
+    global $pdo;
+
+    // Récupérer le body JSON envoyé par Axios
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (empty($data['id'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'ID de la vente manquant'
+        ]);
+        return;
+    }
+
+    $saleId = intval($data['id']);
+
+    try {
+        // Supprimer d'abord les produits associés à la vente (si applicable)
+        $stmtProducts = $pdo->prepare("DELETE FROM sales_products WHERE sale_id = ?");
+        $stmtProducts->execute([$saleId]);
+
+        // Supprimer ensuite la vente
+        $stmtSale = $pdo->prepare("DELETE FROM sales WHERE id = ?");
+        $stmtSale->execute([$saleId]);
+
+        if ($stmtSale->rowCount() > 0) {
+            echo json_encode([
+                'success' => true,
+                'message' => 'Vente supprimée avec succès'
+            ]);
+        } else {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Vente introuvable'
+            ]);
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur serveur : ' . $e->getMessage()
+        ]);
+    }
+}
+
 
 //mise à jour du statut de la commande
 function updateOrderStatus()
@@ -1025,6 +1075,89 @@ function updateOrderProduct()
     }
 }
 
+// Mettre à jour un produit existant d'une vente
+function updateSaleProduct()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+    $productId = $data['id'] ?? null;
+
+    if (!$productId || empty($data['name']) || !isset($data['quantity']) || !isset($data['price'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Champs obligatoires manquants : id, name, quantity, price'
+        ]);
+        return;
+    }
+
+    try {
+        $pdo->beginTransaction();
+
+        // Récupérer le sale_id du produit avant mise à jour
+        $stmt = $pdo->prepare("SELECT sale_id FROM sales_products WHERE id = :id");
+        $stmt->execute([':id' => $productId]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$product) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Produit introuvable'
+            ]);
+            return;
+        }
+
+        $saleId = $product['sale_id'];
+
+        // Mettre à jour le produit
+        $stmt = $pdo->prepare("
+            UPDATE sales_products
+            SET name = :name,
+                quantity = :quantity,
+                price = :price
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            ':name'     => $data['name'],
+            ':quantity' => $data['quantity'],
+            ':price'    => $data['price'],
+            ':id'       => $productId
+        ]);
+
+        // Recalculer le total de la vente
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(price * quantity), 0) AS total
+            FROM sales_products
+            WHERE sale_id = :sale_id
+        ");
+        $stmt->execute([':sale_id' => $saleId]);
+        $newTotal = $stmt->fetchColumn();
+
+        // Mettre à jour le total dans sales
+        $stmt = $pdo->prepare("UPDATE sales SET total = :total WHERE id = :sale_id");
+        $stmt->execute([
+            ':total'   => $newTotal,
+            ':sale_id' => $saleId
+        ]);
+
+        $pdo->commit();
+
+        echo json_encode([
+            'success'    => true,
+            'message'    => 'Produit mis à jour et vente recalculée',
+            'product_id' => $productId,
+            'new_total'  => $newTotal
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la mise à jour du produit : ' . $e->getMessage()
+        ]);
+    }
+}
+
+
 //ajouter un nouveau produit pour les commandes
 function newOrderProduct()
 {
@@ -1091,13 +1224,20 @@ function newOrderProduct()
 }
 
 //ajouter un nouveau produit pour les ventes
+// Ajouter un nouveau produit à une vente
 function newSaleProduct()
 {
     global $pdo;
 
     $data = json_decode(file_get_contents("php://input"), true);
 
-    if (!$data || empty($data['sale _id']) || empty($data['name']) || !isset($data['quantity']) || !isset($data['price'])) {
+    if (
+        !$data ||
+        empty($data['sale_id']) ||
+        empty($data['name']) ||
+        !isset($data['quantity']) ||
+        !isset($data['price'])
+    ) {
         echo json_encode([
             'success' => false,
             'message' => 'Champs obligatoires manquants : sale_id, name, quantity, price'
@@ -1115,14 +1255,14 @@ function newSaleProduct()
         ");
         $stmt->execute([
             ':sale_id' => $data['sale_id'],
-            ':name'     => $data['name'],
+            ':name'    => $data['name'],
             ':quantity' => $data['quantity'],
-            ':price'    => $data['price']
+            ':price'   => $data['price']
         ]);
 
         $productId = $pdo->lastInsertId();
 
-        // Recalculer le total de la commande
+        // Recalculer le total de la vente
         $stmt = $pdo->prepare("
             SELECT COALESCE(SUM(price * quantity), 0) AS total
             FROM sales_products
@@ -1131,10 +1271,10 @@ function newSaleProduct()
         $stmt->execute([':sale_id' => $data['sale_id']]);
         $newTotal = $stmt->fetchColumn();
 
-        // Mettre à jour la commande
+        // Mettre à jour le total dans la table sales
         $stmt = $pdo->prepare("UPDATE sales SET total = :total WHERE id = :sale_id");
         $stmt->execute([
-            ':total'    => $newTotal,
+            ':total'   => $newTotal,
             ':sale_id' => $data['sale_id']
         ]);
 
@@ -1142,7 +1282,7 @@ function newSaleProduct()
 
         echo json_encode([
             'success'    => true,
-            'message'    => 'Produit ajouté et commande mise à jour',
+            'message'    => 'Produit ajouté et vente mise à jour',
             'product_id' => $productId,
             'new_total'  => $newTotal
         ]);
@@ -1154,6 +1294,7 @@ function newSaleProduct()
         ]);
     }
 }
+
 
 
 // Récupérer toutes les claims

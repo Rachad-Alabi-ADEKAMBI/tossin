@@ -158,8 +158,8 @@ if (!isset($_SESSION['user_id'])) {
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
                                 <select v-model="sortBy" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                     <option value="date">Date</option>
-                                    <option value="client_name">Client</option>
-                                    <option value="total_amount">Montant</option>
+                                    <option value="buyer">Client</option>
+                                    <option value="total">Montant</option>
                                     <option value="invoice_number">N° Facture</option>
                                 </select>
                             </div>
@@ -206,7 +206,7 @@ if (!isset($_SESSION['user_id'])) {
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Facture</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
@@ -216,8 +216,8 @@ if (!isset($_SESSION['user_id'])) {
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <tr v-for="sale in paginatedSales" :key="sale.id" class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'ID'">
-                                            #{{ sale.id }}
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'N° Facture'">
+                                            {{ sale.invoice_number }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Client'">
                                             <div class="flex items-center">
@@ -245,13 +245,13 @@ if (!isset($_SESSION['user_id'])) {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
                                             <button @click="viewSaleDetails(sale)" class="text-blue-600 hover:text-blue-800 mr-3" title="Voir détails">
-                                                <i class="fas fa-eye"></i>
+                                                <i class="fas fa-eye fa-lg"></i>
                                             </button>
                                             <button @click="printInvoice(sale)" class="text-green-600 hover:text-green-800 mr-3" title="Imprimer facture">
-                                                <i class="fas fa-print"></i>
+                                                <i class="fas fa-print fa-lg"></i>
                                             </button>
                                             <button @click="deleteSale(sale.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash fa-lg"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -294,6 +294,7 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
             </div>
 
+            <!-- Modal Nouvelle Vente -->
             <div v-if="showSaleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
                 <div class="flex items-center justify-center min-h-screen p-4">
                     <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto">
@@ -307,12 +308,20 @@ if (!isset($_SESSION['user_id'])) {
                         </div>
 
                         <form @submit.prevent="saveSale" class="space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                         <i class="fas fa-user mr-1"></i>Acheteur
                                     </label>
                                     <input v-model="saleForm.buyer" type="text" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-phone mr-1"></i>Téléphone
+                                    </label>
+                                    <input v-model="saleForm.phone" type="text" required
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
 
@@ -433,45 +442,147 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
             </div>
 
+            <!-- Modal Détails Vente -->
             <div v-if="showDetailsModal && selectedSale" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
                 <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-file-invoice mr-2"></i>Détails de la vente
                             </h3>
-                            <button @click="closeDetailsModal" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
+                            <div class="flex space-x-2">
+                                <button @click="printInvoice(selectedSale)" class="no-print bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                    <i class="fas fa-print mr-1"></i>Imprimer
+                                </button>
+                                <button @click="closeDetailsModal" class="no-print text-gray-400 hover:text-gray-600">
+                                    <i class="fas fa-times text-xl"></i>
+                                </button>
+                            </div>
                         </div>
 
-                        <div class="space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-sm text-gray-600">N° Facture</p>
-                                    <p class="text-lg font-semibold">#{{ selectedSale.invoice_number }}</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-gray-700">N° Facture</p>
+                                <p class="text-lg font-semibold text-blue-600">{{ selectedSale.invoice_number }}</p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-gray-700">Client</p>
+                                <p class="text-lg font-semibold text-green-600">{{ selectedSale.buyer }}</p>
+                            </div>
+                            <div class="bg-yellow-50 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-gray-700">Date</p>
+                                <p class="text-lg font-semibold text-yellow-600">{{ formatDate(selectedSale.date_of_insertion) }}</p>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <p class="text-sm font-medium text-gray-700">Statut</p>
+                                <span :class="['inline-block px-3 py-1 text-sm font-semibold rounded-full', getStatusClass(selectedSale.status)]">
+                                    {{ getStatusLabel(selectedSale.status) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Added product lines section with edit functionality -->
+                        <div class="border-t pt-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <h4 class="text-lg font-medium text-gray-900">
+                                    <i class="fas fa-list mr-2"></i>Produits
+                                </h4>
+                                <div class="flex space-x-2 no-print">
+                                    <button @click="addNewProductLine" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                        <i class="fas fa-plus mr-1"></i>Ajouter produit
+                                    </button>
                                 </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Date</p>
-                                    <p class="text-lg font-semibold">{{ formatDate(selectedSale.date) }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Client</p>
-                                    <p class="text-lg font-semibold">{{ selectedSale.client_name }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Téléphone</p>
-                                    <p class="text-lg font-semibold">{{ selectedSale.client_phone }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Montant</p>
-                                    <p class="text-lg font-semibold text-green-600">{{ formatCurrency(selectedSale.total_amount, selectedSale.currency) }}</p>
-                                </div>
-                                <div>
-                                    <p class="text-sm text-gray-600">Statut</p>
-                                    <span :class="['px-3 py-1 text-sm font-semibold rounded-full', getStatusClass(selectedSale.status)]">
-                                        {{ getStatusLabel(selectedSale.status) }}
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix unitaire</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase no-print">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-200">
+                                        <tr v-for="(line, index) in selectedSale.lines" :key="index" class="hover:bg-gray-50">
+                                            <td class="px-4 py-3 text-sm">
+                                                <div v-if="line.editing">
+                                                    <input v-model="line.product" type="text" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                </div>
+                                                <div v-else>{{ line.product }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm">
+                                                <div v-if="line.editing">
+                                                    <input v-model.number="line.quantity" type="number" min="1" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                </div>
+                                                <div v-else>{{ line.quantity }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm">
+                                                <div v-if="line.editing">
+                                                    <input v-model.number="line.price" type="number" step="0.01" min="0" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                </div>
+                                                <div v-else>{{ formatCurrency(line.price, selectedSale.currency) }}</div>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm font-medium">{{ formatCurrency(line.quantity * line.price, selectedSale.currency) }}</td>
+                                            <td class="px-4 py-3 text-sm no-print">
+                                                <div v-if="line.editing" class="flex space-x-3">
+                                                    <button @click="validateProductEdit(index)" class="text-green-600 hover:text-green-800" title="Valider">
+                                                        <i class="fas fa-check fa-lg"></i>
+                                                    </button>
+                                                    <button @click="cancelProductEdit(index)" class="text-gray-600 hover:text-gray-800" title="Annuler">
+                                                        <i class="fas fa-times fa-lg"></i>
+                                                    </button>
+                                                </div>
+                                                <div v-else class="flex space-x-3">
+                                                    <button @click="editProductLine(index)" class="text-blue-600 hover:text-blue-800" title="Modifier">
+                                                        <i class="fas fa-edit fa-lg"></i>
+                                                    </button>
+                                                    <button @click="deleteSaleItem(line.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
+                                                        <i class="fas fa-trash fa-lg"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- New product line row -->
+                                        <tr v-if="newProductLine.visible" class="bg-green-50">
+                                            <td class="px-4 py-3 text-sm">
+                                                <input v-model="newProductLine.product" type="text" placeholder="Nom du produit" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                            </td>
+                                            <td class="px-4 py-3 text-sm">
+                                                <input v-model.number="newProductLine.quantity" type="number" min="1" placeholder="Quantité" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                            </td>
+                                            <td class="px-4 py-3 text-sm">
+                                                <input v-model.number="newProductLine.price" type="number" step="0.01" min="0" placeholder="Prix" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                            </td>
+                                            <td class="px-4 py-3 text-sm font-medium">{{ formatCurrency(newProductLine.quantity * newProductLine.price || 0, selectedSale.currency) }}</td>
+                                            <td class="px-4 py-3 text-sm no-print">
+                                                <div class="flex space-x-3">
+                                                    <button @click="validateNewLine" class="text-green-600 hover:text-green-800" title="Valider">
+                                                        <i class="fas fa-check fa-lg"></i>
+                                                    </button>
+                                                    <button @click="cancelNewLine" class="text-gray-600 hover:text-gray-800" title="Annuler">
+                                                        <i class="fas fa-times fa-lg"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Added totals summary -->
+                            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-medium text-gray-700">
+                                        <i class="fas fa-boxes mr-2"></i>Quantité totale:
                                     </span>
+                                    <span class="text-lg font-semibold text-blue-600">{{ selectedSaleTotalQuantity }}</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lg font-semibold text-gray-900">Total de la vente:</span>
+                                    <span class="text-2xl font-bold text-green-600">{{ formatCurrency(selectedSaleTotal, selectedSale.currency) }}</span>
                                 </div>
                             </div>
                         </div>
@@ -504,16 +615,22 @@ if (!isset($_SESSION['user_id'])) {
                     sales: [],
                     saleForm: {
                         buyer: '',
+                        phone: '',
                         currency: 'XOF',
                         status: 'pending',
                         lines: []
                     },
+                    newProductLine: {
+                        visible: false,
+                        product: '',
+                        quantity: '',
+                        price: ''
+                    }
                 };
             },
 
             mounted() {
                 this.fetchSales();
-                this.generateInvoiceNumber();
             },
 
             computed: {
@@ -524,7 +641,7 @@ if (!isset($_SESSION['user_id'])) {
                         const matchesSearch =
                             sale.buyer.toLowerCase().includes(search) ||
                             (sale.phone && sale.phone.includes(this.searchTerm)) ||
-                            sale.currency.toLowerCase().includes(search);
+                            sale.invoice_number.toLowerCase().includes(search);
 
                         const matchesStatus =
                             this.statusFilter === 'all' || sale.status === this.statusFilter;
@@ -538,8 +655,10 @@ if (!isset($_SESSION['user_id'])) {
                                 return a.buyer.localeCompare(b.buyer);
                             case 'total':
                                 return parseFloat(b.total) - parseFloat(a.total);
-                            case 'date_of_insertion':
+                            case 'date':
                                 return new Date(b.date_of_insertion) - new Date(a.date_of_insertion);
+                            case 'invoice_number':
+                                return a.invoice_number.localeCompare(b.invoice_number);
                             default:
                                 return 0;
                         }
@@ -583,7 +702,7 @@ if (!isset($_SESSION['user_id'])) {
                 totalSales() {
                     return this.filteredSales
                         .filter(sale => sale.status === 'paid')
-                        .reduce((sum, sale) => sum + parseFloat(sale.total_amount), 0);
+                        .reduce((sum, sale) => sum + parseFloat(sale.total), 0);
                 },
 
                 pendingSalesCount() {
@@ -601,34 +720,67 @@ if (!isset($_SESSION['user_id'])) {
 
                 saleTotalQuantity() {
                     return this.saleForm.lines.reduce((total, line) => total + (parseFloat(line.quantity) || 0), 0);
+                },
+
+                selectedSaleTotal() {
+                    if (!this.selectedSale || !this.selectedSale.lines) return 0;
+                    return this.selectedSale.lines.reduce((total, line) => total + (line.quantity * line.price), 0);
+                },
+
+                selectedSaleTotalQuantity() {
+                    if (!this.selectedSale || !this.selectedSale.lines) return 0;
+                    return this.selectedSale.lines.reduce((total, line) => total + (parseFloat(line.quantity) || 0), 0);
                 }
             },
 
             methods: {
-                fetchSales() {
-                    api.get('?action=allSales')
-                        .then(response => {
-                            this.sales = response.data;
-                            console.log(response.data);
-                        })
-                        .catch(error => {
-                            console.error('Erreur lors de la récupération des ventes:', error);
-                        });
+                async fetchSales() {
+                    try {
+                        const response = await api.get('?action=allSales');
+                        this.sales = response.data.map(sale => ({
+                            ...sale,
+                            lines: []
+                        }));
+                        await this.loadSalesProducts();
+                    } catch (error) {
+                        console.error('Erreur lors de la récupération des ventes:', error);
+                    }
                 },
 
-                generateInvoiceNumber() {
-                    const date = new Date();
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-                    this.saleForm.invoice_number = `INV-${year}${month}-${random}`;
+                async loadSalesProducts() {
+                    try {
+                        const response = await api.get('?action=allSalesProducts');
+                        const products = response.data;
+
+                        this.sales.forEach(sale => {
+                            sale.lines = products.filter(product => product.sale_id == sale.id).map(product => ({
+                                id: product.id,
+                                product: product.name,
+                                quantity: product.quantity,
+                                price: parseFloat(product.price),
+                                editing: false,
+                                originalData: null
+                            }));
+                        });
+                    } catch (error) {
+                        console.error('Erreur lors du chargement des produits:', error);
+                    }
                 },
 
                 formatDate(dateString) {
-                    return new Date(dateString).toLocaleDateString('fr-FR');
+                    if (!dateString) return '';
+                    try {
+                        return new Date(dateString).toLocaleDateString('fr-FR');
+                    } catch (e) {
+                        console.error("Invalid date string:", dateString, e);
+                        return '';
+                    }
                 },
 
                 formatCurrency(amount, currency = 'XOF') {
+                    if (amount === null || amount === undefined || isNaN(amount)) {
+                        return '0.00 ' + currency;
+                    }
                     return new Intl.NumberFormat('fr-FR', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
@@ -724,10 +876,10 @@ if (!isset($_SESSION['user_id'])) {
                     this.filteredSales.forEach(sale => {
                         printContent += `
                             <tr>
-                                <td>#${sale.invoice_number}</td>
-                                <td>${sale.client_name}</td>
-                                <td>${this.formatDate(sale.date)}</td>
-                                <td>${this.formatCurrency(sale.total_amount, sale.currency)}</td>
+                                <td>${sale.invoice_number}</td>
+                                <td>${sale.buyer}</td>
+                                <td>${this.formatDate(sale.date_of_insertion)}</td>
+                                <td>${this.formatCurrency(sale.total, sale.currency)}</td>
                                 <td>${this.getStatusLabel(sale.status)}</td>
                             </tr>`;
                     });
@@ -746,57 +898,92 @@ if (!isset($_SESSION['user_id'])) {
                 printInvoice(sale) {
                     const printWindow = window.open('', '_blank');
 
+                    const productsRows = sale.lines.map(line => `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${line.product}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${line.quantity}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${this.formatCurrency(line.price, sale.currency)}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">${this.formatCurrency(line.quantity * line.price, sale.currency)}</td>
+                        </tr>
+                    `).join('');
+
+                    const totalQuantity = sale.lines.reduce((sum, line) => sum + parseFloat(line.quantity), 0);
+                    const totalAmount = sale.lines.reduce((sum, line) => sum + (line.quantity * line.price), 0);
+
                     let printContent = `
                         <!DOCTYPE html>
                         <html>
                         <head>
-                            <title>Facture ${sale.invoice_number}</title>
+                            <title>Facture ${sale.invoice_number} - Ets GBEMIRO</title>
                             <style>
                                 body { font-family: Arial, sans-serif; margin: 40px; }
                                 .invoice-header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid #2563EB; padding-bottom: 20px; }
-                                .invoice-details { margin: 30px 0; }
-                                .detail-row { display: flex; justify-content: space-between; margin: 10px 0; }
-                                .label { font-weight: bold; color: #374151; }
-                                .value { color: #1F2937; }
-                                .amount-section { margin-top: 40px; padding: 20px; background-color: #f0f9ff; border: 2px solid #2563EB; text-align: center; }
-                                .total-amount { font-size: 32px; font-weight: bold; color: #2563EB; }
-                                .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #6B7280; }
+                                .invoice-details { margin: 30px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+                                .detail-box { padding: 15px; background-color: #f9fafb; border-radius: 8px; }
+                                .label { font-weight: bold; color: #374151; margin-bottom: 5px; }
+                                .value { color: #1F2937; font-size: 16px; }
+                                .products-section { margin: 30px 0; }
+                                .products-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                .products-table th { background-color: #2563EB; color: white; padding: 12px; text-align: left; }
+                                .products-table td { border: 1px solid #ddd; padding: 8px; }
+                                .products-table tr:nth-child(even) { background-color: #f9fafb; }
+                                .totals-section { margin-top: 30px; padding: 20px; background-color: #f0f9ff; border: 2px solid #2563EB; }
+                                .total-row { display: flex; justify-content: space-between; margin: 10px 0; }
+                                .total-amount { font-size: 28px; font-weight: bold; color: #2563EB; }
+                                .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #6B7280; border-top: 1px solid #ddd; padding-top: 20px; }
                             </style>
                         </head>
                         <body>
                             <div class="invoice-header">
-                                <h1>FACTURE</h1>
-                                <h2>#${sale.invoice_number}</h2>
+                                <h1>ETS GBEMIRO</h1>
+                                <h2>Facture ${sale.invoice_number}</h2>
                             </div>
                             
                             <div class="invoice-details">
-                                <div class="detail-row">
-                                    <span class="label">Client:</span>
-                                    <span class="value">${sale.client_name}</span>
+                                <div class="detail-box">
+                                    <div class="label">Client:</div>
+                                    <div class="value">${sale.buyer}</div>
                                 </div>
-                                <div class="detail-row">
-                                    <span class="label">Téléphone:</span>
-                                    <span class="value">${sale.client_phone}</span>
+                                <div class="detail-box">
+                                    <div class="label">Téléphone:</div>
+                                    <div class="value">${sale.phone || '-'}</div>
                                 </div>
-                                <div class="detail-row">
-                                    <span class="label">Date:</span>
-                                    <span class="value">${this.formatDate(sale.date)}</span>
+                                <div class="detail-box">
+                                    <div class="label">Date:</div>
+                                    <div class="value">${this.formatDate(sale.date_of_insertion)}</div>
                                 </div>
-                                <div class="detail-row">
-                                    <span class="label">Statut:</span>
-                                    <span class="value">${this.getStatusLabel(sale.status)}</span>
+                                <div class="detail-box">
+                                    <div class="label">Statut:</div>
+                                    <div class="value">${this.getStatusLabel(sale.status)}</div>
                                 </div>
-                                ${sale.notes ? `
-                                <div class="detail-row">
-                                    <span class="label">Notes:</span>
-                                    <span class="value">${sale.notes}</span>
-                                </div>
-                                ` : ''}
                             </div>
                             
-                            <div class="amount-section">
-                                <p style="margin: 0; font-size: 18px; color: #374151;">MONTANT TOTAL</p>
-                                <p class="total-amount">${this.formatCurrency(sale.total_amount, sale.currency)}</p>
+                            <div class="products-section">
+                                <h3>Détails des produits</h3>
+                                <table class="products-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th style="text-align: center;">Quantité</th>
+                                            <th style="text-align: right;">Prix unitaire</th>
+                                            <th style="text-align: right;">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${productsRows}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="totals-section">
+                                <div class="total-row">
+                                    <span style="font-size: 16px; font-weight: bold;">Quantité totale:</span>
+                                    <span style="font-size: 18px; font-weight: bold; color: #059669;">${totalQuantity}</span>
+                                </div>
+                                <div class="total-row" style="border-top: 2px solid #2563EB; padding-top: 15px; margin-top: 15px;">
+                                    <span style="font-size: 20px; font-weight: bold;">MONTANT TOTAL:</span>
+                                    <span class="total-amount">${this.formatCurrency(totalAmount, sale.currency)}</span>
+                                </div>
                             </div>
                             
                             <div class="footer">
@@ -812,15 +999,11 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 openNewSaleModal() {
-                    this.generateInvoiceNumber();
                     this.saleForm = {
-                        client_name: '',
-                        client_phone: '',
-                        date: new Date().toISOString().split('T')[0],
-                        invoice_number: this.saleForm.invoice_number,
+                        buyer: '',
+                        phone: '',
                         currency: 'XOF',
-                        status: 'paid',
-                        notes: '',
+                        status: 'pending',
                         lines: []
                     };
                     this.showSaleModal = true;
@@ -831,7 +1014,10 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 viewSaleDetails(sale) {
-                    this.selectedSale = sale;
+                    this.selectedSale = {
+                        ...sale,
+                        lines: [...sale.lines]
+                    };
                     this.showDetailsModal = true;
                 },
 
@@ -870,14 +1056,14 @@ if (!isset($_SESSION['user_id'])) {
 
                     const saleData = {
                         buyer: this.saleForm.buyer,
+                        phone: this.saleForm.phone,
                         total: this.saleTotal,
                         currency: this.saleForm.currency,
+                        status: this.saleForm.status,
                         lines: this.saleForm.lines
                     };
 
-                    console.log('Données à envoyer au backend:', saleData);
-
-                    api.post('newSale', saleData)
+                    api.post('?action=newSale', saleData)
                         .then(response => {
                             const data = response.data;
 
@@ -913,6 +1099,165 @@ if (!isset($_SESSION['user_id'])) {
                         .catch(error => {
                             console.error('Erreur lors de la suppression:', error);
                             alert('Erreur lors de la suppression de la vente');
+                        });
+                },
+
+                addNewProductLine() {
+                    this.newProductLine = {
+                        visible: true,
+                        product: '',
+                        quantity: 1,
+                        price: 0
+                    };
+                },
+
+                async validateNewLine() {
+                    if (!this.newProductLine.product || !this.newProductLine.quantity || !this.newProductLine.price) {
+                        alert('Veuillez remplir tous les champs');
+                        return;
+                    }
+
+                    try {
+                        const response = await api.post('?action=newSaleProduct', {
+                            sale_id: this.selectedSale.id,
+                            name: this.newProductLine.product,
+                            quantity: this.newProductLine.quantity,
+                            price: this.newProductLine.price
+                        });
+
+                        if (response.data.success) {
+                            const newLine = {
+                                id: response.data.product_id,
+                                product: this.newProductLine.product,
+                                quantity: this.newProductLine.quantity,
+                                price: this.newProductLine.price,
+                                editing: false,
+                                originalData: null
+                            };
+
+                            this.selectedSale.lines.push(newLine);
+
+                            // Update the main sales array
+                            const saleIndex = this.sales.findIndex(s => s.id === this.selectedSale.id);
+                            if (saleIndex !== -1) {
+                                this.sales[saleIndex].lines.push(newLine);
+                                this.sales[saleIndex].total = this.selectedSaleTotal;
+                            }
+
+                            this.cancelNewLine();
+                            alert('Produit ajouté avec succès!');
+                        } else {
+                            alert('Erreur lors de l\'ajout du produit');
+                        }
+                    } catch (error) {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors de l\'ajout du produit');
+                    }
+                },
+
+                cancelNewLine() {
+                    this.newProductLine = {
+                        visible: false,
+                        product: '',
+                        quantity: '',
+                        price: ''
+                    };
+                },
+
+                editProductLine(index) {
+                    const line = this.selectedSale.lines[index];
+                    line.originalData = {
+                        product: line.product,
+                        quantity: line.quantity,
+                        price: line.price
+                    };
+                    line.editing = true;
+                },
+
+                async validateProductEdit(index) {
+                    const line = this.selectedSale.lines[index];
+
+                    if (!line.product || line.quantity <= 0 || line.price < 0) {
+                        alert('Veuillez remplir correctement tous les champs');
+                        return;
+                    }
+
+                    try {
+                        const response = await api.post('?action=updateSaleProduct', {
+                            id: line.id,
+                            name: line.product,
+                            quantity: line.quantity,
+                            price: line.price
+                        });
+
+                        if (response.data.success) {
+                            line.editing = false;
+                            line.originalData = null;
+
+                            // Update the main sales array
+                            const saleIndex = this.sales.findIndex(s => s.id === this.selectedSale.id);
+                            if (saleIndex !== -1) {
+                                const productIndex = this.sales[saleIndex].lines.findIndex(l => l.id === line.id);
+                                if (productIndex !== -1) {
+                                    this.sales[saleIndex].lines[productIndex] = {
+                                        ...line
+                                    };
+                                    this.sales[saleIndex].total = this.selectedSaleTotal;
+                                }
+                            }
+
+                            alert('Produit modifié avec succès!');
+                        } else {
+                            alert('Erreur lors de la modification du produit');
+                        }
+                    } catch (error) {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors de la modification du produit');
+                    }
+                },
+
+                cancelProductEdit(index) {
+                    const line = this.selectedSale.lines[index];
+                    if (line.originalData) {
+                        line.product = line.originalData.product;
+                        line.quantity = line.originalData.quantity;
+                        line.price = line.originalData.price;
+                        line.originalData = null;
+                    }
+                    line.editing = false;
+                },
+
+                deleteSaleItem(itemId) {
+                    if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir supprimer cet article?')) {
+                        return;
+                    }
+
+                    api.post('?action=deleteSaleProduct', {
+                            id: itemId
+                        })
+                        .then(response => {
+                            if (response.data.success) {
+                                // Update the selectedSale.lines immediately to reflect deletion
+                                const deletedLineIndex = this.selectedSale.lines.findIndex(line => line.id === itemId);
+                                if (deletedLineIndex !== -1) {
+                                    this.selectedSale.lines.splice(deletedLineIndex, 1);
+                                }
+
+                                // Update the main sales array to reflect the new total
+                                const saleIndex = this.sales.findIndex(s => s.id === this.selectedSale.id);
+                                if (saleIndex !== -1) {
+                                    this.sales[saleIndex].lines = [...this.selectedSale.lines];
+                                    this.sales[saleIndex].total = this.selectedSaleTotal;
+                                }
+
+                                alert('Article supprimé avec succès!');
+                            } else {
+                                alert('Erreur lors de la suppression: ' + response.data.error);
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la suppression:', error);
+                            alert('Erreur lors de la suppression de l\'article');
                         });
                 }
             }

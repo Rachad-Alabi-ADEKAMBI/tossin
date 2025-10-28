@@ -13,13 +13,21 @@
             <i class="fas fa-tachometer-alt mr-3"></i>
             <span>Tableau de bord</span>
         </a>
-        <a href="claims.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-            <i class="fas fa-money-bill-wave mr-3"></i>
-            <span>Créances</span>
+
+        <a href="sales.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+            <i class="fas fa-file-invoice-dollar mr-3"></i>
+            <span>Factures</span>
         </a>
+
+
         <a href="orders.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
             <i class="fas fa-shopping-cart mr-3"></i>
             <span>Commandes</span>
+        </a>
+
+        <a href="claims.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+            <i class="fas fa-money-bill-wave mr-3"></i>
+            <span>Créances</span>
         </a>
 
         <a href="expenses.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
@@ -27,10 +35,6 @@
             <span>Dépenses</span>
         </a>
 
-        <a href="expenses.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-            <i class="fas fa-file-invoice-dollar mr-3"></i>
-            <span>Factures</span>
-        </a>
 
     </nav>
 </div>

@@ -113,7 +113,7 @@ if (!isset($_SESSION['user_id'])) {
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                <!-- Made recent activity dynamic with latest orders and claims -->
+                <!-- Made recent activity dynamic with latest orders and claims
                 <div class="bg-white rounded-xl shadow-sm p-6">
                     <h3 class="text-lg font-semibold text-gray-900 mb-4">Activité récente</h3>
                     <div class="space-y-3">
@@ -128,7 +128,7 @@ if (!isset($_SESSION['user_id'])) {
                             Aucune activité récente
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
 
             <!-- Added loading indicator -->

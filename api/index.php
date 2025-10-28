@@ -57,12 +57,24 @@ switch ($action) {
         deleteOrderProduct();
         break;
 
+    case 'deleteSaleProduct':
+        deleteSaleProduct();
+        break;
+
     case 'deleteOrder':
         deleteOrder();
         break;
 
+    case 'deleteSale':
+        deleteSale();
+        break;
+
     case 'updateOrderProduct':
         updateOrderProduct();
+        break;
+
+    case 'updateSaleProduct':
+        updateSaleProduct();
         break;
 
     case 'updateOrderStatus':
