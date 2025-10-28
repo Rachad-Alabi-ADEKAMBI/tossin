@@ -27,7 +27,7 @@
             <span>Dépenses</span>
         </a>
 
-        <a href="sales.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+        <a href="expenses.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
             <i class="fas fa-file-invoice-dollar mr-3"></i>
             <span>Factures</span>
         </a>

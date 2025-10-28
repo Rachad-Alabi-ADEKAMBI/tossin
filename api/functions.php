@@ -370,9 +370,6 @@ function deleteClaimPayment($data)
     }
 }
 
-
-
-
 //ajouter un paiement pour commande
 function newOrderPayment()
 {
@@ -586,8 +583,6 @@ function deleteOrderPayment()
     }
 }
 
-
-
 // Ajouter une nouvelle commande
 function newOrder()
 {
@@ -670,76 +665,89 @@ function newSale()
 {
     global $pdo;
 
-    // Lire les données JSON envoyées par Axios
     $data = json_decode(file_get_contents("php://input"), true);
 
-    if (
-        !$data ||
-        empty($data['buyer']) ||
-        !isset($data['total']) ||
-        empty($data['lines']) ||
-        empty($data['currency']) ||
-        empty($data['status'])
-    ) {
+    // Liste des champs obligatoires
+    $requiredFields = ['buyer', 'total', 'currency', 'lines'];
+
+    $missingFields = [];
+
+    foreach ($requiredFields as $field) {
+        if (
+            !isset($data[$field]) ||
+            (empty($data[$field]) && $data[$field] !== "0") || // accepte 0 comme valeur valide
+            ($field === 'lines' && (!is_array($data[$field]) || count($data[$field]) === 0))
+        ) {
+            $missingFields[] = $field;
+        }
+    }
+
+    // Si des champs manquent, renvoyer une erreur descriptive
+    if (!empty($missingFields)) {
         echo json_encode([
             'success' => false,
-            'message' => 'Champs obligatoires manquants : buyer, total, status, currency ou lines'
+            'message' => 'Champs manquants ou invalides : ' . implode(', ', $missingFields)
         ]);
         return;
     }
 
     try {
-        // Démarrer une transaction
         $pdo->beginTransaction();
 
-        // Insérer la commande dans la table orders
+        $status = 'pending';
+
         $stmt = $pdo->prepare("
-            INSERT INTO orders (date_of_insertion, buyer, total, status, currency) 
+            INSERT INTO sales (date_of_insertion, buyer, total, status, currency) 
             VALUES (NOW(), :buyer, :total, :status, :currency)
         ");
         $stmt->execute([
             ':buyer'   => $data['buyer'],
-            ':total'    => $data['total'],
-            ':status'   => $data['status'],
+            ':total'   => floatval($data['total']),
+            ':status'  => $status,
             ':currency' => $data['currency']
         ]);
 
-        // Récupérer l'ID de la commande nouvellement insérée
         $saleId = $pdo->lastInsertId();
 
-        // Insérer chaque produit de la commande dans la table products
         $stmtProduct = $pdo->prepare("
             INSERT INTO sales_products (date_of_insertion, name, quantity, price, sale_id) 
-            VALUES (NOW(), :name, :quantity, :price, :order_id)
+            VALUES (NOW(), :name, :quantity, :price, :sale_id)
         ");
 
         foreach ($data['lines'] as $line) {
+            // Validation interne des produits
+            if (
+                empty($line['product']) ||
+                !isset($line['quantity']) ||
+                !isset($line['price'])
+            ) {
+                throw new Exception('Un ou plusieurs champs manquent dans une ligne produit');
+            }
+
             $stmtProduct->execute([
                 ':name'     => $line['product'],
-                ':quantity' => $line['quantity'],
-                ':price'    => $line['price'],
-                ':sale_id' => $saleId
+                ':quantity' => intval($line['quantity']),
+                ':price'    => floatval($line['price']),
+                ':sale_id'  => $saleId
             ]);
         }
 
-        // Valider la transaction
         $pdo->commit();
 
         echo json_encode([
             'success' => true,
             'message' => 'Commande et produits insérés avec succès',
-            'order_id' => $saleId
+            'sale_id' => $saleId
         ]);
     } catch (Exception $e) {
-        // Annuler en cas d'erreur
         $pdo->rollBack();
-
         echo json_encode([
             'success' => false,
-            'message' => 'Erreur lors de l\'insertion: ' . $e->getMessage()
+            'message' => 'Erreur lors de l\'insertion : ' . $e->getMessage()
         ]);
     }
 }
+
 
 
 // Supprimer une créance
@@ -936,7 +944,7 @@ function updateOrderStatus()
 }
 
 // mettre à jour un produit existant
-function updateProduct()
+function updateOrderProduct()
 {
     global $pdo;
 

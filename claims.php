@@ -14,7 +14,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Créances - Gbemiro</title>
+    <title>Gbemiro - Gestion des Créances</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -378,12 +378,12 @@ if (!isset($_SESSION['user_id'])) {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
                                             <button @click="showPaymentHistory(claim)" class="text-primary hover:text-secondary mr-3" title="Historique">
-                                                <i class="fas fa-history"></i>
+                                                <i class="fas fa-history fa-lg"></i>
                                             </button>
                                             <!-- Removed the + icon for adding payments from the list -->
                                             <!-- Added confirmation dialog before delete -->
                                             <button @click="deleteClaim(claim.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash fa-lg"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -606,10 +606,10 @@ if (!isset($_SESSION['user_id'])) {
                                             <!-- Added edit and delete buttons -->
                                             <td class="px-4 py-3 text-sm" data-label="Actions">
                                                 <button @click="editPayment(payment)" class="text-blue-600 hover:text-blue-800 mr-3" title="Modifier">
-                                                    <i class="fas fa-edit"></i>
+                                                    <i class="fas fa-edit fa-lg"></i>
                                                 </button>
                                                 <button @click="deletePayment(payment.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                    <i class="fas fa-trash"></i>
+                                                    <i class="fas fa-trash fa-lg"></i>
                                                 </button>
                                             </td>
                                         </tr>

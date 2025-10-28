@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tossin - Gestion des Commandes</title>
+    <title>Gbemiro - Gestion des Commandes</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -282,18 +282,19 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" data-label="Actions">
                                             <button @click="showPaymentHistory(order)" class="text-green-600 hover:text-green-800 mr-3" title="Historique des paiements">
-                                                <i class="fas fa-history"></i>
+                                                <i class="fas fa-history fa-lg"></i>
                                             </button>
                                             <button @click="showOrderDetails(order)" class="text-primary hover:text-secondary mr-3" title="Voir détails">
-                                                <i class="fas fa-eye"></i>
+                                                <i class="fas fa-eye fa-lg"></i>
                                             </button>
                                             <button @click="editOrderStatus(order)" class="text-accent hover:text-yellow-600 mr-3" title="Modifier statut">
-                                                <i class="fas fa-edit"></i>
+                                                <i class="fas fa-edit fa-lg"></i>
                                             </button>
                                             <button @click="deleteOrder(order.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash fa-lg"></i>
                                             </button>
                                         </td>
+
                                     </tr>
                                 </tbody>
                             </table>
@@ -650,18 +651,18 @@
                                                 <td v-if="selectedOrder.status !== 'Livrée'" class="px-4 py-3 text-sm no-print" data-label="Actions">
                                                     <div v-if="line.editing" class="flex space-x-3">
                                                         <button @click="validateProductEdit(index)" class="px-3 py-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors" title="Valider">
-                                                            <i class="fas fa-check text-lg"></i>
+                                                            <i class="fas fa-check text-lg fa-lg"></i>
                                                         </button>
                                                         <button @click="cancelProductEdit(index)" class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors" title="Annuler">
-                                                            <i class="fas fa-times text-lg"></i>
+                                                            <i class="fas fa-times text-lg fa-lg"></i>
                                                         </button>
                                                     </div>
                                                     <div v-else class="flex space-x-3">
                                                         <button @click="editProductLine(index)" class="px-3 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors" title="Modifier">
-                                                            <i class="fas fa-edit text-lg"></i>
+                                                            <i class="fas fa-edit text-lg fa-lg"></i>
                                                         </button>
                                                         <button @click="deleteOrderItem(line.id)" class="px-3 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors" title="Supprimer">
-                                                            <i class="fas fa-trash text-lg"></i>
+                                                            <i class="fas fa-trash text-lg fa-lg"></i>
                                                         </button>
                                                     </div>
                                                 </td>
@@ -681,10 +682,10 @@
                                                 <td class="px-4 py-3 text-sm no-print" data-label="Actions">
                                                     <div class="flex space-x-3">
                                                         <button @click="validateNewLine" class="px-3 py-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors" title="Valider">
-                                                            <i class="fas fa-check text-lg"></i>
+                                                            <i class="fas fa-check text-lg fa-lg"></i>
                                                         </button>
                                                         <button @click="cancelNewLine" class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors" title="Annuler">
-                                                            <i class="fas fa-times text-lg"></i>
+                                                            <i class="fas fa-times text-lg fa-lg"></i>
                                                         </button>
                                                     </div>
                                                 </td>
@@ -810,10 +811,11 @@
                                             </td>
                                             <td class="px-4 py-3 text-sm no-print" data-label="Actions">
                                                 <button @click="editPayment(payment)" class="text-blue-600 hover:text-blue-800 mr-3" title="Modifier">
-                                                    <i class="fas fa-edit"></i>
+                                                    <i class="fas fa-edit fa-lg"></i>
                                                 </button>
-                                                <button @click="deletePayment(payment.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                    <i class="fas fa-trash"></i>
+                                                <button @click="deletePayment(payment.id)" class="text-red-600 hover:text-red-800"
+                                                    title="Supprimer">
+                                                    <i class="fas fa-trash fa-lg"></i>
                                                 </button>
                                             </td>
                                         </tr>
@@ -1325,14 +1327,24 @@
                         })
                         .then(response => {
                             if (response.data.success) {
-                                alert('Article supprimé avec succès!');
-                                // Refresh order details
-                                // Reload the details of the currently viewed order
-                                if (this.selectedOrder && this.selectedOrder.id) {
-                                    this.showOrderDetails(this.selectedOrder); // Re-fetches details to refresh the list
+                                // <CHANGE> Update the selectedOrder.lines immediately to reflect deletion
+                                const deletedLineIndex = this.selectedOrder.lines.findIndex(line => line.id === itemId);
+                                if (deletedLineIndex !== -1) {
+                                    this.selectedOrder.lines.splice(deletedLineIndex, 1);
                                 }
-                                // Also update the main orders list to reflect potential total changes
-                                this.loadOrders();
+
+                                // <CHANGE> Update the main orders array to reflect the new total and quantity
+                                const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
+                                if (orderIndex !== -1) {
+                                    this.orders[orderIndex].lines = [...this.selectedOrder.lines];
+                                    this.orders[orderIndex].total = this.selectedOrderTotal;
+                                    this.orders[orderIndex].totalQuantity = this.selectedOrderTotalQuantity;
+                                }
+
+                                // <CHANGE> Update the filtered orders as well
+                                this.applyFilters();
+
+                                alert('Article supprimé avec succès!');
                             } else {
                                 alert('Erreur lors de la suppression: ' + response.data.error);
                             }
@@ -1357,7 +1369,7 @@
                     }
 
                     try {
-                        const response = await api.post('?action=newProduct', {
+                        const response = await api.post('?action=newOrderProduct', {
                             order_id: this.selectedOrder.id,
                             name: this.newProductLine.product,
                             quantity: this.newProductLine.quantity,
@@ -1443,7 +1455,7 @@
                             price: line.price
                         });
 
-                        const response = await api.post('?action=updateProduct', {
+                        const response = await api.post('?action=updateOrdersProduct', {
                             id: line.id,
                             name: line.product,
                             quantity: line.quantity,

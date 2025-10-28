@@ -206,7 +206,7 @@ if (!isset($_SESSION['user_id'])) {
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Facture</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
@@ -216,8 +216,8 @@ if (!isset($_SESSION['user_id'])) {
                                 </thead>
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <tr v-for="sale in paginatedSales" :key="sale.id" class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'N° Facture'">
-                                            #{{ sale.invoice_number }}
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'ID'">
+                                            #{{ sale.id }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Client'">
                                             <div class="flex items-center">
@@ -227,16 +227,16 @@ if (!isset($_SESSION['user_id'])) {
                                                     </div>
                                                 </div>
                                                 <div class="ml-4">
-                                                    <div class="text-sm font-medium text-gray-900">{{ sale.client_name }}</div>
-                                                    <div class="text-sm text-gray-500">{{ sale.client_phone }}</div>
+                                                    <div class="text-sm font-medium text-gray-900">{{ sale.buyer }}</div>
+                                                    <div class="text-sm text-gray-500">{{ sale.phone }}</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Date'">
-                                            {{ formatDate(sale.date) }}
+                                            {{ formatDate(sale.date_of_insertion) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600" :data-label="'Montant'">
-                                            {{ formatCurrency(sale.total_amount, sale.currency) }}
+                                            {{ formatCurrency(sale.total, sale.currency) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Statut'">
                                             <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getStatusClass(sale.status)]">
@@ -290,6 +290,7 @@ if (!isset($_SESSION['user_id'])) {
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
 
@@ -309,38 +310,18 @@ if (!isset($_SESSION['user_id'])) {
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-user mr-1"></i>Nom du client
+                                        <i class="fas fa-user mr-1"></i>Acheteur
                                     </label>
-                                    <input v-model="saleForm.client_name" type="text" required
+                                    <input v-model="saleForm.buyer" type="text" required
                                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-phone mr-1"></i>Téléphone
-                                    </label>
-                                    <input v-model="saleForm.client_phone" type="tel" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-calendar mr-1"></i>Date
-                                    </label>
-                                    <input v-model="saleForm.date" type="date" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-hashtag mr-1"></i>N° Facture
-                                    </label>
-                                    <input v-model="saleForm.invoice_number" type="text" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                </div>
-                                <!-- Removed total_amount input field -->
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                         <i class="fas fa-coins mr-1"></i>Devise
                                     </label>
-                                    <select v-model="saleForm.currency" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <select v-model="saleForm.currency" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                         <option value="XOF">XOF (Franc CFA)</option>
                                         <option value="N">N (Naira)</option>
                                         <option value="GHC">GHC (Ghana Cedis)</option>
@@ -349,31 +330,35 @@ if (!isset($_SESSION['user_id'])) {
                                         <option value="GBP">GBP (Livre Sterling)</option>
                                     </select>
                                 </div>
+
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
                                         <i class="fas fa-info-circle mr-1"></i>Statut
                                     </label>
-                                    <select v-model="saleForm.status" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                        <option value="paid">Payé</option>
+                                    <select v-model="saleForm.status" required
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                         <option value="pending">En attente</option>
-                                        <option value="cancelled">Annulé</option>
+                                        <option value="paid">Payée</option>
+                                        <option value="cancelled">Annulée</option>
                                     </select>
                                 </div>
                             </div>
 
-                            <!-- Added product lines section -->
+                            <!-- Section produits -->
                             <div class="border-t pt-6">
                                 <div class="flex justify-between items-center mb-4">
                                     <h4 class="text-lg font-medium text-gray-900">
                                         <i class="fas fa-list mr-2"></i>Produits
                                     </h4>
-                                    <button type="button" @click="addProductLine" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                                    <button type="button" @click="addProductLine"
+                                        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
                                         <i class="fas fa-plus mr-1"></i>Ajouter produit
                                     </button>
                                 </div>
 
                                 <div class="space-y-3">
-                                    <div v-for="(line, index) in saleForm.lines" :key="index" class="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                    <div v-for="(line, index) in saleForm.lines" :key="index"
+                                        class="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50">
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-box mr-1"></i>Produit
@@ -381,6 +366,7 @@ if (!isset($_SESSION['user_id'])) {
                                             <input v-model="line.product" type="text" required
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
                                         </div>
+
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
@@ -389,6 +375,7 @@ if (!isset($_SESSION['user_id'])) {
                                                 @input="updateLineTotal(index)"
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
                                         </div>
+
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire
@@ -397,6 +384,7 @@ if (!isset($_SESSION['user_id'])) {
                                                 @input="updateLineTotal(index)"
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
                                         </div>
+
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-calculator mr-1"></i>Total
@@ -404,6 +392,7 @@ if (!isset($_SESSION['user_id'])) {
                                             <input :value="formatCurrency(line.total, saleForm.currency)" type="text" readonly
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm bg-gray-100">
                                         </div>
+
                                         <div class="flex items-end">
                                             <button type="button" @click="removeProductLine(index)"
                                                 class="w-full bg-red-500 hover:bg-red-600 text-white px-2 py-2 rounded text-sm transition-colors">
@@ -413,7 +402,7 @@ if (!isset($_SESSION['user_id'])) {
                                     </div>
                                 </div>
 
-                                <!-- Added total summary section -->
+                                <!-- Résumé -->
                                 <div class="mt-6 p-4 bg-gray-50 rounded-lg">
                                     <div class="flex justify-between items-center mb-2">
                                         <span class="text-sm font-medium text-gray-700">
@@ -428,14 +417,6 @@ if (!isset($_SESSION['user_id'])) {
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">
-                                    <i class="fas fa-sticky-note mr-1"></i>Notes / Description
-                                </label>
-                                <textarea v-model="saleForm.notes" rows="3"
-                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
-                            </div>
-
                             <div class="flex space-x-3 pt-4">
                                 <button type="submit"
                                     class="flex-1 bg-accent hover:bg-green-600 text-white py-3 px-4 rounded-lg transition-colors font-medium">
@@ -447,6 +428,7 @@ if (!isset($_SESSION['user_id'])) {
                                 </button>
                             </div>
                         </form>
+
                     </div>
                 </div>
             </div>
@@ -521,14 +503,11 @@ if (!isset($_SESSION['user_id'])) {
                     selectedSale: null,
                     sales: [],
                     saleForm: {
-                        client_name: '',
-                        client_phone: '',
-                        date: new Date().toISOString().split('T')[0],
-                        invoice_number: '',
+                        buyer: '',
                         currency: 'XOF',
-                        status: 'paid',
+                        status: 'pending',
                         lines: []
-                    }
+                    },
                 };
             },
 
@@ -540,26 +519,27 @@ if (!isset($_SESSION['user_id'])) {
             computed: {
                 filteredSales() {
                     let filtered = this.sales.filter(sale => {
-                        const matchesSearch =
-                            sale.client_name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-                            sale.client_phone.includes(this.searchTerm) ||
-                            sale.invoice_number.toLowerCase().includes(this.searchTerm.toLowerCase());
+                        const search = this.searchTerm.toLowerCase();
 
-                        const matchesStatus = this.statusFilter === 'all' || sale.status === this.statusFilter;
+                        const matchesSearch =
+                            sale.buyer.toLowerCase().includes(search) ||
+                            (sale.phone && sale.phone.includes(this.searchTerm)) ||
+                            sale.currency.toLowerCase().includes(search);
+
+                        const matchesStatus =
+                            this.statusFilter === 'all' || sale.status === this.statusFilter;
 
                         return matchesSearch && matchesStatus;
                     });
 
                     filtered.sort((a, b) => {
                         switch (this.sortBy) {
-                            case 'client_name':
-                                return a.client_name.localeCompare(b.client_name);
-                            case 'total_amount':
-                                return parseFloat(b.total_amount) - parseFloat(a.total_amount);
-                            case 'date':
-                                return new Date(b.date) - new Date(a.date);
-                            case 'invoice_number':
-                                return a.invoice_number.localeCompare(b.invoice_number);
+                            case 'buyer':
+                                return a.buyer.localeCompare(b.buyer);
+                            case 'total':
+                                return parseFloat(b.total) - parseFloat(a.total);
+                            case 'date_of_insertion':
+                                return new Date(b.date_of_insertion) - new Date(a.date_of_insertion);
                             default:
                                 return 0;
                         }
@@ -567,7 +547,6 @@ if (!isset($_SESSION['user_id'])) {
 
                     return filtered;
                 },
-
                 totalItems() {
                     return this.filteredSales.length;
                 },
@@ -630,6 +609,7 @@ if (!isset($_SESSION['user_id'])) {
                     api.get('?action=allSales')
                         .then(response => {
                             this.sales = response.data;
+                            console.log(response.data);
                         })
                         .catch(error => {
                             console.error('Erreur lors de la récupération des ventes:', error);
@@ -868,18 +848,13 @@ if (!isset($_SESSION['user_id'])) {
                         total: 0
                     });
                 },
-
                 removeProductLine(index) {
-                    if (confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette ligne?')) {
-                        this.saleForm.lines.splice(index, 1);
-                    }
+                    this.saleForm.lines.splice(index, 1);
                 },
-
                 updateLineTotal(index) {
                     const line = this.saleForm.lines[index];
-                    line.total = (parseFloat(line.quantity) || 0) * (parseFloat(line.price) || 0);
+                    line.total = line.quantity * line.price;
                 },
-
                 saveSale() {
                     if (this.saleForm.lines.length === 0) {
                         alert('Veuillez ajouter au moins un produit');
@@ -894,14 +869,20 @@ if (!isset($_SESSION['user_id'])) {
                     }
 
                     const saleData = {
-                        ...this.saleForm,
-                        total_amount: this.saleTotal
+                        buyer: this.saleForm.buyer,
+                        total: this.saleTotal,
+                        currency: this.saleForm.currency,
+                        lines: this.saleForm.lines
                     };
 
-                    api.post('?action=newSale', saleData)
+                    console.log('Données à envoyer au backend:', saleData);
+
+                    api.post('newSale', saleData)
                         .then(response => {
-                            if (response.data.error) {
-                                alert('Erreur: ' + response.data.error);
+                            const data = response.data;
+
+                            if (!data.success) {
+                                alert('Erreur: ' + (data.message || 'Une erreur est survenue.'));
                                 return;
                             }
 
@@ -914,12 +895,10 @@ if (!isset($_SESSION['user_id'])) {
                             alert('Erreur lors de l\'enregistrement de la vente');
                         });
                 },
-
                 deleteSale(saleId) {
                     if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir supprimer cette vente?')) {
                         return;
                     }
-
                     api.post('?action=deleteSale', {
                             id: saleId
                         })
