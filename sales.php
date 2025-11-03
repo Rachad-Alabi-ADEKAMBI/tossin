@@ -209,6 +209,7 @@ if (!isset($_SESSION['user_id'])) {
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Facture</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -221,12 +222,7 @@ if (!isset($_SESSION['user_id'])) {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Client'">
                                             <div class="flex items-center">
-                                                <div class="flex-shrink-0 h-10 w-10">
-                                                    <div class="h-10 w-10 rounded-full bg-green-500 flex items-center justify-center">
-                                                        <i class="fas fa-user text-white"></i>
-                                                    </div>
-                                                </div>
-                                                <div class="ml-4">
+                                                <div class="">
                                                     <div class="text-sm font-medium text-gray-900">{{ sale.buyer }}</div>
                                                     <div class="text-sm text-gray-500">{{ sale.phone }}</div>
                                                 </div>
@@ -234,6 +230,9 @@ if (!isset($_SESSION['user_id'])) {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Date'">
                                             {{ formatDate(sale.date_of_insertion) }}
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Quantité'">
+                                            {{ formatNumber(sale.quantity) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600" :data-label="'Montant'">
                                             {{ formatCurrency(sale.total, sale.currency) }}
@@ -507,26 +506,27 @@ if (!isset($_SESSION['user_id'])) {
                                     </thead>
                                     <tbody class="divide-y divide-gray-200">
                                         <tr v-for="(line, index) in selectedSale.lines" :key="index" class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 text-sm">
+                                            <td class="px-4 py-3 text-sm" data-label="Produit">
                                                 <div v-if="line.editing">
                                                     <input v-model="line.product" type="text" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                                                 </div>
                                                 <div v-else>{{ line.product }}</div>
                                             </td>
-                                            <td class="px-4 py-3 text-sm">
+                                            <td class="px-4 py-3 text-sm" data-label="Quantité">
                                                 <div v-if="line.editing">
                                                     <input v-model.number="line.quantity" type="number" min="1" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                                                 </div>
                                                 <div v-else>{{ line.quantity }}</div>
                                             </td>
-                                            <td class="px-4 py-3 text-sm">
+                                            <td class="px-4 py-3 text-sm" data-label="Prix unitaire">
                                                 <div v-if="line.editing">
-                                                    <input v-model.number="line.price" type="number" step="0.01" min="0" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
+                                                    <input v-model.number="line.price"
+                                                        type="number" step="0.01" min="0" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
                                                 </div>
                                                 <div v-else>{{ formatCurrency(line.price, selectedSale.currency) }}</div>
                                             </td>
-                                            <td class="px-4 py-3 text-sm font-medium">{{ formatCurrency(line.quantity * line.price, selectedSale.currency) }}</td>
-                                            <td class="px-4 py-3 text-sm no-print">
+                                            <td class="px-4 py-3 text-sm font-medium" data-label="Total">{{ formatCurrency(line.quantity * line.price, selectedSale.currency) }}</td>
+                                            <td class="px-4 py-3 text-sm no-print" data-label="Actions">
                                                 <div v-if="line.editing" class="flex space-x-3">
                                                     <button @click="validateProductEdit(index)" class="text-green-600 hover:text-green-800" title="Valider">
                                                         <i class="fas fa-check fa-lg"></i>
@@ -737,6 +737,7 @@ if (!isset($_SESSION['user_id'])) {
                 async fetchSales() {
                     try {
                         const response = await api.get('?action=allSales');
+                        console.log(response);
                         this.sales = response.data.map(sale => ({
                             ...sale,
                             lines: []
@@ -785,6 +786,10 @@ if (!isset($_SESSION['user_id'])) {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2
                     }).format(amount) + ' ' + currency;
+                },
+
+                formatNumber(number) {
+                    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
                 },
 
                 getStatusClass(status) {
