@@ -559,18 +559,19 @@
             </div>
 
             <!-- Modal Détails Commande -->
-            <div v-if="showOrderDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+            <div v-if="showOrderDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 no-print">
                 <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto modal-content">
+                    <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto modal-content">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
-                                <i class="fas fa-eye mr-2"></i>Détails de la commande
+                                <i class="fas fa-file-alt mr-2"></i>Détails de la commande
                             </h3>
-                            <div class="flex space-x-2">
-                                <button @click="printOrderDetails" class="no-print bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                                    <i class="fas fa-print mr-1"></i>Imprimer
+                            <div class="flex gap-2">
+                                <!-- Updated print button to show modal for print options -->
+                                <button @click="openPrintOptionsModal" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-print mr-2"></i>Imprimer
                                 </button>
-                                <button @click="closeOrderDetailsModal" class="no-print text-gray-400 hover:text-gray-600">
+                                <button @click="closeOrderDetailsModal" class="text-gray-400 hover:text-gray-600">
                                     <i class="fas fa-times text-xl"></i>
                                 </button>
                             </div>
@@ -729,6 +730,72 @@
                                         <span class="text-2xl font-bold text-primary">{{ formatCurrency(selectedOrderTotal, selectedOrder.currency) }}</span>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Options d'Impression -->
+            <div v-if="showPrintOptionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-60 no-print" style="z-index: 9999;">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-print mr-2"></i>Options d'impression
+                            </h3>
+                            <button @click="closePrintOptionsModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    Afficher les prix?
+                                </label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" v-model="printOptions.withPrices" :value="true" class="mr-2">
+                                        <span>Avec les prix</span>
+                                    </label>
+                                    <label class="flex items-center cursor-pointer">
+                                        <input type="radio" v-model="printOptions.withPrices" :value="false" class="mr-2">
+                                        <span>Sans les prix</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div v-if="printOptions.withPrices">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-money-bill mr-1"></i>Devise d'affichage
+                                </label>
+                                <select v-model="printOptions.currency" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="XOF">XOF (Franc CFA)</option>
+                                    <option value="N">N (Naira)</option>
+                                    <option value="GHC">GHC (Ghana Cedis)</option>
+                                    <option value="EUR">EUR (Euro)</option>
+                                    <option value="USD">USD (Dollar)</option>
+                                    <option value="GBP">GBP (Livre Sterling)</option>
+                                </select>
+                            </div>
+
+                            <div v-if="printOptions.withPrices && printOptions.currency !== selectedOrder.currency">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-exchange-alt mr-1"></i>Taux de conversion
+                                    <span class="text-xs text-gray-500">(1 {{ selectedOrder.currency }} = ? {{ printOptions.currency }})</span>
+                                </label>
+                                <input v-model.number="printOptions.conversionRate" type="number" step="0.0001" min="0" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+
+                            <div class="flex gap-3 pt-4">
+                                <button @click="executePrint" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-print mr-2"></i>Imprimer
+                                </button>
+                                <button @click="closePrintOptionsModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Annuler
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -984,6 +1051,12 @@
                     showPaymentHistoryModal: false,
                     showNewPaymentModal: false,
                     showEditPaymentModal: false,
+                    showPrintOptionsModal: false,
+                    printOptions: {
+                        withPrices: true,
+                        currency: 'N',
+                        conversionRate: 1
+                    },
                     orderPayments: [],
                     selectedOrder: null,
                     editingOrder: null,
@@ -1327,13 +1400,13 @@
                         })
                         .then(response => {
                             if (response.data.success) {
-                                // <CHANGE> Update the selectedOrder.lines immediately to reflect deletion
+                                // Update the selectedOrder.lines immediately to reflect deletion
                                 const deletedLineIndex = this.selectedOrder.lines.findIndex(line => line.id === itemId);
                                 if (deletedLineIndex !== -1) {
                                     this.selectedOrder.lines.splice(deletedLineIndex, 1);
                                 }
 
-                                // <CHANGE> Update the main orders array to reflect the new total and quantity
+                                // Update the main orders array to reflect the new total and quantity
                                 const orderIndex = this.orders.findIndex(o => o.id === this.selectedOrder.id);
                                 if (orderIndex !== -1) {
                                     this.orders[orderIndex].lines = [...this.selectedOrder.lines];
@@ -1341,7 +1414,7 @@
                                     this.orders[orderIndex].totalQuantity = this.selectedOrderTotalQuantity;
                                 }
 
-                                // <CHANGE> Update the filtered orders as well
+                                // Update the filtered orders as well
                                 this.applyFilters();
 
                                 alert('Article supprimé avec succès!');
@@ -1455,7 +1528,7 @@
                             price: line.price
                         });
 
-                        const response = await api.post('?action=updateOrdersProduct', {
+                        const response = await api.post('?action=updateOrderProduct', {
                             id: line.id,
                             name: line.product,
                             quantity: line.quantity,
@@ -1502,9 +1575,228 @@
                     line.editing = false;
                 },
                 // Removed deleteProductLine method as deleteOrderItem handles it now.
-                printOrderDetails() {
-                    window.print();
+
+                openPrintOptionsModal() {
+                    this.printOptions = {
+                        withPrices: true,
+                        currency: this.selectedOrder.currency,
+                        conversionRate: 1
+                    };
+                    this.showPrintOptionsModal = true;
                 },
+                closePrintOptionsModal() {
+                    this.showPrintOptionsModal = false;
+                },
+                executePrint() {
+                    this.closePrintOptionsModal();
+
+                    const printWindow = window.open('', '_blank');
+                    const order = this.selectedOrder;
+
+                    // Calculate conversion rate
+                    const rate = this.printOptions.currency === order.currency ? 1 : this.printOptions.conversionRate;
+                    const displayCurrency = this.printOptions.withPrices ? this.printOptions.currency : order.currency;
+
+                    // Calculate totals
+                    const totalQuantity = order.lines.reduce((sum, line) => sum + parseFloat(line.quantity), 0);
+                    const productCount = order.lines.length;
+                    const totalAmount = order.lines.reduce((sum, line) => sum + (line.quantity * line.price * rate), 0);
+
+                    // Generate products rows
+                    let productsRows = '';
+                    order.lines.forEach((line, index) => {
+                        productsRows += `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${index + 1}</td>
+                                <td style="border: 1px solid #ddd; padding: 10px;">${line.product}</td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;">${line.quantity}</td>`;
+
+                        if (this.printOptions.withPrices) {
+                            productsRows += `
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">${this.formatCurrency(line.price * rate, displayCurrency)}</td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold;">${this.formatCurrency(line.quantity * line.price * rate, displayCurrency)}</td>`;
+                        }
+
+                        productsRows += `</tr>`;
+                    });
+
+                    // Build print content
+                    let printContent = `
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>Bon de commande ${order.number}</title>
+                            <style>
+                                @page { 
+                                    margin: 1.5cm; 
+                                    size: A4;
+                                }
+                                body { 
+                                    font-family: Arial, sans-serif; 
+                                    margin: 0;
+                                    padding: 20px;
+                                    font-size: 12px;
+                                }
+                                .header { 
+                                    text-align: center; 
+                                    margin-bottom: 30px; 
+                                    border-bottom: 3px solid #2563EB; 
+                                    padding-bottom: 15px; 
+                                }
+                                .header h1 {
+                                    margin: 0;
+                                    color: #2563EB;
+                                    font-size: 28px;
+                                }
+                                .header h2 {
+                                    margin: 10px 0 5px 0;
+                                    color: #1F2937;
+                                    font-size: 20px;
+                                }
+                                .order-info { 
+                                    margin: 20px 0;
+                                    display: grid;
+                                    grid-template-columns: 1fr 1fr;
+                                    gap: 15px;
+                                }
+                                .info-box {
+                                    background-color: #f9fafb;
+                                    padding: 10px;
+                                    border-radius: 5px;
+                                }
+                                .label { 
+                                    font-weight: bold; 
+                                    color: #374151; 
+                                    font-size: 11px;
+                                    text-transform: uppercase;
+                                }
+                                .value { 
+                                    color: #1F2937; 
+                                    font-size: 14px;
+                                    margin-top: 3px;
+                                }
+                                .products-table { 
+                                    width: 100%; 
+                                    border-collapse: collapse; 
+                                    margin: 20px 0;
+                                }
+                                .products-table th { 
+                                    background-color: #2563EB; 
+                                    color: white; 
+                                    padding: 10px; 
+                                    text-align: left;
+                                    font-size: 11px;
+                                    text-transform: uppercase;
+                                }
+                                .products-table td { 
+                                    border: 1px solid #ddd; 
+                                    padding: 10px;
+                                    font-size: 12px;
+                                }
+                                .products-table tr:nth-child(even) { 
+                                    background-color: #f9fafb; 
+                                }
+                                .summary { 
+                                    margin-top: 20px; 
+                                    padding: 15px; 
+                                    background-color: #f0f9ff; 
+                                    border: 2px solid #2563EB;
+                                    border-radius: 5px;
+                                }
+                                .summary-row { 
+                                    display: flex; 
+                                    justify-content: space-between; 
+                                    margin: 8px 0;
+                                    font-size: 13px;
+                                }
+                                .total-amount { 
+                                    font-size: 22px; 
+                                    font-weight: bold; 
+                                    color: #2563EB; 
+                                }
+                                .footer { 
+                                    margin-top: 40px; 
+                                    text-align: center; 
+                                    font-size: 10px; 
+                                    color: #6B7280; 
+                                    border-top: 1px solid #ddd; 
+                                    padding-top: 15px; 
+                                }
+                            </style>
+                        </head>
+                        <body>
+                            <div class="header">
+                                <h1>GBEMIRO</h1>
+                                <h2>BON DE COMMANDE</h2>
+                                <div style="font-size: 14px; color: #6B7280; margin-top: 5px;">N° ${order.number}</div>
+                            </div>
+                            
+                            <div class="order-info">
+                                <div class="info-box">
+                                    <div class="label">Fournisseur</div>
+                                    <div class="value">${order.supplier}</div>
+                                </div>
+                                <div class="info-box">
+                                    <div class="label">Date</div>
+                                    <div class="value">${this.formatDate(order.date)}</div>
+                                </div>
+                                <div class="info-box">
+                                    <div class="label">Statut</div>
+                                    <div class="value">${this.getStatusInfo(order.status).label}</div>
+                                </div>
+                                ${this.printOptions.withPrices && displayCurrency !== order.currency ? `
+                                <div class="info-box">
+                                    <div class="label">Taux de conversion</div>
+                                    <div class="value">1 ${order.currency} = ${rate} ${displayCurrency}</div>
+                                </div>` : ''}
+                            </div>
+                            
+                            <h3 style="margin-top: 30px; margin-bottom: 10px; color: #1F2937;">Liste des produits</h3>
+                            <table class="products-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 5%; text-align: center;">N°</th>
+                                        <th style="width: ${this.printOptions.withPrices ? '45%' : '80%'};">Produit</th>
+                                        <th style="width: ${this.printOptions.withPrices ? '15%' : '15%'}; text-align: center;">Quantité</th>
+                                        ${this.printOptions.withPrices ? `
+                                        <th style="width: 17.5%; text-align: right;">Prix unitaire</th>
+                                        <th style="width: 17.5%; text-align: right;">Total</th>` : ''}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${productsRows}
+                                </tbody>
+                            </table>
+                            
+                            <div class="summary">
+                                <div class="summary-row">
+                                    <span style="font-weight: bold;">Nombre de produits différents:</span>
+                                    <span style="font-weight: bold; color: #059669;">${productCount}</span>
+                                </div>
+                                <div class="summary-row">
+                                    <span style="font-weight: bold;">Quantité totale:</span>
+                                    <span style="font-weight: bold; color: #0ea5e9;">${totalQuantity}</span>
+                                </div>
+                                ${this.printOptions.withPrices ? `
+                                <div class="summary-row" style="border-top: 2px solid #2563EB; padding-top: 10px; margin-top: 10px;">
+                                    <span style="font-size: 16px; font-weight: bold;">MONTANT TOTAL:</span>
+                                    <span class="total-amount">${this.formatCurrency(totalAmount, displayCurrency)}</span>
+                                </div>` : ''}
+                            </div>
+                            
+                            <div class="footer">
+                                <p>Merci pour votre collaboration!</p>
+                                <p>Document généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+                            </div>
+                        </body>
+                        </html>`;
+
+                    printWindow.document.write(printContent);
+                    printWindow.document.close();
+                    printWindow.print();
+                },
+
+                // Payment History functions
                 async showPaymentHistory(order) {
                     this.selectedOrder = order;
 
