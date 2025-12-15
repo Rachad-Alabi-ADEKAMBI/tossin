@@ -211,7 +211,6 @@ if (!isset($_SESSION['user_id'])) {
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -236,11 +235,6 @@ if (!isset($_SESSION['user_id'])) {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600" :data-label="'Montant'">
                                             {{ formatCurrency(sale.total, sale.currency) }}
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap" :data-label="'Statut'">
-                                            <span :class="['px-2 py-1 text-xs font-semibold rounded-full', getStatusClass(sale.status)]">
-                                                {{ getStatusLabel(sale.status) }}
-                                            </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
                                             <button @click="viewSaleDetails(sale)" class="text-blue-600 hover:text-blue-800 mr-3" title="Voir détails">
@@ -941,7 +935,9 @@ if (!isset($_SESSION['user_id'])) {
                         <body>
                             <div class="invoice-header">
                                 <h1>GBEMIRO</h1>
-                                <h2>Facture ${sale.id}</h2>
+                                <p>Commerçialisation de boissons en gros et en détail <br>
+                                Lokossa, Quinji carrefour Abo, téléphone 0149916566
+                                <h2>Facture ${sale.invoice_number}</h2>
                             </div>
                             
                             <div class="invoice-details">
@@ -957,10 +953,7 @@ if (!isset($_SESSION['user_id'])) {
                                     <div class="label">Date:</div>
                                     <div class="value">${this.formatDate(sale.date_of_insertion)}</div>
                                 </div>
-                                <div class="detail-box">
-                                    <div class="label">Statut:</div>
-                                    <div class="value">${this.getStatusLabel(sale.status)}</div>
-                                </div>
+                               
                             </div>
                             
                             <div class="products-section">

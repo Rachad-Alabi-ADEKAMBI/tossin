@@ -802,6 +802,7 @@ function newOrder()
 }
 
 
+
 // Ajouter une nouvelle commande
 function newSale()
 {
@@ -809,22 +810,20 @@ function newSale()
 
     $data = json_decode(file_get_contents("php://input"), true);
 
-    // Liste des champs obligatoires
-    $requiredFields = ['buyer', 'total', 'currency', 'lines'];
-
+    // Champs obligatoires
+    $requiredFields = ['buyer', 'phone', 'total', 'currency', 'lines'];
     $missingFields = [];
 
     foreach ($requiredFields as $field) {
         if (
             !isset($data[$field]) ||
-            (empty($data[$field]) && $data[$field] !== "0") || // accepte 0 comme valeur valide
+            (empty($data[$field]) && $data[$field] !== "0") ||
             ($field === 'lines' && (!is_array($data[$field]) || count($data[$field]) === 0))
         ) {
             $missingFields[] = $field;
         }
     }
 
-    // Si des champs manquent, renvoyer une erreur descriptive
     if (!empty($missingFields)) {
         echo json_encode([
             'success' => false,
@@ -839,25 +838,25 @@ function newSale()
         $status = 'pending';
 
         $stmt = $pdo->prepare("
-            INSERT INTO sales (date_of_insertion, buyer, total, status, currency) 
-            VALUES (NOW(), :buyer, :total, :status, :currency)
+            INSERT INTO sales (date_of_insertion, buyer, phone, total, status, currency)
+            VALUES (NOW(), :buyer, :phone, :total, :status, :currency)
         ");
         $stmt->execute([
-            ':buyer'   => $data['buyer'],
-            ':total'   => floatval($data['total']),
-            ':status'  => $status,
+            ':buyer'    => $data['buyer'],
+            ':phone'    => $data['phone'],
+            ':total'    => floatval($data['total']),
+            ':status'   => $status,
             ':currency' => $data['currency']
         ]);
 
         $saleId = $pdo->lastInsertId();
 
         $stmtProduct = $pdo->prepare("
-            INSERT INTO sales_products (date_of_insertion, name, quantity, price, sale_id) 
+            INSERT INTO sales_products (date_of_insertion, name, quantity, price, sale_id)
             VALUES (NOW(), :name, :quantity, :price, :sale_id)
         ");
 
         foreach ($data['lines'] as $line) {
-            // Validation interne des produits
             if (
                 empty($line['product']) ||
                 !isset($line['quantity']) ||
@@ -889,6 +888,7 @@ function newSale()
         ]);
     }
 }
+
 
 
 
