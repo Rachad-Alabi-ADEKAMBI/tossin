@@ -10,6 +10,222 @@ function getAllClaims()
     echo json_encode($claims);
 }
 
+// Récupérer toutes les clients
+function getAllClients()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM clients ORDER BY id DESC");
+    $clients = $stmt->fetchAll();
+    echo json_encode($clients);
+}
+
+function createProduct()
+{
+    global $pdo;
+
+    $requiredFields = ['name', 'quantity', 'buying_price', 'bulk_price', 'semi_bulk_price', 'retail_price'];
+    $missingFields = [];
+
+    foreach ($requiredFields as $field) {
+        if (!isset($_POST[$field]) || $_POST[$field] === '') {
+            $missingFields[] = $field;
+        }
+    }
+
+    if (!empty($missingFields)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Données manquantes: ' . implode(', ', $missingFields)
+        ]);
+        return;
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO products 
+        (name, quantity, buying_price, bulk_price, semi_bulk_price, retail_price)
+        VALUES 
+        (:name, :quantity, :buying_price, :bulk_price, :semi_bulk_price, :retail_price)
+    ");
+
+    $stmt->execute([
+        ':name' => $_POST['name'],
+        ':quantity' => $_POST['quantity'],
+        ':buying_price' => $_POST['buying_price'],
+        ':bulk_price' => $_POST['bulk_price'],
+        ':semi_bulk_price' => $_POST['semi_bulk_price'],
+        ':retail_price' => $_POST['retail_price'],
+    ]);
+
+    $productId = $pdo->lastInsertId();
+
+    $stmt = $pdo->prepare("
+        INSERT INTO products_history (product_id, quantity, comment)
+        VALUES (:product_id, :quantity, :comment)
+    ");
+    $stmt->execute([
+        ':product_id' => $productId,
+        ':quantity' => $_POST['quantity'],
+        ':comment' => 'Création du produit'
+    ]);
+
+    echo json_encode(['success' => true]);
+}
+
+//create Client
+// Créer un nouveau client
+function createClient()
+{
+    global $pdo;
+
+    // Lecture des données JSON envoyées par Axios
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    $name  = trim($data['name'] ?? '');
+    $phone = trim($data['phone'] ?? '');
+
+    if ($name === '' || $phone === '') {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Nom ou téléphone manquant'
+        ]);
+        return;
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO clients (name, phone, created_at)
+            VALUES (:name, :phone, NOW())
+        ");
+
+        $stmt->execute([
+            ':name'  => $name,
+            ':phone' => $phone
+        ]);
+
+        echo json_encode([
+            'success'   => true,
+            'client_id' => $pdo->lastInsertId()
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erreur lors de la création du client'
+        ]);
+    }
+}
+
+
+// Récupérer tous les produits
+function getAllProducts()
+{
+    global $pdo;
+    $stmt = $pdo->query("SELECT * FROM products ORDER BY id DESC");
+    $products = $stmt->fetchAll();
+    echo json_encode($products);
+}
+
+
+
+// Mettre à jour un produit
+function updateProduct()
+{
+    global $pdo;
+
+    $stmt = $pdo->prepare("
+        UPDATE products SET
+            name = :name,
+            buying_price = :buying_price,
+            bulk_price = :bulk_price,
+            semi_bulk_price = :semi_bulk_price,
+            retail_price = :retail_price
+        WHERE id = :id
+    ");
+    $stmt->execute([
+        ':id' => $_POST['id'],
+        ':name' => $_POST['name'],
+        ':buying_price' => $_POST['buying_price'],
+        ':bulk_price' => $_POST['bulk_price'],
+        ':semi_bulk_price' => $_POST['semi_bulk_price'],
+        ':retail_price' => $_POST['retail_price'],
+    ]);
+
+    $stmt = $pdo->prepare("
+        INSERT INTO products_history (product_id, quantity, comment)
+        VALUES (:product_id, NULL, :comment)
+    ");
+    $stmt->execute([
+        ':product_id' => $_POST['id'],
+        ':comment' => 'Modification du produit'
+    ]);
+
+    echo json_encode(['success' => true]);
+}
+
+// Ajuster le stock
+function adjustProductStock()
+{
+    global $pdo;
+
+    $stmt = $pdo->prepare("
+        UPDATE products SET quantity = quantity + :quantity WHERE id = :id
+    ");
+    $stmt->execute([
+        ':quantity' => $_POST['quantity'],
+        ':id' => $_POST['product_id']
+    ]);
+
+    $stmt = $pdo->prepare("
+        INSERT INTO products_history (product_id, quantity, comment)
+        VALUES (:product_id, :quantity, :comment)
+    ");
+    $stmt->execute([
+        ':product_id' => $_POST['product_id'],
+        ':quantity' => $_POST['quantity'],
+        ':comment' => $_POST['comment']
+    ]);
+
+    echo json_encode(['success' => true]);
+}
+
+// Supprimer un produit
+function deleteProduct()
+{
+    global $pdo;
+
+    // Lire les données depuis le body JSON
+    $data = json_decode(file_get_contents('php://input'), true);
+    $id = $data['id'] ?? null;
+
+    if (!$id) {
+        echo json_encode(['success' => false, 'message' => 'ID manquant']);
+        return;
+    }
+
+    // Supprimer le produit
+    $stmt = $pdo->prepare("DELETE FROM products WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+
+    echo json_encode(['success' => true]);
+}
+
+// Historique d’un produit
+function getProductHistory()
+{
+    global $pdo;
+
+    $stmt = $pdo->prepare("
+        SELECT * FROM products_history
+        WHERE product_id = :product_id
+        ORDER BY id DESC
+    ");
+    $stmt->execute([':product_id' => $_GET['product_id']]);
+
+    echo json_encode($stmt->fetchAll());
+}
+
+
+
+
 // Récupérer toutes les depenses
 function getAllExpenses()
 {
@@ -166,10 +382,32 @@ function getAllOrdersPayments()
 function getAllSales()
 {
     global $pdo;
-    $stmt = $pdo->query("SELECT * FROM sales ORDER BY id DESC");
-    $sales = $stmt->fetchAll();
-    echo json_encode($sales);
+
+    $stmt = $pdo->query("
+        SELECT 
+            id,
+            client_id,
+            total_quantity,
+            total_products,
+            total,
+            comment,
+            payment_method,
+            date_of_insertion,
+            buyer,
+            CASE 
+                WHEN status = 'annulé' THEN 'Annulé'
+                WHEN status = 'fait' THEN 'Fait'
+                ELSE status
+            END AS status
+        FROM sales
+        ORDER BY id DESC
+    ");
+
+    $sales = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    echo json_encode($sales, JSON_UNESCAPED_UNICODE);
 }
+
+
 // Ajouter une nouvelle claim
 function addNewClaim($data)
 {
@@ -801,75 +1039,157 @@ function newOrder()
     }
 }
 
-
-
-// Ajouter une nouvelle commande
+//nouvelle vente
 function newSale()
 {
     global $pdo;
 
     $data = json_decode(file_get_contents("php://input"), true);
 
-    // Champs obligatoires
-    $requiredFields = ['buyer', 'phone', 'total', 'currency', 'lines'];
-    $missingFields = [];
-
-    foreach ($requiredFields as $field) {
-        if (
-            !isset($data[$field]) ||
-            (empty($data[$field]) && $data[$field] !== "0") ||
-            ($field === 'lines' && (!is_array($data[$field]) || count($data[$field]) === 0))
-        ) {
-            $missingFields[] = $field;
-        }
-    }
-
-    if (!empty($missingFields)) {
+    if (
+        empty($data['buyer']) ||
+        !isset($data['total']) ||
+        empty($data['lines']) ||
+        !is_array($data['lines'])
+    ) {
         echo json_encode([
             'success' => false,
-            'message' => 'Champs manquants ou invalides : ' . implode(', ', $missingFields)
+            'message' => 'Données manquantes ou invalides'
         ]);
         return;
+    }
+
+    // Récupérer l'ID du client
+    $stmtClient = $pdo->prepare("SELECT id FROM clients WHERE name = :name LIMIT 1");
+    $stmtClient->execute([':name' => $data['buyer']]);
+    $client = $stmtClient->fetch(PDO::FETCH_ASSOC);
+
+    if (!$client) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Client introuvable'
+        ]);
+        return;
+    }
+
+    $clientId = $client['id'];
+
+    // Calculs
+    $totalQuantity = 0;
+    $totalProducts = count($data['lines']);
+
+    foreach ($data['lines'] as $line) {
+        if (
+            empty($line['product']) ||
+            !isset($line['quantity']) ||
+            !isset($line['price'])
+        ) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Ligne produit invalide'
+            ]);
+            return;
+        }
+
+        $totalQuantity += (int)$line['quantity'];
     }
 
     try {
         $pdo->beginTransaction();
 
-        $status = 'pending';
-
-        $stmt = $pdo->prepare("
-            INSERT INTO sales (date_of_insertion, buyer, phone, total, status, currency)
-            VALUES (NOW(), :buyer, :phone, :total, :status, :currency)
+        // Insertion vente
+        $stmtSale = $pdo->prepare("
+            INSERT INTO sales (
+                client_id,
+                total_quantity,
+                total_products,
+                total,
+                comment,
+                payment_method,
+                date_of_insertion,
+                buyer,
+                status
+            ) VALUES (
+                :client_id,
+                :total_quantity,
+                :total_products,
+                :total,
+                NULL,
+                NULL,
+                NOW(),
+                :buyer,
+                'fait'
+            )
         ");
-        $stmt->execute([
-            ':buyer'    => $data['buyer'],
-            ':phone'    => $data['phone'],
-            ':total'    => floatval($data['total']),
-            ':status'   => $status,
-            ':currency' => $data['currency']
+
+        $stmtSale->execute([
+            ':client_id'      => $clientId,
+            ':total_quantity' => $totalQuantity,
+            ':total_products' => $totalProducts,
+            ':total'          => (float)$data['total'],
+            ':buyer'          => $data['buyer']
         ]);
 
         $saleId = $pdo->lastInsertId();
 
-        $stmtProduct = $pdo->prepare("
+        // Statements réutilisables
+        $stmtProductSale = $pdo->prepare("
             INSERT INTO sales_products (date_of_insertion, name, quantity, price, sale_id)
             VALUES (NOW(), :name, :quantity, :price, :sale_id)
         ");
 
+        $stmtGetProduct = $pdo->prepare("
+            SELECT id, quantity FROM products WHERE name = :name LIMIT 1
+        ");
+
+        $stmtUpdateStock = $pdo->prepare("
+            UPDATE products SET quantity = quantity - :qty WHERE id = :id
+        ");
+
+        $stmtHistory = $pdo->prepare("
+            INSERT INTO products_history (product_id, quantity, comment, created_at)
+            VALUES (:product_id, :quantity, :comment, NOW())
+        ");
+
+        $stmtNotification = $pdo->prepare("
+            INSERT INTO notifications (comment, created_at)
+            VALUES (:comment, NOW())
+        ");
+
         foreach ($data['lines'] as $line) {
-            if (
-                empty($line['product']) ||
-                !isset($line['quantity']) ||
-                !isset($line['price'])
-            ) {
-                throw new Exception('Un ou plusieurs champs manquent dans une ligne produit');
+
+            // Enregistrer produit vendu
+            $stmtProductSale->execute([
+                ':name'     => $line['product'],
+                ':quantity' => (int)$line['quantity'],
+                ':price'    => (float)$line['price'],
+                ':sale_id'  => $saleId
+            ]);
+
+            // Récupérer le produit
+            $stmtGetProduct->execute([':name' => $line['product']]);
+            $product = $stmtGetProduct->fetch(PDO::FETCH_ASSOC);
+
+            if (!$product) {
+                throw new Exception('Produit introuvable : ' . $line['product']);
             }
 
-            $stmtProduct->execute([
-                ':name'     => $line['product'],
-                ':quantity' => intval($line['quantity']),
-                ':price'    => floatval($line['price']),
-                ':sale_id'  => $saleId
+            // Mise à jour du stock
+            $stmtUpdateStock->execute([
+                ':qty' => (int)$line['quantity'],
+                ':id'  => $product['id']
+            ]);
+
+            // Historique produit (avec client)
+            $stmtHistory->execute([
+                ':product_id' => $product['id'],
+                ':quantity'   => -(int)$line['quantity'],
+                ':comment'    => 'Vente au client ' . $data['buyer'] . ' (commande #' . $saleId . ')'
+            ]);
+
+            // Notification (avec client)
+            $stmtNotification->execute([
+                ':comment' => 'Vente de ' . $line['quantity'] . ' unité(s) de ' . $line['product'] . ' au client ' . $data['buyer']
             ]);
         }
 
@@ -877,18 +1197,341 @@ function newSale()
 
         echo json_encode([
             'success' => true,
-            'message' => 'Commande et produits insérés avec succès',
             'sale_id' => $saleId
         ]);
     } catch (Exception $e) {
         $pdo->rollBack();
         echo json_encode([
             'success' => false,
-            'message' => 'Erreur lors de l\'insertion : ' . $e->getMessage()
+            'message' => $e->getMessage()
         ]);
     }
 }
 
+//mettre a jour une vente
+function updateSale()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (
+        empty($data['id']) ||
+        empty($data['buyer']) ||
+        !isset($data['total']) ||
+        empty($data['lines'])
+    ) {
+        echo json_encode(['success' => false, 'message' => 'Données invalides']);
+        return;
+    }
+
+    $saleId = (int)$data['id'];
+
+    try {
+        $pdo->beginTransaction();
+
+        /* ===============================
+           ANCIENNES LIGNES
+        =============================== */
+        $stmtOld = $pdo->prepare("
+            SELECT name, quantity
+            FROM sales_products
+            WHERE sale_id = :sale_id
+        ");
+        $stmtOld->execute([':sale_id' => $saleId]);
+
+        $oldProducts = [];
+        foreach ($stmtOld->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $oldProducts[$row['name']] = (int)$row['quantity'];
+        }
+
+        /* ===============================
+           NOUVELLES LIGNES
+        =============================== */
+        $newProducts = [];
+        foreach ($data['lines'] as $line) {
+            $newProducts[$line['product']] = (int)$line['quantity'];
+        }
+
+        /* ===============================
+           SUPPRESSION ANCIENNES LIGNES
+        =============================== */
+        $pdo->prepare("DELETE FROM sales_products WHERE sale_id = :id")
+            ->execute([':id' => $saleId]);
+
+        /* ===============================
+           MAJ VENTE
+        =============================== */
+        $totalQty = array_sum($newProducts);
+
+        $pdo->prepare("
+            UPDATE sales SET
+                total_quantity = :qty,
+                total_products = :products,
+                total = :total,
+                buyer = :buyer
+            WHERE id = :id
+        ")->execute([
+            ':qty'      => $totalQty,
+            ':products' => count($newProducts),
+            ':total'    => $data['total'],
+            ':buyer'    => $data['buyer'],
+            ':id'       => $saleId
+        ]);
+
+        /* ===============================
+           STATEMENTS
+        =============================== */
+        $stmtInsertSaleProduct = $pdo->prepare("
+            INSERT INTO sales_products (date_of_insertion, name, quantity, price, sale_id)
+            VALUES (NOW(), :name, :qty, :price, :sale_id)
+        ");
+
+        $stmtGetProduct = $pdo->prepare("
+            SELECT id FROM products WHERE name = :name LIMIT 1
+        ");
+
+        $stmtUpdateStock = $pdo->prepare("
+            UPDATE products SET quantity = quantity + :qty WHERE id = :id
+        ");
+
+        $stmtHistory = $pdo->prepare("
+            INSERT INTO products_history (product_id, quantity, comment, created_at)
+            VALUES (:product_id, :quantity, :comment, NOW())
+        ");
+
+        $stmtNotif = $pdo->prepare("
+            INSERT INTO notifications (comment, created_at)
+            VALUES (:comment, NOW())
+        ");
+
+        /* ===============================
+           1️⃣ PRODUITS SUPPRIMÉS
+        =============================== */
+        foreach ($oldProducts as $name => $oldQty) {
+            if (!isset($newProducts[$name])) {
+
+                $stmtGetProduct->execute([':name' => $name]);
+                $product = $stmtGetProduct->fetch(PDO::FETCH_ASSOC);
+
+                if (!$product) continue;
+
+                // RESTITUTION STOCK
+                $stmtUpdateStock->execute([
+                    ':qty' => $oldQty,
+                    ':id'  => $product['id']
+                ]);
+
+                $stmtHistory->execute([
+                    ':product_id' => $product['id'],
+                    ':quantity'   => $oldQty,
+                    ':comment'    => "Ajout stock suite à la modification de la facture #{$saleId}"
+                ]);
+
+                $stmtNotif->execute([
+                    ':comment' => "AJOUT STOCK : {$oldQty} {$name} (facture #{$saleId} modifiée)"
+                ]);
+            }
+        }
+
+        /* ===============================
+           2️⃣ PRODUITS AJOUTÉS / MODIFIÉS
+        =============================== */
+        foreach ($newProducts as $name => $newQty) {
+
+            $oldQty = $oldProducts[$name] ?? 0;
+            $diff   = $newQty - $oldQty;
+
+            // Réinsertion ligne vente
+            $price = 0;
+            foreach ($data['lines'] as $l) {
+                if ($l['product'] === $name) {
+                    $price = (float)$l['price'];
+                    break;
+                }
+            }
+
+            $stmtInsertSaleProduct->execute([
+                ':name'    => $name,
+                ':qty'     => $newQty,
+                ':price'   => $price,
+                ':sale_id' => $saleId
+            ]);
+
+            if ($diff === 0) continue;
+
+            $stmtGetProduct->execute([':name' => $name]);
+            $product = $stmtGetProduct->fetch(PDO::FETCH_ASSOC);
+
+            if (!$product) {
+                throw new Exception("Produit introuvable : $name");
+            }
+
+            // DIFF STOCK
+            $stmtUpdateStock->execute([
+                ':qty' => -$diff,
+                ':id'  => $product['id']
+            ]);
+
+            if ($diff > 0) {
+                // RETRAIT
+                $stmtHistory->execute([
+                    ':product_id' => $product['id'],
+                    ':quantity'   => -$diff,
+                    ':comment'    => "Retrait stock suite à la modification de la facture #{$saleId}"
+                ]);
+
+                $stmtNotif->execute([
+                    ':comment' => "RETRAIT STOCK : {$diff} {$name} (facture #{$saleId} modifiée)"
+                ]);
+            } else {
+                // AJOUT
+                $stmtHistory->execute([
+                    ':product_id' => $product['id'],
+                    ':quantity'   => abs($diff),
+                    ':comment'    => "Ajout stock suite à la modification de la facture #{$saleId}"
+                ]);
+
+                $stmtNotif->execute([
+                    ':comment' => "AJOUT STOCK : " . abs($diff) . " {$name} (facture #{$saleId} modifiée)"
+                ]);
+            }
+        }
+
+        $pdo->commit();
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+    }
+}
+
+//annuler une vente
+function cancelSale()
+{
+    global $pdo;
+
+    $data = json_decode(file_get_contents("php://input"), true);
+
+    if (empty($data['id'])) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'ID de la vente manquant'
+        ]);
+        return;
+    }
+
+    $saleId = (int)$data['id'];
+
+    try {
+        $pdo->beginTransaction();
+
+        /* ===============================
+           VÉRIFIER LA VENTE
+        =============================== */
+        $stmtSale = $pdo->prepare("
+            SELECT status, buyer
+            FROM sales
+            WHERE id = :id
+            LIMIT 1
+        ");
+        $stmtSale->execute([':id' => $saleId]);
+        $sale = $stmtSale->fetch(PDO::FETCH_ASSOC);
+
+        if (!$sale) {
+            throw new Exception("Vente introuvable");
+        }
+
+        if ($sale['status'] === 'annulé') {
+            throw new Exception("Cette facture est déjà annulée");
+        }
+
+        /* ===============================
+           PRODUITS DE LA VENTE
+        =============================== */
+        $stmtProducts = $pdo->prepare("
+            SELECT name, quantity
+            FROM sales_products
+            WHERE sale_id = :sale_id
+        ");
+        $stmtProducts->execute([':sale_id' => $saleId]);
+        $lines = $stmtProducts->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($lines)) {
+            throw new Exception("Aucun produit lié à cette vente");
+        }
+
+        /* ===============================
+           STATEMENTS
+        =============================== */
+        $stmtGetProduct = $pdo->prepare("
+            SELECT id FROM products WHERE name = :name LIMIT 1
+        ");
+
+        $stmtUpdateStock = $pdo->prepare("
+            UPDATE products SET quantity = quantity + :qty WHERE id = :id
+        ");
+
+        $stmtHistory = $pdo->prepare("
+            INSERT INTO products_history (product_id, quantity, comment, created_at)
+            VALUES (:product_id, :quantity, :comment, NOW())
+        ");
+
+        $stmtNotif = $pdo->prepare("
+            INSERT INTO notifications (comment, created_at)
+            VALUES (:comment, NOW())
+        ");
+
+        /* ===============================
+           RESTITUTION DU STOCK
+        =============================== */
+        foreach ($lines as $line) {
+
+            $stmtGetProduct->execute([':name' => $line['name']]);
+            $product = $stmtGetProduct->fetch(PDO::FETCH_ASSOC);
+
+            if (!$product) {
+                throw new Exception("Produit introuvable : " . $line['name']);
+            }
+
+            // AJOUT AU STOCK
+            $stmtUpdateStock->execute([
+                ':qty' => (int)$line['quantity'],
+                ':id'  => $product['id']
+            ]);
+
+            // HISTORIQUE
+            $stmtHistory->execute([
+                ':product_id' => $product['id'],
+                ':quantity'   => (int)$line['quantity'],
+                ':comment'    => "Ajout stock suite à l'annulation de la facture #{$saleId}"
+            ]);
+
+            // NOTIFICATION
+            $stmtNotif->execute([
+                ':comment' => "ANNULATION FACTURE #{$saleId} : restitution de {$line['quantity']} {$line['name']}"
+            ]);
+        }
+
+        /* ===============================
+           MISE À JOUR STATUT FACTURE
+        =============================== */
+        $pdo->prepare("
+            UPDATE sales SET status = 'annulé'
+            WHERE id = :id
+        ")->execute([':id' => $saleId]);
+
+        $pdo->commit();
+
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
+}
 
 
 

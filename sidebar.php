@@ -19,6 +19,11 @@
             <span>Factures</span>
         </a>
 
+        <a href="products.php"
+            class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+            <i class="fas fa-boxes mr-3"></i>
+            <span>Produits</span>
+        </a>
 
         <a href="orders.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
             <i class="fas fa-shopping-cart mr-3"></i>

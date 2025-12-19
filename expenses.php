@@ -213,14 +213,6 @@ if (!isset($_SESSION['user_id'])) {
                                 <p class="text-sm text-gray-600 mb-1">Total des dépenses</p>
                                 <p class="text-2xl font-bold text-red-600">{{ formatCurrency(totalExpenses) }}</p>
                             </div>
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">Nombre de dépenses</p>
-                                <p class="text-2xl font-bold text-blue-600">{{ filteredExpenses.length }}</p>
-                            </div>
-                            <div class="bg-green-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">Dépense moyenne</p>
-                                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(averageExpense) }}</p>
-                            </div>
                         </div>
                     </div>
 

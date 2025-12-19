@@ -122,6 +122,28 @@ if (!isset($_SESSION['user_id'])) {
                 size: A4;
             }
         }
+
+        /* Custom dropdown styles */
+        .client-dropdown {
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .client-option:hover {
+            background-color: #F3F4F6;
+        }
+
+        /* Added product dropdown styles for searchable input */
+        .product-dropdown {
+            max-height: 250px;
+            overflow-y: auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .product-option:hover {
+            background-color: #F3F4F6;
+        }
     </style>
 </head>
 
@@ -134,7 +156,9 @@ if (!isset($_SESSION['user_id'])) {
                 <header class="bg-white shadow-sm border-b">
                     <div class="px-6 py-4">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-                            <h1 class="text-2xl font-bold text-gray-900">Gestion des Ventes</h1>
+                            <h1 class="text-2xl font-bold text-gray-900">
+                                <i class="fas fa-file-invoice mr-2"></i>Gestion des Ventes
+                            </h1>
                             <div class="flex space-x-3">
                                 <button @click="printSalesList" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
                                     <i class="fas fa-print mr-2"></i>Imprimer la liste
@@ -148,12 +172,33 @@ if (!isset($_SESSION['user_id'])) {
                 </header>
 
                 <div class="p-6">
+                    <!-- Filters Section -->
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                            <i class="fas fa-filter mr-2"></i>Filtres
+                        </h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
                                 <input v-model="searchTerm" @input="applyFilters" type="text" placeholder="Client, numéro facture..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
+
+                            <!-- Added date exact filter -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date exacte</label>
+                                <input v-model="exactDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+
+                            <!-- Added date range filters -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date début</label>
+                                <input v-model="startDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date fin</label>
+                                <input v-model="endDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
                                 <select v-model="sortBy" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
@@ -163,44 +208,40 @@ if (!isset($_SESSION['user_id'])) {
                                     <option value="invoice_number">N° Facture</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
-                                <select v-model="statusFilter" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                    <option value="all">Tous</option>
-                                    <option value="paid">Payé</option>
-                                    <option value="pending">En attente</option>
-                                    <option value="cancelled">Annulé</option>
-                                </select>
-                            </div>
-                            <div class="flex items-end">
-                                <button @click="applyFilters" class="w-full bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors">
-                                    <i class="fas fa-filter mr-2"></i>Filtrer
-                                </button>
-                            </div>
+                        </div>
+
+                        <!-- Added clear filters button -->
+                        <div class="mt-4 flex gap-2">
+                            <button @click="clearFilters" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
+                                <i class="fas fa-times mr-2"></i>Réinitialiser
+                            </button>
                         </div>
                     </div>
 
+                    <!-- Updated statistics: removed average sale, added product count stats -->
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div class="bg-green-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Total des ventes</p>
-                                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalSales) }}</p>
+                                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalSales, 'FCFA') }}</p>
                             </div>
                             <div class="bg-blue-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Nombre de ventes</p>
                                 <p class="text-2xl font-bold text-blue-600">{{ filteredSales.length }}</p>
                             </div>
-                            <div class="bg-yellow-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">En attente</p>
-                                <p class="text-2xl font-bold text-yellow-600">{{ pendingSalesCount }}</p>
-                            </div>
+                            <!-- Added total products count -->
                             <div class="bg-purple-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">Vente moyenne</p>
-                                <p class="text-2xl font-bold text-purple-600">{{ formatCurrency(averageSale) }}</p>
+                                <p class="text-sm text-gray-600 mb-1">Total produits vendus</p>
+                                <p class="text-2xl font-bold text-purple-600">{{ Math.round(totalProductsCount) }}</p>
+                            </div>
+                            <div class="bg-orange-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600 mb-1">Articles</p>
+                                <p class="text-2xl font-bold text-orange-600">{{ totalUniqueProducts }}</p>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Table without phone column -->
                     <div class="bg-white rounded-xl shadow-sm overflow-hidden">
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
@@ -209,7 +250,10 @@ if (!isset($_SESSION['user_id'])) {
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Facture</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                                        <!-- Added columns for product counts -->
+                                        <!-- Changed column labels to match the data structure -->
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité totale</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Articles</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
@@ -217,41 +261,49 @@ if (!isset($_SESSION['user_id'])) {
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     <tr v-for="sale in paginatedSales" :key="sale.id" class="hover:bg-gray-50">
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'N° Facture'">
-                                            {{ sale.id }}
+                                            #{{ sale.id }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap" :data-label="'Client'">
-                                            <div class="flex items-center">
-                                                <div class="">
-                                                    <div class="text-sm font-medium text-gray-900">{{ sale.buyer }}</div>
-                                                    <div class="text-sm text-gray-500">{{ sale.phone }}</div>
-                                                </div>
-                                            </div>
+                                            <div class="text-sm font-medium text-gray-900">{{ sale.buyer }}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Date'">
                                             {{ formatDate(sale.date_of_insertion) }}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Quantité'">
-                                            {{ formatNumber(sale.quantity) }}
+                                        <!-- Added product count columns -->
+                                        <!-- Swapped the order to match new column headers -->
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Quantité totale'">
+                                            {{ calculateTotalProducts(sale) }}
                                         </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Articles'">
+                                            {{ calculateUniqueProducts(sale) }}
+                                        </td>
+                                        <!-- Removed currency display from table -->
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600" :data-label="'Montant'">
-                                            {{ formatCurrency(sale.total, sale.currency) }}
+                                            {{ formatCurrency(sale.total) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
-                                            <button @click="viewSaleDetails(sale)" class="text-blue-600 hover:text-blue-800 mr-3" title="Voir détails">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            <button @click="printInvoice(sale)" class="text-green-600 hover:text-green-800 mr-3" title="Imprimer facture">
-                                                <i class="fas fa-print"></i>
-                                            </button>
-                                            <button @click="deleteSale(sale.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                            <!-- Enlarged icons like in products.php -->
+                                            <!-- Improved spacing between icons (space-x-2 to space-x-3) -->
+                                            <div class="flex space-x-3">
+                                                <!-- Remplacé le bouton oeil par un bouton éditer -->
+                                                <button @click="editSale(sale)" class="text-orange-600 hover:text-orange-800 text-xl" title="Éditer">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button @click="printInvoice(sale)" class="text-green-600 hover:text-green-800 text-xl" title="Imprimer facture">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+                                                <!-- Replaced "Supprimer" with "Annuler" button text, keeping same deleteSale logic -->
+                                                <button @click="cancelSale(sale.id)" class="text-red-600 hover:text-red-800 text-xl" title="Annuler">
+                                                    <i class="fas fa-ban"></i>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
 
+                        <!-- Pagination -->
                         <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
                             <div class="flex-1 flex justify-between sm:hidden">
                                 <button @click="previousPage" :disabled="currentPage === 1" class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50">
@@ -287,86 +339,117 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
             </div>
 
-            <!-- Modal Nouvelle Vente -->
+            <!-- New optimized sale modal with client dropdown and searchable list -->
             <div v-if="showSaleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
                 <div class="flex items-center justify-center min-h-screen p-4">
                     <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
-                                <i class="fas fa-file-invoice mr-2"></i>Nouvelle Vente / Facture
+                                <i class="fas fa-file-invoice mr-2"></i>{{ isEditMode ? 'Modifier Vente' : 'Nouvelle Vente / Facture' }}
                             </h3>
                             <button @click="closeSaleModal" class="text-gray-400 hover:text-gray-600">
                                 <i class="fas fa-times text-xl"></i>
                             </button>
                         </div>
 
-                        <form @submit.prevent="saveSale" class="space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div>
+                        <form @submit.prevent="showConfirmationModal" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Client selection with searchable dropdown -->
+                                <div class="relative">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-user mr-1"></i>Acheteur
+                                        <i class="fas fa-user mr-1"></i>Client
                                     </label>
-                                    <input v-model="saleForm.buyer" type="text" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                </div>
+                                    <div class="relative">
+                                        <input
+                                            v-model="clientSearchTerm"
+                                            @focus="showClientDropdown = true"
+                                            @input="filterClients"
+                                            type="text"
+                                            placeholder="Rechercher ou créer un client..."
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-phone mr-1"></i>Téléphone
-                                    </label>
-                                    <input v-model="saleForm.phone" type="text" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                </div>
+                                        <!-- Dropdown list -->
+                                        <div v-if="showClientDropdown && (filteredClients.length > 0 || clientSearchTerm)"
+                                            class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg client-dropdown">
+                                            <!-- Existing clients -->
+                                            <div v-for="client in filteredClients"
+                                                :key="client.id"
+                                                @click="selectClient(client)"
+                                                class="px-4 py-3 cursor-pointer client-option border-b border-gray-100">
+                                                <div class="font-medium text-gray-900">{{ client.name }}</div>
+                                                <div class="text-sm text-gray-500">{{ client.phone }}</div>
+                                            </div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-coins mr-1"></i>Devise
-                                    </label>
-                                    <select v-model="saleForm.currency" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                        <option value="XOF">XOF (Franc CFA)</option>
-                                        <option value="N">N (Naira)</option>
-                                        <option value="GHC">GHC (Ghana Cedis)</option>
-                                        <option value="EUR">EUR (Euro)</option>
-                                        <option value="USD">USD (Dollar)</option>
-                                        <option value="GBP">GBP (Livre Sterling)</option>
-                                    </select>
-                                </div>
+                                            <!-- Create new client option -->
+                                            <div v-if="clientSearchTerm && !filteredClients.some(c => c.name.toLowerCase() === clientSearchTerm.toLowerCase())"
+                                                @click="showNewClientForm = true; showClientDropdown = false"
+                                                class="px-4 py-3 cursor-pointer client-option bg-green-50 text-green-700 font-medium hover:bg-green-100">
+                                                <i class="fas fa-plus-circle mr-2"></i>Créer "{{ clientSearchTerm }}"
+                                            </div>
+                                        </div>
+                                    </div>
 
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-info-circle mr-1"></i>Statut
-                                    </label>
-                                    <select v-model="saleForm.status" required
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-                                        <option value="pending">En attente</option>
-                                        <option value="paid">Payée</option>
-                                        <option value="cancelled">Annulée</option>
-                                    </select>
+                                    <!-- Selected client display -->
+                                    <div v-if="saleForm.selectedClient" class="mt-2 p-3 bg-blue-50 rounded-lg flex justify-between items-center">
+                                        <div>
+                                            <div class="font-medium text-blue-900">{{ saleForm.selectedClient.name }}</div>
+                                            <div class="text-sm text-blue-600">{{ saleForm.selectedClient.phone }}</div>
+                                        </div>
+                                        <button type="button" @click="clearClientSelection" class="text-red-500 hover:text-red-700">
+                                            <i class="fas fa-times-circle"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- Section produits -->
+                            <!-- Products section with improved layout -->
                             <div class="border-t pt-6">
-                                <div class="flex justify-between items-center mb-4">
-                                    <h4 class="text-lg font-medium text-gray-900">
-                                        <i class="fas fa-list mr-2"></i>Produits
-                                    </h4>
-                                    <button type="button" @click="addProductLine"
-                                        class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                                        <i class="fas fa-plus mr-1"></i>Ajouter produit
-                                    </button>
-                                </div>
+                                <h4 class="text-lg font-medium text-gray-900 mb-4">
+                                    <i class="fas fa-list mr-2"></i>Produits
+                                </h4>
 
                                 <div class="space-y-3">
+                                    <!-- Added searchable product dropdown instead of plain select -->
                                     <div v-for="(line, index) in saleForm.lines" :key="index"
-                                        class="grid grid-cols-1 md:grid-cols-5 gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50">
-                                        <div>
+                                        class="grid grid-cols-1 md:grid-cols-7 gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                        <div class="md:col-span-2 relative">
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-box mr-1"></i>Produit
                                             </label>
-                                            <input v-model="line.product" type="text" required
+                                            <input
+                                                v-model="line.productSearchTerm"
+                                                @focus="line.showProductDropdown = true; filterProducts(index);"
+                                                @input="filterProducts(index)"
+                                                type="text"
+                                                placeholder="Rechercher un produit..."
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
+                                            <i class="fas fa-search absolute right-3 top-8 text-gray-400 text-xs"></i>
+
+                                            <!-- Product dropdown list -->
+                                            <div v-if="line.showProductDropdown && line.filteredProducts && line.filteredProducts.length > 0"
+                                                class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg product-dropdown">
+                                                <div v-for="product in line.filteredProducts"
+                                                    :key="product.id"
+                                                    @click="selectProduct(index, product)"
+                                                    class="px-3 py-2 cursor-pointer product-option border-b border-gray-100">
+                                                    <div class="font-medium text-gray-900 text-sm">{{ product.name }}</div>
+                                                    <div class="text-xs text-gray-500">Stock: {{ Math.round(product.quantity) }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Added price type selector -->
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                <i class="fas fa-tag mr-1"></i>Type Prix
+                                            </label>
+                                            <select v-model="line.priceType" @change="changePriceType(index)"
+                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
+                                                <option value="retail_price">Détail</option>
+                                                <option value="semi_bulk_price">Semi-gros</option>
+                                                <option value="bulk_price">Gros</option>
+                                            </select>
                                         </div>
 
                                         <div>
@@ -374,24 +457,25 @@ if (!isset($_SESSION['user_id'])) {
                                                 <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
                                             </label>
                                             <input v-model.number="line.quantity" type="number" min="1" required
-                                                @input="updateLineTotal(index)"
+                                                @input="validateQuantity(index)"
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
                                         </div>
 
+                                        <!-- Made price input editable -->
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire
                                             </label>
-                                            <input v-model.number="line.price" type="number" step="0.01" min="0" required
+                                            <input v-model.number="line.price" type="number" step="1" min="0" required
                                                 @input="updateLineTotal(index)"
-                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
+                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm bg-white">
                                         </div>
 
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-calculator mr-1"></i>Total
                                             </label>
-                                            <input :value="formatCurrency(line.total, saleForm.currency)" type="text" readonly
+                                            <input :value="Math.round(line.total) + ' FCFA'" type="text" readonly
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm bg-gray-100">
                                         </div>
 
@@ -404,7 +488,15 @@ if (!isset($_SESSION['user_id'])) {
                                     </div>
                                 </div>
 
-                                <!-- Résumé -->
+                                <!-- Add product button moved below the last line -->
+                                <div class="mt-3">
+                                    <button type="button" @click="addProductLine"
+                                        class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg transition-colors flex items-center justify-center">
+                                        <i class="fas fa-plus-circle mr-2 text-lg"></i>Ajouter un produit
+                                    </button>
+                                </div>
+
+                                <!-- Summary -->
                                 <div class="mt-6 p-4 bg-gray-50 rounded-lg">
                                     <div class="flex justify-between items-center mb-2">
                                         <span class="text-sm font-medium text-gray-700">
@@ -414,160 +506,132 @@ if (!isset($_SESSION['user_id'])) {
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-lg font-semibold text-gray-900">Montant total:</span>
-                                        <span class="text-2xl font-bold text-green-600">{{ formatCurrency(saleTotal, saleForm.currency) }}</span>
+                                        <span class="text-2xl font-bold text-green-600">{{ formatCurrency(saleTotal) }}</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="flex space-x-3 pt-4">
-                                <button type="submit"
-                                    class="flex-1 bg-accent hover:bg-green-600 text-white py-3 px-4 rounded-lg transition-colors font-medium">
-                                    <i class="fas fa-save mr-2"></i>Enregistrer
-                                </button>
+                            <div class="flex justify-between items-center pt-4 border-t border-gray-200">
+                                <div>
+                                    <p class="text-sm text-gray-600">Total produits: <span class="font-semibold">{{ Math.round(totalProductsInForm) }}</span></p>
+                                    <p class="text-sm text-gray-600">Articles: <span class="font-semibold">{{ uniqueProductsInForm }}</span></p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm text-gray-600">Total général</p>
+                                    <p class="text-2xl font-bold text-green-600">{{ Math.round(totalAmount) }} FCFA</p>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-3 mt-6">
                                 <button type="button" @click="closeSaleModal"
-                                    class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg transition-colors font-medium">
-                                    <i class="fas fa-times mr-2"></i>Annuler
+                                    class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                                    Annuler
+                                </button>
+                                <button type="button" @click="showConfirmationModal"
+                                    class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg">
+                                    <i class="fas fa-check mr-2"></i>Finaliser la vente
                                 </button>
                             </div>
                         </form>
-
                     </div>
                 </div>
             </div>
 
-            <!-- Modal Détails Vente -->
-            <div v-if="showDetailsModal && selectedSale" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+            <!-- New client creation modal -->
+            <div v-if="showNewClientForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[60]">
                 <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
-                                <i class="fas fa-file-invoice mr-2"></i>Détails de la vente
+                                <i class="fas fa-user-plus mr-2"></i>Nouveau Client
                             </h3>
-                            <div class="flex space-x-2">
-                                <button @click="printInvoice(selectedSale)" class="no-print bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                                    <i class="fas fa-print mr-1"></i>Imprimer
-                                </button>
-                                <button @click="closeDetailsModal" class="no-print text-gray-400 hover:text-gray-600">
-                                    <i class="fas fa-times text-xl"></i>
-                                </button>
-                            </div>
+                            <button @click="showNewClientForm = false" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <p class="text-sm font-medium text-gray-700">N° Facture</p>
-                                <p class="text-lg font-semibold text-blue-600">{{ selectedSale.id }}</p>
+                        <form @submit.prevent="createNewClient" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-user mr-1"></i>Nom du client *
+                                </label>
+                                <input v-model="newClientForm.name" type="text" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
-                            <div class="bg-green-50 p-4 rounded-lg">
-                                <p class="text-sm font-medium text-gray-700">Client</p>
-                                <p class="text-lg font-semibold text-green-600">{{ selectedSale.buyer }}</p>
+
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-phone mr-1"></i>Téléphone *
+                                </label>
+                                <input v-model="newClientForm.phone" type="tel" required
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
-                            <div class="bg-yellow-50 p-4 rounded-lg">
-                                <p class="text-sm font-medium text-gray-700">Date</p>
-                                <p class="text-lg font-semibold text-yellow-600">{{ formatDate(selectedSale.date_of_insertion) }}</p>
+
+                            <div class="flex space-x-3 pt-4">
+                                <button type="submit"
+                                    class="flex-1 bg-accent hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-check mr-2"></i>Créer
+                                </button>
+                                <button type="button" @click="showNewClientForm = false"
+                                    class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Annuler
+                                </button>
                             </div>
-                            <div class="bg-purple-50 p-4 rounded-lg">
-                                <p class="text-sm font-medium text-gray-700">Statut</p>
-                                <span :class="['inline-block px-3 py-1 text-sm font-semibold rounded-full', getStatusClass(selectedSale.status)]">
-                                    {{ getStatusLabel(selectedSale.status) }}
-                                </span>
-                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Détails de Vente -->
+            <div v-if="showDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-file-invoice-dollar mr-2"></i>Détails de la vente #{{ selectedSale?.id }}
+                            </h3>
+                            <button @click="closeDetailsModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
                         </div>
 
-                        <!-- Added product lines section with edit functionality -->
-                        <div class="border-t pt-6">
-                            <div class="flex justify-between items-center mb-4">
-                                <h4 class="text-lg font-medium text-gray-900">
-                                    <i class="fas fa-list mr-2"></i>Produits
-                                </h4>
-                                <div class="flex space-x-2 no-print">
-                                    <button @click="addNewProductLine" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm transition-colors">
-                                        <i class="fas fa-plus mr-1"></i>Ajouter produit
-                                    </button>
+                        <div v-if="selectedSale" class="space-y-6">
+                            <!-- Client Info -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="text-sm text-gray-600">Client</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ selectedSale.buyer }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Date</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ formatDate(selectedSale.date_of_insertion) }}</p>
                                 </div>
                             </div>
 
+                            <!-- Products Table -->
                             <div class="overflow-x-auto">
-                                <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                                <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
                                         <tr>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix unitaire</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase no-print">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody class="divide-y divide-gray-200">
-                                        <tr v-for="(line, index) in selectedSale.lines" :key="index" class="hover:bg-gray-50">
-                                            <td class="px-4 py-3 text-sm" data-label="Produit">
-                                                <div v-if="line.editing">
-                                                    <input v-model="line.product" type="text" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                                                </div>
-                                                <div v-else>{{ line.product }}</div>
-                                            </td>
-                                            <td class="px-4 py-3 text-sm" data-label="Quantité">
-                                                <div v-if="line.editing">
-                                                    <input v-model.number="line.quantity" type="number" min="1" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                                                </div>
-                                                <div v-else>{{ line.quantity }}</div>
-                                            </td>
-                                            <td class="px-4 py-3 text-sm" data-label="Prix unitaire">
-                                                <div v-if="line.editing">
-                                                    <input v-model.number="line.price"
-                                                        type="number" step="0.01" min="0" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                                                </div>
-                                                <div v-else>{{ formatCurrency(line.price, selectedSale.currency) }}</div>
-                                            </td>
-                                            <td class="px-4 py-3 text-sm font-medium" data-label="Total">{{ formatCurrency(line.quantity * line.price, selectedSale.currency) }}</td>
-                                            <td class="px-4 py-3 text-sm no-print" data-label="Actions">
-                                                <div v-if="line.editing" class="flex space-x-3">
-                                                    <button @click="validateProductEdit(index)" class="text-green-600 hover:text-green-800" title="Valider">
-                                                        <i class="fas fa-check fa-lg"></i>
-                                                    </button>
-                                                    <button @click="cancelProductEdit(index)" class="text-gray-600 hover:text-gray-800" title="Annuler">
-                                                        <i class="fas fa-times fa-lg"></i>
-                                                    </button>
-                                                </div>
-                                                <div v-else class="flex space-x-3">
-                                                    <button @click="editProductLine(index)" class="text-blue-600 hover:text-blue-800" title="Modifier">
-                                                        <i class="fas fa-edit fa-lg"></i>
-                                                    </button>
-                                                    <button @click="deleteSaleItem(line.id)" class="text-red-600 hover:text-red-800" title="Supprimer">
-                                                        <i class="fas fa-trash fa-lg"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                        <!-- New product line row -->
-                                        <tr v-if="newProductLine.visible" class="bg-green-50">
-                                            <td class="px-4 py-3 text-sm">
-                                                <input v-model="newProductLine.product" type="text" placeholder="Nom du produit" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                                            </td>
-                                            <td class="px-4 py-3 text-sm">
-                                                <input v-model.number="newProductLine.quantity" type="number" min="1" placeholder="Quantité" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                                            </td>
-                                            <td class="px-4 py-3 text-sm">
-                                                <input v-model.number="newProductLine.price" type="number" step="0.01" min="0" placeholder="Prix" class="w-full px-2 py-1 border border-gray-300 rounded text-sm">
-                                            </td>
-                                            <td class="px-4 py-3 text-sm font-medium">{{ formatCurrency(newProductLine.quantity * newProductLine.price || 0, selectedSale.currency) }}</td>
-                                            <td class="px-4 py-3 text-sm no-print">
-                                                <div class="flex space-x-3">
-                                                    <button @click="validateNewLine" class="text-green-600 hover:text-green-800" title="Valider">
-                                                        <i class="fas fa-check fa-lg"></i>
-                                                    </button>
-                                                    <button @click="cancelNewLine" class="text-gray-600 hover:text-gray-800" title="Annuler">
-                                                        <i class="fas fa-times fa-lg"></i>
-                                                    </button>
-                                                </div>
-                                            </td>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr v-for="line in selectedSale.lines" :key="line.id">
+                                            <td class="px-4 py-3 text-sm text-gray-900">{{ line.product }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-500">{{ formatNumber(line.quantity) }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-500">{{ formatCurrency(line.price, selectedSale.currency) }}</td>
+                                            <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ formatCurrency(line.quantity * line.price, selectedSale.currency) }}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
 
-                            <!-- Added totals summary -->
-                            <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+                            <!-- Summary -->
+                            <div class="p-4 bg-gray-50 rounded-lg">
                                 <div class="flex justify-between items-center mb-2">
                                     <span class="text-sm font-medium text-gray-700">
                                         <i class="fas fa-boxes mr-2"></i>Quantité totale:
@@ -579,80 +643,294 @@ if (!isset($_SESSION['user_id'])) {
                                     <span class="text-2xl font-bold text-green-600">{{ formatCurrency(selectedSaleTotal, selectedSale.currency) }}</span>
                                 </div>
                             </div>
+
+                            <div class="flex justify-end space-x-3">
+                                <button @click="printInvoice(selectedSale)" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-print mr-2"></i>Imprimer
+                                </button>
+                                <button @click="closeDetailsModal" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-times mr-2"></i>Fermer
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <!-- Added modal of summary/confirmation -->
+            <div v-if="showRecapModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-3xl w-full p-6 max-h-screen overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-receipt mr-2"></i>Récapitulatif de la vente
+                            </h3>
+                            <button @click="showRecapModal = false" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600">Client</p>
+                                <p class="text-lg font-semibold">{{ saleForm.selectedClient ? saleForm.selectedClient.name : 'N/A' }}</p>
+                            </div>
+
+                            <div class="border border-gray-200 rounded-lg overflow-hidden">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qté</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">P.U.</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-200">
+                                        <tr v-for="(line, index) in saleForm.lines" :key="index">
+                                            <td class="px-4 py-3 text-sm" data-label="Produit">{{ line.product_name }}</td>
+                                            <td class="px-4 py-3 text-sm" data-label="Type de prix">
+                                                <span v-if="line.priceType === 'retail_price'" class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Détail</span>
+                                                <span v-if="line.priceType === 'semi_bulk_price'" class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Semi-gros</span>
+                                                <span v-if="line.priceType === 'bulk_price'" class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">Gros</span>
+                                            </td>
+                                            <td class="px-4 py-3 text-sm" data-label="Quantité">{{ Math.round(line.quantity) }}</td>
+                                            <td class="px-4 py-3 text-sm" data-label="Prix">{{ Math.round(line.price) }} FCFA</td>
+                                            <td class="px-4 py-3 text-sm font-semibold" data-label="Total">{{ Math.round(line.total) }} FCFA</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="bg-gray-50 p-4 rounded-lg space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-600">Total produits:</span>
+                                    <span class="text-sm font-semibold">{{ Math.round(totalProductsInForm) }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-600">Articles:</span>
+                                    <span class="text-sm font-semibold">{{ uniqueProductsInForm }}</span>
+                                </div>
+                                <div class="flex justify-between border-t border-gray-300 pt-2 mt-2">
+                                    <span class="text-lg font-bold">Total général:</span>
+                                    <span class="text-lg font-bold text-green-600">{{ Math.round(totalAmount) }} FCFA</span>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-3 mt-6">
+                                <button type="button" @click="showRecapModal = false" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                                    Retour
+                                </button>
+                                <button type="button" @click="saveSale" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg">
+                                    <i class="fas fa-check mr-2"></i>Confirmer la vente
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Added new modal for sales history list print preview -->
+            <div v-if="showPrintListModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-7xl w-full p-6 max-h-screen overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6 no-print">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-list mr-2"></i>Historique des ventes
+                            </h3>
+                            <button @click="closePrintListModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div class="print-area">
+                            <div class="text-center mb-6 hidden print:block">
+                                <h1 class="text-2xl font-bold">GBEMIRO</h1>
+                                <p class="text-sm">Historique des ventes</p>
+                                <p class="text-xs text-gray-600">Généré le {{ new Date().toLocaleDateString('fr-FR') }}</p>
+                            </div>
+
+                            <div class="mb-4 bg-blue-50 p-4 rounded-lg grid grid-cols-4 gap-4">
+                                <div>
+                                    <p class="text-sm text-gray-600">Total des ventes</p>
+                                    <p class="text-xl font-bold text-green-600">{{ formatCurrency(totalSales) }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Nombre de ventes</p>
+                                    <p class="text-xl font-bold text-blue-600">{{ filteredSales.length }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Total produits vendus</p>
+                                    <p class="text-xl font-bold text-purple-600">{{ Math.round(totalProductsCount) }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-sm text-gray-600">Articles</p>
+                                    <p class="text-xl font-bold text-orange-600">{{ totalUniqueProducts }}</p>
+                                </div>
+                            </div>
+
+                            <table class="min-w-full divide-y divide-gray-200 border">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Facture</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Articles</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-gray-200">
+                                    <tr v-for="sale in filteredSales" :key="sale.id">
+                                        <td class="px-4 py-3 text-sm">#{{ sale.id }}</td>
+                                        <td class="px-4 py-3 text-sm">{{ sale.buyer }}</td>
+                                        <td class="px-4 py-3 text-sm">{{ formatDate(sale.date_of_insertion) }}</td>
+                                        <td class="px-4 py-3 text-sm">{{ calculateTotalProducts(sale) }}</td>
+                                        <td class="px-4 py-3 text-sm">{{ calculateUniqueProducts(sale) }}</td>
+                                        <td class="px-4 py-3 text-sm font-semibold">{{ formatCurrency(sale.total) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-end space-x-3 mt-6 no-print">
+                            <button @click="printListNow" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors">
+                                <i class="fas fa-print mr-2"></i>Imprimer
+                            </button>
+                            <button @click="closePrintListModal" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg transition-colors">
+                                <i class="fas fa-times mr-2"></i>Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 
     <script>
-        const {
-            createApp
-        } = Vue;
-
         const api = axios.create({
             baseURL: 'api/index.php'
         });
 
+        const {
+            createApp
+        } = Vue;
+
         createApp({
             data() {
                 return {
-                    searchTerm: '',
-                    sortBy: 'date',
-                    statusFilter: 'all',
-                    currentPage: 1,
-                    itemsPerPage: 10,
-                    showSaleModal: false,
-                    showDetailsModal: false,
-                    selectedSale: null,
                     sales: [],
-                    saleForm: {
+                    salesProducts: [],
+                    products: [],
+                    clients: [],
+                    // Added currentSale object for new sale creation form
+                    currentSale: {
                         buyer: '',
                         phone: '',
-                        currency: 'XOF',
-                        status: 'pending',
-                        lines: []
+                        items: [] // Array to hold products in the current sale
                     },
-                    newProductLine: {
-                        visible: false,
-                        product: '',
-                        quantity: '',
-                        price: ''
-                    }
+                    filteredClients: [],
+                    searchTerm: '',
+                    sortBy: 'date',
+                    exactDate: '',
+                    startDate: '',
+                    endDate: '',
+                    currentPage: 1,
+                    itemsPerPage: 10,
+                    showSaleModal: false, // Renamed from showModal
+                    showNewClientForm: false, // Renamed from showClientModal
+                    showClientDropdown: false, // Added for client dropdown visibility
+                    clientSearchTerm: '', // For client search
+                    saleForm: {
+                        selectedClient: null, // Changed from buyer: ''
+                        currency: 'FCFA', // Changé de XOF à FCFA
+                        lines: [],
+                        notes: '' // Added notes field
+                    },
+                    newClientForm: { // For creating new client
+                        name: '',
+                        phone: ''
+                    },
+                    showDetailsModal: false,
+                    selectedSale: null,
+                    // Added variable for summary modal
+                    showRecapModal: false,
+
+                    // Added properties for product search and dropdown in modal
+                    productSearchTerm: '',
+                    showProductDropdown: false,
+                    filteredProducts: [],
+                    isEditMode: false,
+                    editingSaleId: null,
+
+                    // Added for print list modal
+                    showPrintListModal: false,
                 };
             },
 
             mounted() {
                 this.fetchSales();
+                this.fetchSalesProducts();
+                this.fetchProducts();
+                this.fetchClients();
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.relative')) {
+                        this.showClientDropdown = false;
+                    }
+                });
             },
 
             computed: {
                 filteredSales() {
-                    let filtered = this.sales.filter(sale => {
-                        const search = this.searchTerm.toLowerCase();
+                    let filtered = this.sales;
 
-                        const matchesSearch =
-                            sale.buyer.toLowerCase().includes(search) ||
-                            (sale.phone && sale.phone.includes(this.searchTerm)) ||
-                            sale.invoice_number.toLowerCase().includes(search);
+                    if (this.exactDate) {
+                        filtered = filtered.filter(sale => {
+                            const saleDate = sale.date_of_insertion.split(' ')[0];
+                            return saleDate === this.exactDate;
+                        });
+                    }
 
-                        const matchesStatus =
-                            this.statusFilter === 'all' || sale.status === this.statusFilter;
+                    if (this.startDate && this.endDate) {
+                        filtered = filtered.filter(sale => {
+                            const saleDate = sale.date_of_insertion.split(' ')[0];
+                            return saleDate >= this.startDate && saleDate <= this.endDate;
+                        });
+                    } else if (this.startDate) {
+                        filtered = filtered.filter(sale => {
+                            const saleDate = sale.date_of_insertion.split(' ')[0];
+                            return saleDate >= this.startDate;
+                        });
+                    } else if (this.endDate) {
+                        filtered = filtered.filter(sale => {
+                            const saleDate = sale.date_of_insertion.split(' ')[0];
+                            return saleDate <= this.endDate;
+                        });
+                    }
 
-                        return matchesSearch && matchesStatus;
-                    });
+                    if (this.searchTerm) {
+                        const term = this.searchTerm.toLowerCase();
+                        filtered = filtered.filter(sale =>
+                            sale.buyer.toLowerCase().includes(term) ||
+                            sale.id.toString().includes(term)
+                        );
+                    }
 
+                    // Sorting
                     filtered.sort((a, b) => {
                         switch (this.sortBy) {
+                            case 'date':
+                                return new Date(b.date_of_insertion) - new Date(a.date_of_insertion);
                             case 'buyer':
                                 return a.buyer.localeCompare(b.buyer);
                             case 'total':
-                                return parseFloat(b.total) - parseFloat(a.total);
-                            case 'date':
-                                return new Date(b.date_of_insertion) - new Date(a.date_of_insertion);
+                                return b.total - a.total;
                             case 'invoice_number':
-                                return a.invoice_number.localeCompare(b.invoice_number);
+                                return b.id - a.id;
                             default:
                                 return 0;
                         }
@@ -660,12 +938,31 @@ if (!isset($_SESSION['user_id'])) {
 
                     return filtered;
                 },
-                totalItems() {
-                    return this.filteredSales.length;
+
+                paginatedSales() {
+                    const start = (this.currentPage - 1) * this.itemsPerPage;
+                    const end = start + this.itemsPerPage;
+                    return this.filteredSales.slice(start, end);
                 },
 
                 totalPages() {
-                    return Math.ceil(this.totalItems / this.itemsPerPage);
+                    return Math.ceil(this.filteredSales.length / this.itemsPerPage);
+                },
+
+                visiblePages() {
+                    const pages = [];
+                    const maxVisible = 5;
+                    let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+                    let end = Math.min(this.totalPages, start + maxVisible - 1);
+
+                    if (end - start < maxVisible - 1) {
+                        start = Math.max(1, end - maxVisible + 1);
+                    }
+
+                    for (let i = start; i <= end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
                 },
 
                 startItem() {
@@ -673,349 +970,565 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 endItem() {
-                    return Math.min(this.currentPage * this.itemsPerPage, this.totalItems);
+                    return Math.min(this.currentPage * this.itemsPerPage, this.filteredSales.length);
                 },
 
-                paginatedSales() {
-                    const start = (this.currentPage - 1) * this.itemsPerPage;
-                    return this.filteredSales.slice(start, start + this.itemsPerPage);
-                },
-
-                visiblePages() {
-                    const pages = [];
-                    const total = this.totalPages;
-                    const current = this.currentPage;
-                    for (let i = 1; i <= total; i++) {
-                        if (i === 1 || i === total || (i >= current - 1 && i <= current + 1)) {
-                            pages.push(i);
-                        }
-                    }
-                    return pages;
+                totalItems() {
+                    return this.filteredSales.length;
                 },
 
                 totalSales() {
-                    return this.filteredSales
-                        .filter(sale => sale.status === 'paid')
-                        .reduce((sum, sale) => sum + parseFloat(sale.total), 0);
+                    return this.filteredSales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
                 },
 
-                pendingSalesCount() {
-                    return this.filteredSales.filter(sale => sale.status === 'pending').length;
+                totalProductsCount() {
+                    return this.filteredSales.reduce((sum, sale) => {
+                        // Ensure sale.items is an array before calculating
+                        const items = Array.isArray(sale.items) ? sale.items : [];
+                        return sum + items.reduce((itemSum, item) => itemSum + parseFloat(item.quantity || 0), 0);
+                    }, 0);
                 },
 
-                averageSale() {
-                    const paidSales = this.filteredSales.filter(sale => sale.status === 'paid');
-                    return paidSales.length > 0 ? this.totalSales / paidSales.length : 0;
+                totalUniqueProducts() {
+                    return this.filteredSales.reduce((sum, sale) => {
+                        // Ensure sale.items is an array before calculating
+                        const items = Array.isArray(sale.items) ? sale.items : [];
+                        return sum + items.length;
+                    }, 0);
                 },
+
+                currentSaleTotalProducts() {
+                    return this.currentSale.items.reduce((sum, item) => {
+                        return sum + parseFloat(item.quantity || 0);
+                    }, 0);
+                },
+
+                currentSaleUniqueProducts() {
+                    return this.currentSale.items.length;
+                },
+
+                filteredClients() {
+                    if (!this.clientSearchTerm) return this.clients;
+                    const search = this.clientSearchTerm.toLowerCase();
+                    return this.clients.filter(client =>
+                        client.name.toLowerCase().includes(search) ||
+                        client.phone.includes(search)
+                    );
+                },
+
 
                 saleTotal() {
-                    return this.saleForm.lines.reduce((total, line) => total + (line.total || 0), 0);
+                    return this.saleForm.lines.reduce((sum, line) => sum + (line.total || 0), 0);
                 },
 
                 saleTotalQuantity() {
-                    return this.saleForm.lines.reduce((total, line) => total + (parseFloat(line.quantity) || 0), 0);
+                    return this.saleForm.lines.reduce((sum, line) => sum + (parseFloat(line.quantity) || 0), 0);
                 },
+
+                // Added computed for total products and unique products in the form
+                totalProductsInForm() {
+                    return this.saleForm.lines.reduce((sum, line) => sum + (line.quantity || 0), 0);
+                },
+
+                uniqueProductsInForm() {
+                    return this.saleForm.lines.filter(line => line.product_id).length;
+                },
+
+                totalAmount() {
+                    return this.saleForm.lines.reduce((sum, line) => sum + (line.total || 0), 0);
+                },
+
 
                 selectedSaleTotal() {
                     if (!this.selectedSale || !this.selectedSale.lines) return 0;
-                    return this.selectedSale.lines.reduce((total, line) => total + (line.quantity * line.price), 0);
+                    return this.selectedSale.lines.reduce((sum, line) => sum + (line.quantity * line.price), 0);
                 },
 
                 selectedSaleTotalQuantity() {
                     if (!this.selectedSale || !this.selectedSale.lines) return 0;
-                    return this.selectedSale.lines.reduce((total, line) => total + (parseFloat(line.quantity) || 0), 0);
+                    return this.selectedSale.lines.reduce((sum, line) => sum + parseFloat(line.quantity), 0);
                 }
             },
 
             methods: {
+                async fetchSalesProducts() {
+                    try {
+                        const response = await api.get('?action=allSalesProducts');
+                        this.salesProducts = response.data;
+                    } catch (error) {
+                        console.error('Erreur lors de la récupération des produits des ventes:', error);
+                    }
+                },
+
                 async fetchSales() {
                     try {
                         const response = await api.get('?action=allSales');
-                        console.log(response);
-                        this.sales = response.data.map(sale => ({
-                            ...sale,
-                            lines: []
-                        }));
-                        await this.loadSalesProducts();
+                        this.sales = response.data.map(sale => {
+                            // Ensure lines is always an array, parsing if it's a string
+                            const lines = typeof sale.items === 'string' ? JSON.parse(sale.items) : (Array.isArray(sale.items) ? sale.items : []);
+                            return {
+                                ...sale,
+                                lines: lines.map(item => ({
+                                    // Adjust properties to match expected structure if necessary
+                                    product: item.product_name || item.product, // Handle potential naming differences
+                                    quantity: parseFloat(item.quantity),
+                                    price: parseFloat(item.unit_price || item.price), // Handle potential naming differences
+                                    // Add other relevant properties if needed
+                                }))
+                            };
+                        });
+                        // No need to call loadSalesProducts separately if items are already fetched/parsed in `fetchSales`
                     } catch (error) {
                         console.error('Erreur lors de la récupération des ventes:', error);
                     }
                 },
 
-                async loadSalesProducts() {
-                    try {
-                        const response = await api.get('?action=allSalesProducts');
-                        const products = response.data;
+                // This method might be redundant if `items` are correctly fetched and parsed in `fetchSales`
+                // async loadSalesProducts() {
+                //     try {
+                //         const response = await api.get('?action=allSalesProducts');
+                //         const products = response.data;
 
-                        this.sales.forEach(sale => {
-                            sale.lines = products.filter(product => product.sale_id == sale.id).map(product => ({
-                                id: product.id,
-                                product: product.name,
-                                quantity: product.quantity,
-                                price: parseFloat(product.price),
-                                editing: false,
-                                originalData: null
-                            }));
-                        });
+                //         this.sales.forEach(sale => {
+                //             sale.lines = products.filter(product => product.sale_id == sale.id).map(product => ({
+                //                 id: product.id,
+                //                 product: product.name,
+                //                 quantity: product.quantity,
+                //                 price: parseFloat(product.price)
+                //             }));
+                //         });
+                //     } catch (error) {
+                //         console.error('Erreur lors du chargement des produits:', error);
+                //     }
+                // },
+
+                async fetchProducts() {
+                    try {
+                        const response = await api.get('?action=allProducts');
+                        this.products = response.data;
+                        // Ensure filteredProducts is updated when products change
+                        if (this.showSaleModal) { // Only update if modal is open to avoid unnecessary re-renders
+                            this.saleForm.lines.forEach((line, index) => {
+                                line.filteredProducts = this.products;
+                                // Re-filter if the search term is still active
+                                if (line.productSearchTerm) {
+                                    this.filterProducts(index);
+                                }
+                            });
+                        } else {
+                            this.filteredProducts = this.products; // Initialize or update the general list
+                        }
                     } catch (error) {
-                        console.error('Erreur lors du chargement des produits:', error);
+                        console.error('Erreur lors de la récupération des produits:', error);
                     }
                 },
 
-                formatDate(dateString) {
-                    if (!dateString) return '';
+                async fetchClients() {
                     try {
-                        return new Date(dateString).toLocaleDateString('fr-FR');
-                    } catch (e) {
-                        console.error("Invalid date string:", dateString, e);
-                        return '';
+                        const response = await api.get('?action=allClients');
+                        this.clients = response.data;
+                        this.filteredClients = this.clients;
+                    } catch (error) {
+                        console.error('Erreur lors de la récupération des clients:', error);
                     }
                 },
 
-                formatCurrency(amount, currency = 'XOF') {
-                    if (amount === null || amount === undefined || isNaN(amount)) {
-                        return '0.00 ' + currency;
+                async editSale(sale) {
+                    try {
+                        // Charger les produits de cette vente depuis l'API
+                        const response = await api.get('?action=allSalesProducts');
+                        const saleProducts = response.data.filter(product => product.sale_id === sale.id);
+
+                        // Passer en mode édition
+                        this.isEditMode = true;
+                        this.editingSaleId = sale.id;
+
+                        // Trouver le client
+                        const client = this.clients.find(c => c.name === sale.buyer);
+                        this.saleForm.selectedClient = client || {
+                            name: sale.buyer,
+                            phone: ''
+                        };
+                        this.clientSearchTerm = sale.buyer;
+
+                        // Charger les lignes de produits
+                        this.saleForm.lines = saleProducts.map(sp => {
+                            const product = this.products.find(p => p.name === sp.name);
+
+                            return {
+                                product_id: product ? product.id : null,
+                                product_name: sp.name,
+                                productSearchTerm: sp.name,
+                                showProductDropdown: false,
+                                filteredProducts: this.products,
+                                priceType: 'retail_price', // Default to retail, will be set if available
+                                retail_price: product ? parseFloat(product.retail_price) : 0,
+                                semi_bulk_price: product ? parseFloat(product.semi_bulk_price) : 0,
+                                bulk_price: product ? parseFloat(product.bulk_price) : 0,
+                                quantity: parseFloat(sp.quantity),
+                                price: parseFloat(sp.price),
+                                total: parseFloat(sp.quantity) * parseFloat(sp.price),
+                                // Available stock calculation needs to consider the quantity already in this sale
+                                availableStock: product ? parseFloat(product.quantity) : parseFloat(sp.quantity), // Initial available stock from product list
+                                originalQuantity: parseFloat(sp.quantity) // Garder la quantité originale pour le calcul du stock
+                            };
+                        });
+
+                        this.showSaleModal = true;
+                    } catch (error) {
+                        console.error('Erreur lors du chargement de la vente:', error);
+                        alert('Erreur lors du chargement de la vente');
                     }
-                    return new Intl.NumberFormat('fr-FR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
-                    }).format(amount) + ' ' + currency;
-                },
-
-                formatNumber(number) {
-                    return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                },
-
-                getStatusClass(status) {
-                    switch (status) {
-                        case 'paid':
-                            return 'text-green-800 bg-green-100 border border-green-200';
-                        case 'pending':
-                            return 'text-yellow-800 bg-yellow-100 border border-yellow-200';
-                        case 'cancelled':
-                            return 'text-red-800 bg-red-100 border border-red-200';
-                        default:
-                            return 'text-gray-800 bg-gray-100 border border-gray-200';
-                    }
-                },
-
-                getStatusLabel(status) {
-                    switch (status) {
-                        case 'paid':
-                            return 'Payé';
-                        case 'pending':
-                            return 'En attente';
-                        case 'cancelled':
-                            return 'Annulé';
-                        default:
-                            return status;
-                    }
-                },
-
-                applyFilters() {
-                    this.currentPage = 1;
-                },
-
-                previousPage() {
-                    if (this.currentPage > 1) this.currentPage--;
-                },
-
-                nextPage() {
-                    if (this.currentPage < this.totalPages) this.currentPage++;
-                },
-
-                goToPage(page) {
-                    this.currentPage = page;
-                },
-
-                printSalesList() {
-                    const printWindow = window.open('', '_blank');
-                    const currentDate = new Date().toLocaleDateString('fr-FR');
-
-                    let printContent = `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <title>Liste des Ventes</title>
-                            <style>
-                                body { font-family: Arial, sans-serif; margin: 20px; }
-                                .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
-                                .summary { margin: 20px 0; padding: 15px; background-color: #f9f9f9; border: 1px solid #ddd; }
-                                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                                th, td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 12px; }
-                                th { background-color: #f0f0f0; font-weight: bold; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="header">
-                                <h1>LISTE DES VENTES</h1>
-                                <p>Date d'impression: ${currentDate}</p>
-                                <p>Nombre total de ventes: ${this.filteredSales.length}</p>
-                            </div>
-                            
-                            <div class="summary">
-                                <h3>Résumé:</h3>
-                                <p><strong>Total des ventes (payées):</strong> ${this.formatCurrency(this.totalSales)}</p>
-                                <p><strong>Ventes en attente:</strong> ${this.pendingSalesCount}</p>
-                                <p><strong>Vente moyenne:</strong> ${this.formatCurrency(this.averageSale)}</p>
-                            </div>
-                            
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>N° Facture</th>
-                                        <th>Client</th>
-                                        <th>Date</th>
-                                        <th>Montant</th>
-                                        <th>Statut</th>
-                                    </tr>
-                                </thead>
-                                <tbody>`;
-
-                    this.filteredSales.forEach(sale => {
-                        printContent += `
-                            <tr>
-                                <td>${sale.id}</td>
-                                <td>${sale.buyer}</td>
-                                <td>${this.formatDate(sale.date_of_insertion)}</td>
-                                <td>${this.formatCurrency(sale.total, sale.currency)}</td>
-                                <td>${this.getStatusLabel(sale.status)}</td>
-                            </tr>`;
-                    });
-
-                    printContent += `
-                                </tbody>
-                            </table>
-                        </body>
-                        </html>`;
-
-                    printWindow.document.write(printContent);
-                    printWindow.document.close();
-                    printWindow.print();
-                },
-
-                printInvoice(sale) {
-                    const printWindow = window.open('', '_blank');
-
-                    const productsRows = sale.lines.map(line => `
-                        <tr>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${line.product}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${line.quantity}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${this.formatCurrency(line.price, sale.currency)}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: right; font-weight: bold;">${this.formatCurrency(line.quantity * line.price, sale.currency)}</td>
-                        </tr>
-                    `).join('');
-
-                    const totalQuantity = sale.lines.reduce((sum, line) => sum + parseFloat(line.quantity), 0);
-                    const totalAmount = sale.lines.reduce((sum, line) => sum + (line.quantity * line.price), 0);
-
-                    let printContent = `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <title>Facture ${sale.id}</title>
-                            <style>
-                                body { font-family: Arial, sans-serif; margin: 40px; }
-                                .invoice-header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid #2563EB; padding-bottom: 20px; }
-                                .invoice-details { margin: 30px 0; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-                                .detail-box { padding: 15px; background-color: #f9fafb; border-radius: 8px; }
-                                .label { font-weight: bold; color: #374151; margin-bottom: 5px; }
-                                .value { color: #1F2937; font-size: 16px; }
-                                .products-section { margin: 30px 0; }
-                                .products-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                                .products-table th { background-color: #2563EB; color: white; padding: 12px; text-align: left; }
-                                .products-table td { border: 1px solid #ddd; padding: 8px; }
-                                .products-table tr:nth-child(even) { background-color: #f9fafb; }
-                                .totals-section { margin-top: 30px; padding: 20px; background-color: #f0f9ff; border: 2px solid #2563EB; }
-                                .total-row { display: flex; justify-content: space-between; margin: 10px 0; }
-                                .total-amount { font-size: 28px; font-weight: bold; color: #2563EB; }
-                                .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #6B7280; border-top: 1px solid #ddd; padding-top: 20px; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="invoice-header">
-                                <h1>GBEMIRO</h1>
-                                <p>Commerçialisation de boissons en gros et en détail <br>
-                                Lokossa, Quinji carrefour Abo, téléphone 0149916566
-                                <h2>Facture ${sale.invoice_number}</h2>
-                            </div>
-                            
-                            <div class="invoice-details">
-                                <div class="detail-box">
-                                    <div class="label">Client:</div>
-                                    <div class="value">${sale.buyer}</div>
-                                </div>
-                                <div class="detail-box">
-                                    <div class="label">Téléphone:</div>
-                                    <div class="value">${sale.phone || '-'}</div>
-                                </div>
-                                <div class="detail-box">
-                                    <div class="label">Date:</div>
-                                    <div class="value">${this.formatDate(sale.date_of_insertion)}</div>
-                                </div>
-                               
-                            </div>
-                            
-                            <div class="products-section">
-                                <h3>Détails des produits</h3>
-                                <table class="products-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Produit</th>
-                                            <th style="text-align: center;">Quantité</th>
-                                            <th style="text-align: right;">Prix unitaire</th>
-                                            <th style="text-align: right;">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${productsRows}
-                                    </tbody>
-                                </table>
-                            </div>
-                            
-                            <div class="totals-section">
-                                <div class="total-row">
-                                    <span style="font-size: 16px; font-weight: bold;">Quantité totale:</span>
-                                    <span style="font-size: 18px; font-weight: bold; color: #059669;">${totalQuantity}</span>
-                                </div>
-                                <div class="total-row" style="border-top: 2px solid #2563EB; padding-top: 15px; margin-top: 15px;">
-                                    <span style="font-size: 20px; font-weight: bold;">MONTANT TOTAL:</span>
-                                    <span class="total-amount">${this.formatCurrency(totalAmount, sale.currency)}</span>
-                                </div>
-                            </div>
-                            
-                            <div class="footer">
-                                <p>Merci pour votre confiance!</p>
-                                <p>Document généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
-                            </div>
-                        </body>
-                        </html>`;
-
-                    printWindow.document.write(printContent);
-                    printWindow.document.close();
-                    printWindow.print();
                 },
 
                 openNewSaleModal() {
-                    this.saleForm = {
+                    this.isEditMode = false;
+                    this.editingSaleId = null;
+
+                    this.currentSale = {
                         buyer: '',
                         phone: '',
-                        currency: 'XOF',
-                        status: 'pending',
-                        lines: []
+                        items: []
                     };
+                    this.clientSearchTerm = '';
+                    this.productSearchTerm = '';
+                    this.showProductDropdown = false;
                     this.showSaleModal = true;
+                    this.saleForm = {
+                        selectedClient: null,
+                        currency: 'FCFA',
+                        lines: [],
+                        notes: ''
+                    };
                 },
 
                 closeSaleModal() {
                     this.showSaleModal = false;
+                    this.showNewClientForm = false;
+                    this.isEditMode = false;
+                    this.editingSaleId = null;
+
+                    this.currentSale = {
+                        buyer: '',
+                        phone: '',
+                        items: []
+                    };
+                    this.clientSearchTerm = '';
+                    this.productSearchTerm = '';
+                    this.showProductDropdown = false;
+                    this.saleForm = {
+                        selectedClient: null,
+                        currency: 'FCFA',
+                        lines: [],
+                        notes: ''
+                    };
+                    this.showRecapModal = false;
                 },
 
-                viewSaleDetails(sale) {
-                    this.selectedSale = {
-                        ...sale,
-                        lines: [...sale.lines]
+                applyFilters() {
+                    // The filters are reactive due to computed properties.
+                    // Resetting to the first page ensures the user sees the first results after filtering.
+                    this.currentPage = 1;
+                },
+
+                clearFilters() {
+                    this.searchTerm = '';
+                    this.exactDate = '';
+                    this.startDate = '';
+                    this.endDate = '';
+                    this.sortBy = 'date';
+                    this.currentPage = 1;
+                },
+
+                filterClients() {
+                    const term = this.clientSearchTerm.toLowerCase();
+                    this.filteredClients = this.clients.filter(client =>
+                        client.name.toLowerCase().includes(term) ||
+                        client.phone.includes(term)
+                    );
+                },
+
+                selectClient(client) {
+                    // Update saleForm.selectedClient with selected client info
+                    this.saleForm.selectedClient = client;
+                    this.clientSearchTerm = client.name; // Display selected client name in search input
+                    this.showClientDropdown = false;
+                },
+
+                clearClientSelection() {
+                    this.saleForm.selectedClient = null;
+                    this.clientSearchTerm = '';
+                },
+
+                async createNewClient() {
+                    if (!this.newClientForm.name || !this.newClientForm.phone) {
+                        alert('Veuillez remplir tous les champs');
+                        return;
+                    }
+
+                    try {
+                        const response = await api.post('?action=createClient', this.newClientForm);
+
+                        if (response.data.success) {
+                            alert('Client créé avec succès!');
+                            await this.fetchClients();
+
+                            // Automatically select the newly created client
+                            const newClient = {
+                                id: response.data.client_id,
+                                name: this.newClientForm.name,
+                                phone: this.newClientForm.phone
+                            };
+                            this.selectClient(newClient);
+
+                            this.showNewClientForm = false;
+                            this.newClientForm = {
+                                name: '',
+                                phone: ''
+                            };
+                        } else {
+                            alert('Erreur: ' + (response.data.message || 'Une erreur est survenue.'));
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors de la création du client:', error);
+                        alert('Erreur lors de la création du client');
+                    }
+                },
+
+                // Method to filter products and exclude already selected ones
+                filterProducts(index) {
+                    const line = this.saleForm.lines[index];
+                    const term = line.productSearchTerm.toLowerCase();
+
+                    // Get IDs of products already selected in other lines
+                    const selectedProductIds = this.saleForm.lines
+                        .filter((l, i) => i !== index && l.product_id)
+                        .map(l => l.product_id);
+
+                    // Filter by search term AND exclude already selected products
+                    line.filteredProducts = this.products.filter(product =>
+                        product.name.toLowerCase().includes(term) &&
+                        !selectedProductIds.includes(product.id)
+                    );
+                },
+
+                // Method to validate quantity and check stock
+                validateQuantity(index) {
+                    const line = this.saleForm.lines[index];
+
+                    if (line.quantity < 0) {
+                        line.quantity = 0;
+                    }
+
+                    const product = this.products.find(p => p.id === line.product_id);
+
+                    if (product) {
+                        let availableStock = parseFloat(product.quantity);
+
+                        // En mode édition, ajouter la quantité originale au stock disponible
+                        if (this.isEditMode && line.originalQuantity) {
+                            availableStock += line.originalQuantity;
+                        }
+
+                        if (line.quantity > availableStock) {
+                            alert(`Stock insuffisant pour ${product.name}!\nStock disponible: ${Math.round(availableStock)}`);
+                            line.quantity = Math.floor(availableStock);
+                        }
+                    }
+
+                    this.updateLineTotal(index);
+                },
+
+                // Method to select a product for a line item in the sale form
+                selectProduct(index, product) {
+                    const line = this.saleForm.lines[index];
+                    line.product_id = product.id;
+                    line.product_name = product.name;
+                    line.productSearchTerm = product.name;
+
+                    // Calculer le stock disponible
+                    let availableStock = parseFloat(product.quantity);
+
+                    // En mode édition, si c'est un nouveau produit ajouté, le stock reste normal
+                    // Si c'est un produit existant remplacé, garder la quantité actuelle
+                    if (!this.isEditMode || !line.originalQuantity) {
+                        line.originalQuantity = 0;
+                    }
+
+                    line.availableStock = availableStock;
+
+                    line.retail_price = parseFloat(product.retail_price);
+                    line.semi_bulk_price = parseFloat(product.semi_bulk_price);
+                    line.bulk_price = parseFloat(product.bulk_price);
+
+                    if (!line.priceType) {
+                        line.priceType = 'retail_price';
+                    }
+                    line.price = parseFloat(product[line.priceType]);
+
+                    line.showProductDropdown = false; // Hide dropdown after selection
+                    this.updateLineTotal(index); // Recalculate total for this line
+                },
+
+                // Method to update the unit price based on the selected price type
+                changePriceType(index) {
+                    const line = this.saleForm.lines[index];
+                    if (line.priceType && line[line.priceType]) {
+                        line.price = line[line.priceType];
+                        this.updateLineTotal(index);
+                    }
+                },
+
+                // Method to add a product line to the saleForm.lines array
+                addProductLine() {
+                    this.saleForm.lines.push({
+                        product_id: '',
+                        product_name: '',
+                        productSearchTerm: '',
+                        showProductDropdown: false,
+                        filteredProducts: this.products, // Ensure filteredProducts is available here
+                        priceType: 'retail_price', // Default price type
+                        retail_price: 0,
+                        semi_bulk_price: 0,
+                        bulk_price: 0,
+                        quantity: 1,
+                        price: 0, // Default price
+                        total: 0,
+                        availableStock: 0,
+                        originalQuantity: 0
+                    });
+                },
+
+                // Remove product line from saleForm.lines
+                removeProductLine(index) {
+                    this.saleForm.lines.splice(index, 1);
+                },
+
+                // Update product details based on selection in saleForm.lines
+                updateProductDetails(index) {
+                    const line = this.saleForm.lines[index];
+                    const product = this.products.find(p => p.id == line.product_id);
+                    if (product) {
+                        line.product_name = product.name;
+                        line.price = parseFloat(product.retail_price); // Default to retail price
+                        this.updateLineTotal(index);
+                    }
+                },
+
+                // Method to calculate the total for a single line item
+                updateLineTotal(index) {
+                    const line = this.saleForm.lines[index];
+                    line.total = (line.quantity || 0) * (line.price || 0);
+                },
+
+                // Method to show the recap modal
+                showConfirmationModal() {
+                    // Check if all fields are filled
+                    if (!this.saleForm.selectedClient) {
+                        alert('Veuillez sélectionner un client');
+                        return;
+                    }
+
+                    if (this.saleForm.lines.length === 0) {
+                        alert('Veuillez ajouter au moins un produit');
+                        return;
+                    }
+
+                    // Check that all lines have a product selected
+                    for (let line of this.saleForm.lines) {
+                        if (!line.product_id || !line.quantity || line.quantity <= 0) {
+                            alert('Veuillez vérifier que tous les produits ont une quantité valide');
+                            return;
+                        }
+                    }
+
+                    this.showRecapModal = true;
+                },
+
+                async saveSale() {
+                    const saleData = {
+                        buyer: this.saleForm.selectedClient.name,
+                        total: this.totalAmount,
+                        currency: 'FCFA',
+                        lines: this.saleForm.lines.map(line => ({
+                            product: line.product_name,
+                            product_id: line.product_id, // Include product_id for backend
+                            quantity: line.quantity,
+                            price: line.price,
+                            price_type: line.priceType // Store price type
+                        }))
                     };
+
+                    // En mode édition, ajouter l'ID de la vente
+                    if (this.isEditMode) {
+                        saleData.id = this.editingSaleId;
+                    }
+
+                    const action = this.isEditMode ? 'updateSale' : 'newSale';
+
+                    console.log(`[v0] Requête de ${this.isEditMode ? 'mise à jour' : 'création'} de vente:`, {
+                        route: `?action=${action}`,
+                        data: saleData
+                    });
+
+                    try {
+                        const response = await api.post(`?action=${action}`, saleData);
+
+                        console.log('[v0] Réponse:', response.data);
+
+                        if (!response.data.success) {
+                            alert('Erreur: ' + (response.data.message || 'Une erreur est survenue.'));
+                            return;
+                        }
+
+                        alert(this.isEditMode ? 'Vente modifiée avec succès!' : 'Nouvelle vente ajoutée avec succès!');
+                        this.showRecapModal = false;
+                        this.closeSaleModal();
+                        await this.fetchSales();
+                        await this.fetchSalesProducts();
+                        await this.fetchProducts(); // Actualiser les produits pour mettre à jour les stocks
+                    } catch (error) {
+                        console.error('[v0] Erreur lors de l\'enregistrement:', error);
+                        alert('Erreur lors de l\'enregistrement de la vente');
+                    }
+                },
+
+                async cancelSale(saleId) {
+                    if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir annuler cette vente?')) {
+                        return;
+                    }
+
+                    try {
+                        const response = await api.post('?action=cancelSale', {
+                            id: saleId
+                        });
+
+                        if (response.data.success) {
+                            alert('Vente annulée avec succès!');
+                            this.fetchSales(); // Refresh the list
+                        } else {
+                            alert("Erreur lors de l'annulation de la vente");
+                        }
+                    } catch (error) {
+                        console.error("Erreur lors de l'annulation", error);
+                        alert("Erreur lors de l'annulation de la vente");
+                    }
+                },
+
+                async viewSaleDetails(sale) {
+                    // Ensure sale.items is an array and properly formatted if needed
+                    if (typeof sale.items === 'string') {
+                        try {
+                            sale.items = JSON.parse(sale.items);
+                        } catch (e) {
+                            console.error("Erreur lors du parsing des items pour la vente:", sale.id, e);
+                            sale.items = []; // Set to empty array if parsing fails
+                        }
+                    } else if (!Array.isArray(sale.items)) {
+                        sale.items = []; // Ensure it's an array
+                    }
+
+                    this.selectedSale = sale;
                     this.showDetailsModal = true;
                 },
 
@@ -1024,241 +1537,214 @@ if (!isset($_SESSION['user_id'])) {
                     this.selectedSale = null;
                 },
 
-                addProductLine() {
-                    this.saleForm.lines.push({
-                        product: '',
-                        quantity: '',
-                        price: 0,
-                        total: 0
-                    });
-                },
-                removeProductLine(index) {
-                    this.saleForm.lines.splice(index, 1);
-                },
-                updateLineTotal(index) {
-                    const line = this.saleForm.lines[index];
-                    line.total = line.quantity * line.price;
-                },
-                saveSale() {
-                    if (this.saleForm.lines.length === 0) {
-                        alert('Veuillez ajouter au moins un produit');
-                        return;
-                    }
+                async printInvoice(sale) {
+                    try {
+                        const response = await api.get('?action=allSalesProducts');
+                        const saleProducts = response.data.filter(product => product.sale_id === sale.id);
 
-                    for (let line of this.saleForm.lines) {
-                        if (!line.product || !line.quantity || line.price === null || line.price === undefined) {
-                            alert('Veuillez remplir tous les champs des produits');
+                        if (saleProducts.length === 0) {
+                            alert('Aucun produit trouvé pour cette vente');
                             return;
                         }
-                    }
 
-                    const saleData = {
-                        buyer: this.saleForm.buyer,
-                        phone: this.saleForm.phone,
-                        total: this.saleTotal,
-                        currency: this.saleForm.currency,
-                        status: this.saleForm.status,
-                        lines: this.saleForm.lines
-                    };
+                        // Trouver les informations du client
+                        const client = this.clients.find(c => c.name === sale.buyer);
+                        const clientPhone = client ? client.phone : 'Non disponible';
 
-                    api.post('?action=newSale', saleData)
-                        .then(response => {
-                            const data = response.data;
+                        const printContent = `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <title>Facture #${sale.id}</title>
+                                <style>
+                                    body { font-family: Arial, sans-serif; margin: 20px; }
+                                    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+                                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+                                    th { background-color: #f0f0f0; font-weight: bold; }
+                                    .total { font-weight: bold; font-size: 1.2em; margin-top: 20px; text-align: right; }
+                                    .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #6B7280; border-top: 1px solid #ddd; padding-top: 20px; }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="header">
+                                    <h1>GBEMIRO</h1>
+                                    <p>Commerçialisation de boissons en gros et en détail<br>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
+                                    <h2>FACTURE #${sale.id}</h2>
+                                </div>
+                                <p><strong>Client:</strong> ${sale.buyer}</p>
+                                <p><strong>Téléphone:</strong> ${clientPhone}</p>
+                                <p><strong>Date:</strong> ${this.formatDate(sale.date_of_insertion)}</p>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th>Quantité</th>
+                                            <th>Prix unitaire</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${saleProducts.map(product => `
+                                            <tr>
+                                                <td>${product.name}</td>
+                                                <td>${this.formatNumber(product.quantity)}</td>
+                                                <td>${this.formatCurrency(product.price)}</td>
+                                                <td>${this.formatCurrency(parseFloat(product.quantity) * parseFloat(product.price))}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                                <p class="total">Total: ${this.formatCurrency(sale.total)}</p>
+                                
+                                <div class="footer">
+                                    <p>Merci pour votre confiance!</p>
+                                    <p>Document généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+                                </div>
+                            </body>
+                            </html>
+                        `;
 
-                            if (!data.success) {
-                                alert('Erreur: ' + (data.message || 'Une erreur est survenue.'));
-                                return;
-                            }
-
-                            alert('Nouvelle vente ajoutée avec succès!');
-                            this.closeSaleModal();
-                            this.fetchSales();
-                        })
-                        .catch(error => {
-                            console.error('Erreur lors de l\'enregistrement:', error);
-                            alert('Erreur lors de l\'enregistrement de la vente');
-                        });
-                },
-                deleteSale(saleId) {
-                    if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir supprimer cette vente?')) {
-                        return;
-                    }
-                    api.post('?action=deleteSale', {
-                            id: saleId
-                        })
-                        .then(response => {
-                            if (response.data.success) {
-                                alert('Vente supprimée avec succès!');
-                                this.fetchSales();
-                            } else {
-                                alert('Erreur lors de la suppression: ' + response.data.error);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erreur lors de la suppression:', error);
-                            alert('Erreur lors de la suppression de la vente');
-                        });
-                },
-
-                addNewProductLine() {
-                    this.newProductLine = {
-                        visible: true,
-                        product: '',
-                        quantity: '',
-                        price: 0
-                    };
-                },
-
-                async validateNewLine() {
-                    if (!this.newProductLine.product || !this.newProductLine.quantity || !this.newProductLine.price) {
-                        alert('Veuillez remplir tous les champs');
-                        return;
-                    }
-
-                    try {
-                        const response = await api.post('?action=newSaleProduct', {
-                            sale_id: this.selectedSale.id,
-                            name: this.newProductLine.product,
-                            quantity: this.newProductLine.quantity,
-                            price: this.newProductLine.price
-                        });
-
-                        if (response.data.success) {
-                            const newLine = {
-                                id: response.data.product_id,
-                                product: this.newProductLine.product,
-                                quantity: this.newProductLine.quantity,
-                                price: this.newProductLine.price,
-                                editing: false,
-                                originalData: null
-                            };
-
-                            this.selectedSale.lines.push(newLine);
-
-                            // Update the main sales array
-                            const saleIndex = this.sales.findIndex(s => s.id === this.selectedSale.id);
-                            if (saleIndex !== -1) {
-                                this.sales[saleIndex].lines.push(newLine);
-                                this.sales[saleIndex].total = this.selectedSaleTotal;
-                            }
-
-                            this.cancelNewLine();
-                            alert('Produit ajouté avec succès!');
-                        } else {
-                            alert('Erreur lors de l\'ajout du produit');
-                        }
+                        const printWindow = window.open('', '', 'height=600,width=800');
+                        printWindow.document.write(printContent);
+                        printWindow.document.close();
+                        printWindow.print();
                     } catch (error) {
-                        console.error('Erreur:', error);
-                        alert('Erreur lors de l\'ajout du produit');
+                        console.error('Erreur lors de l\'impression:', error);
+                        alert('Erreur lors de l\'impression de la facture');
                     }
                 },
 
-                cancelNewLine() {
-                    this.newProductLine = {
-                        visible: false,
-                        product: '',
-                        quantity: '',
-                        price: ''
-                    };
+                printSalesList() {
+                    // Créer un modal pour afficher l'historique
+                    const modalContent = `
+                        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50" id="print-modal">
+                            <div class="flex items-center justify-center min-h-screen p-4">
+                                <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full p-6 max-h-screen overflow-y-auto">
+                                    <div class="flex justify-between items-center mb-6 no-print">
+                                        <h3 class="text-xl font-semibold text-gray-900">
+                                            <i class="fas fa-list mr-2"></i>Historique des Ventes
+                                        </h3>
+                                        <div class="flex space-x-3">
+                                            <button onclick="window.print()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                                                <i class="fas fa-print mr-2"></i>Imprimer
+                                            </button>
+                                            <button onclick="document.getElementById('print-modal').remove()" class="text-gray-400 hover:text-gray-600">
+                                                <i class="fas fa-times text-xl"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div class="print-area">
+                                        <div class="text-center mb-6">
+                                            <h1 class="text-2xl font-bold">GBEMIRO</h1>
+                                            <p class="text-sm text-gray-600">Historique des Ventes</p>
+                                            <p class="text-sm text-gray-600">Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+                                        </div>
+
+                                        <table class="min-w-full divide-y divide-gray-200 border">
+                                            <thead class="bg-gray-50">
+                                                <tr>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">N° Facture</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Client</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Date</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Qté Totale</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Articles</th>
+                                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Montant</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="bg-white divide-y divide-gray-200">
+                                                ${this.filteredSales.map(sale => `
+                                                    <tr>
+                                                        <td class="px-4 py-2 text-sm border">#${sale.id}</td>
+                                                        <td class="px-4 py-2 text-sm border">${sale.buyer}</td>
+                                                        <td class="px-4 py-2 text-sm border">${this.formatDate(sale.date_of_insertion)}</td>
+                                                        <td class="px-4 py-2 text-sm border">${this.calculateTotalProducts(sale)}</td>
+                                                        <td class="px-4 py-2 text-sm border">${this.calculateUniqueProducts(sale)}</td>
+                                                        <td class="px-4 py-2 text-sm border font-medium text-green-600">${this.formatCurrency(sale.total)}</td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                            <tfoot class="bg-gray-50">
+                                                <tr class="font-bold">
+                                                    <td colspan="5" class="px-4 py-2 text-right border">Total:</td>
+                                                    <td class="px-4 py-2 text-green-600 border">${this.formatCurrency(this.totalSales)}</td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Injecter le modal dans le DOM
+                    const modalDiv = document.createElement('div');
+                    modalDiv.innerHTML = modalContent;
+                    document.body.appendChild(modalDiv);
                 },
 
-                editProductLine(index) {
-                    const line = this.selectedSale.lines[index];
-                    line.originalData = {
-                        product: line.product,
-                        quantity: line.quantity,
-                        price: line.price
-                    };
-                    line.editing = true;
+                closePrintListModal() {
+                    this.showPrintListModal = false;
                 },
 
-                async validateProductEdit(index) {
-                    const line = this.selectedSale.lines[index];
+                printListNow() {
+                    window.print();
+                },
 
-                    if (!line.product || line.quantity <= 0 || line.price < 0) {
-                        alert('Veuillez remplir correctement tous les champs');
-                        return;
-                    }
-
-                    try {
-                        const response = await api.post('?action=updateSaleProduct', {
-                            id: line.id,
-                            name: line.product,
-                            quantity: line.quantity,
-                            price: line.price
-                        });
-
-                        if (response.data.success) {
-                            line.editing = false;
-                            line.originalData = null;
-
-                            // Update the main sales array
-                            const saleIndex = this.sales.findIndex(s => s.id === this.selectedSale.id);
-                            if (saleIndex !== -1) {
-                                const productIndex = this.sales[saleIndex].lines.findIndex(l => l.id === line.id);
-                                if (productIndex !== -1) {
-                                    this.sales[saleIndex].lines[productIndex] = {
-                                        ...line
-                                    };
-                                    this.sales[saleIndex].total = this.selectedSaleTotal;
-                                }
-                            }
-
-                            alert('Produit modifié avec succès!');
-                        } else {
-                            alert('Erreur lors de la modification du produit');
-                        }
-                    } catch (error) {
-                        console.error('Erreur:', error);
-                        alert('Erreur lors de la modification du produit');
+                previousPage() {
+                    if (this.currentPage > 1) {
+                        this.currentPage--;
                     }
                 },
 
-                cancelProductEdit(index) {
-                    const line = this.selectedSale.lines[index];
-                    if (line.originalData) {
-                        line.product = line.originalData.product;
-                        line.quantity = line.originalData.quantity;
-                        line.price = line.originalData.price;
-                        line.originalData = null;
+                nextPage() {
+                    if (this.currentPage < this.totalPages) {
+                        this.currentPage++;
                     }
-                    line.editing = false;
                 },
 
-                deleteSaleItem(itemId) {
-                    if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir supprimer cet article?')) {
-                        return;
-                    }
+                goToPage(page) {
+                    this.currentPage = page;
+                },
 
-                    api.post('?action=deleteSaleProduct', {
-                            id: itemId
-                        })
-                        .then(response => {
-                            if (response.data.success) {
-                                // Update the selectedSale.lines immediately to reflect deletion
-                                const deletedLineIndex = this.selectedSale.lines.findIndex(line => line.id === itemId);
-                                if (deletedLineIndex !== -1) {
-                                    this.selectedSale.lines.splice(deletedLineIndex, 1);
-                                }
+                formatDate(date) {
+                    if (!date) return '';
+                    // Ensure date is a valid Date object
+                    const d = new Date(date);
+                    if (isNaN(d)) return ''; // Return empty string for invalid dates
+                    return d.toLocaleDateString('fr-FR');
+                },
 
-                                // Update the main sales array to reflect the new total
-                                const saleIndex = this.sales.findIndex(s => s.id === this.selectedSale.id);
-                                if (saleIndex !== -1) {
-                                    this.sales[saleIndex].lines = [...this.selectedSale.lines];
-                                    this.sales[saleIndex].total = this.selectedSaleTotal;
-                                }
+                formatNumber(num) {
+                    // Ensure num is a number, default to 0 if not
+                    const number = parseFloat(num);
+                    return (isNaN(number) ? 0 : number).toLocaleString('fr-FR');
+                },
 
-                                alert('Article supprimé avec succès!');
-                            } else {
-                                alert('Erreur lors de la suppression: ' + response.data.error);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erreur lors de la suppression:', error);
-                            alert('Erreur lors de la suppression de l\'article');
-                        });
-                }
-            }
+                formatCurrency(amount, currency = 'FCFA') {
+                    // Display amounts without decimals (integers) in FCFA
+                    const number = parseFloat(amount);
+                    const roundedAmount = Math.round(isNaN(number) ? 0 : number);
+                    return `${roundedAmount.toLocaleString('fr-FR')} ${currency}`;
+                },
+
+                calculateTotalProducts(sale) {
+                    // Filtrer les produits qui appartiennent à cette vente
+                    const saleProducts = this.salesProducts.filter(product => product.sale_id === sale.id);
+                    // Calculer la somme totale des quantités
+                    return saleProducts.reduce((sum, product) => sum + parseInt(product.quantity || 0), 0);
+                },
+
+                calculateUniqueProducts(sale) {
+                    // Filtrer les produits qui appartiennent à cette vente
+                    const saleProducts = this.salesProducts.filter(product => product.sale_id === sale.id);
+                    // Retourner le nombre de produits
+                    return saleProducts.length;
+                },
+            },
         }).mount('#app');
     </script>
 </body>

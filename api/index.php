@@ -25,6 +25,36 @@ switch ($action) {
         getAllOrders();
         break;
 
+    case 'create':
+        createProduct();
+        break;
+
+
+    case 'allProducts':
+        getAllProducts();
+        break;
+
+    case 'update':
+        updateProduct();
+        break;
+
+    case 'adjust_stock':
+        adjustProductStock();
+        break;
+
+    case 'deleteProduct':
+        deleteProduct();
+        break;
+
+    case 'allClients':
+        getAllClients();
+        break;
+
+    case 'history':
+        getProductHistory();
+        break;
+
+
     case 'allOrdersProducts':
         getAllOrdersProducts();
         break;
@@ -55,6 +85,18 @@ switch ($action) {
 
     case 'newSale':
         newSale();
+        break;
+
+    case 'updateSale':
+        updateSale();
+        break;
+
+    case 'cancelSale':
+        cancelSale();
+        break;
+
+    case 'createClient':
+        createClient();
         break;
 
     case 'newOrderPayment':
