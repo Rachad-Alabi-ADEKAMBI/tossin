@@ -250,8 +250,8 @@ if (!isset($_SESSION['user_id'])) {
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Facture</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                                        <!-- Added columns for product counts -->
-                                        <!-- Changed column labels to match the data structure -->
+                                        <!-- Added Status column -->
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité totale</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Articles</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
@@ -269,31 +269,34 @@ if (!isset($_SESSION['user_id'])) {
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Date'">
                                             {{ formatDate(sale.date_of_insertion) }}
                                         </td>
-                                        <!-- Added product count columns -->
-                                        <!-- Swapped the order to match new column headers -->
+                                        <!-- Added Status display with badges -->
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm" :data-label="'Statut'">
+                                            <span v-if="sale.status === 'Fait'" class="px-3 py-1 bg-green-100 text-green-800 rounded-full font-semibold text-xs">
+                                                <i class="fas fa-check-circle mr-1"></i>Fait
+                                            </span>
+                                            <span v-else-if="sale.status === 'Annulé'" class="px-3 py-1 bg-red-100 text-red-800 rounded-full font-semibold text-xs">
+                                                <i class="fas fa-times-circle mr-1"></i>Annulé
+                                            </span>
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Quantité totale'">
                                             {{ calculateTotalProducts(sale) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Articles'">
                                             {{ calculateUniqueProducts(sale) }}
                                         </td>
-                                        <!-- Removed currency display from table -->
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600" :data-label="'Montant'">
                                             {{ formatCurrency(sale.total) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
-                                            <!-- Enlarged icons like in products.php -->
-                                            <!-- Improved spacing between icons (space-x-2 to space-x-3) -->
+                                            <!-- Disabled edit and cancel buttons if sale is already cancelled -->
                                             <div class="flex space-x-3">
-                                                <!-- Remplacé le bouton oeil par un bouton éditer -->
-                                                <button @click="editSale(sale)" class="text-orange-600 hover:text-orange-800 text-xl" title="Éditer">
+                                                <button @click="editSale(sale)" :disabled="sale.status === 'Annulé'" :class="sale.status === 'Annulé' ? 'text-gray-400 cursor-not-allowed' : 'text-orange-600 hover:text-orange-800'" class="text-xl" title="Éditer">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button @click="printInvoice(sale)" class="text-green-600 hover:text-green-800 text-xl" title="Imprimer facture">
                                                     <i class="fas fa-print"></i>
                                                 </button>
-                                                <!-- Replaced "Supprimer" with "Annuler" button text, keeping same deleteSale logic -->
-                                                <button @click="cancelSale(sale.id)" class="text-red-600 hover:text-red-800 text-xl" title="Annuler">
+                                                <button @click="cancelSale(sale.id)" :disabled="sale.status === 'Annulé'" :class="sale.status === 'Annulé' ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'" class="text-xl" title="Annuler">
                                                     <i class="fas fa-ban"></i>
                                                 </button>
                                             </div>
@@ -400,6 +403,17 @@ if (!isset($_SESSION['user_id'])) {
                                             <i class="fas fa-times-circle"></i>
                                         </button>
                                     </div>
+                                </div>
+
+                                <!-- Added payment method selector -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-credit-card mr-1"></i>Mode de paiement
+                                    </label>
+                                    <select v-model="saleForm.payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="cash">Cash</option>
+                                        <option value="crédit">Crédit</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -676,6 +690,12 @@ if (!isset($_SESSION['user_id'])) {
                                 <p class="text-lg font-semibold">{{ saleForm.selectedClient ? saleForm.selectedClient.name : 'N/A' }}</p>
                             </div>
 
+                            <!-- Added payment method display in recap -->
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <p class="text-sm text-gray-600">Mode de paiement</p>
+                                <p class="text-lg font-semibold">{{ saleForm.payment_method === 'cash' ? 'Cash' : 'Crédit' }}</p>
+                            </div>
+
                             <div class="border border-gray-200 rounded-lg overflow-hidden">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead class="bg-gray-50">
@@ -825,11 +845,10 @@ if (!isset($_SESSION['user_id'])) {
                     salesProducts: [],
                     products: [],
                     clients: [],
-                    // Added currentSale object for new sale creation form
                     currentSale: {
                         buyer: '',
                         phone: '',
-                        items: [] // Array to hold products in the current sale
+                        items: []
                     },
                     filteredClients: [],
                     searchTerm: '',
@@ -839,33 +858,29 @@ if (!isset($_SESSION['user_id'])) {
                     endDate: '',
                     currentPage: 1,
                     itemsPerPage: 10,
-                    showSaleModal: false, // Renamed from showModal
-                    showNewClientForm: false, // Renamed from showClientModal
-                    showClientDropdown: false, // Added for client dropdown visibility
-                    clientSearchTerm: '', // For client search
+                    showSaleModal: false,
+                    showNewClientForm: false,
+                    showClientDropdown: false,
+                    clientSearchTerm: '',
                     saleForm: {
-                        selectedClient: null, // Changed from buyer: ''
-                        currency: 'FCFA', // Changé de XOF à FCFA
+                        selectedClient: null,
+                        currency: 'FCFA',
                         lines: [],
-                        notes: '' // Added notes field
+                        notes: '',
+                        payment_method: 'cash' // Added default payment method
                     },
-                    newClientForm: { // For creating new client
+                    newClientForm: {
                         name: '',
                         phone: ''
                     },
                     showDetailsModal: false,
                     selectedSale: null,
-                    // Added variable for summary modal
                     showRecapModal: false,
-
-                    // Added properties for product search and dropdown in modal
                     productSearchTerm: '',
                     showProductDropdown: false,
                     filteredProducts: [],
                     isEditMode: false,
                     editingSaleId: null,
-
-                    // Added for print list modal
                     showPrintListModal: false,
                 };
             },
@@ -876,7 +891,6 @@ if (!isset($_SESSION['user_id'])) {
                 this.fetchProducts();
                 this.fetchClients();
 
-                // Close dropdown when clicking outside
                 document.addEventListener('click', (e) => {
                     if (!e.target.closest('.relative')) {
                         this.showClientDropdown = false;
@@ -1134,6 +1148,11 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 async editSale(sale) {
+                    if (sale.status === 'Annulé') {
+                        alert('Impossible de modifier une vente annulée');
+                        return;
+                    }
+
                     try {
                         // Charger les produits de cette vente depuis l'API
                         const response = await api.get('?action=allSalesProducts');
@@ -1151,6 +1170,8 @@ if (!isset($_SESSION['user_id'])) {
                         };
                         this.clientSearchTerm = sale.buyer;
 
+                        this.saleForm.payment_method = sale.payment_method || 'cash';
+
                         // Charger les lignes de produits
                         this.saleForm.lines = saleProducts.map(sp => {
                             const product = this.products.find(p => p.name === sp.name);
@@ -1160,7 +1181,7 @@ if (!isset($_SESSION['user_id'])) {
                                 product_name: sp.name,
                                 productSearchTerm: sp.name,
                                 showProductDropdown: false,
-                                filteredProducts: this.products,
+                                filteredProducts: this.products, // Ensure filteredProducts is available
                                 priceType: 'retail_price', // Default to retail, will be set if available
                                 retail_price: product ? parseFloat(product.retail_price) : 0,
                                 semi_bulk_price: product ? parseFloat(product.semi_bulk_price) : 0,
@@ -1198,7 +1219,8 @@ if (!isset($_SESSION['user_id'])) {
                         selectedClient: null,
                         currency: 'FCFA',
                         lines: [],
-                        notes: ''
+                        notes: '',
+                        payment_method: 'cash' // Reset to default payment method
                     };
                 },
 
@@ -1220,7 +1242,8 @@ if (!isset($_SESSION['user_id'])) {
                         selectedClient: null,
                         currency: 'FCFA',
                         lines: [],
-                        notes: ''
+                        notes: '',
+                        payment_method: 'cash' // Reset payment method
                     };
                     this.showRecapModal = false;
                 },
@@ -1450,6 +1473,7 @@ if (!isset($_SESSION['user_id'])) {
                         buyer: this.saleForm.selectedClient.name,
                         total: this.totalAmount,
                         currency: 'FCFA',
+                        payment_method: this.saleForm.payment_method, // Added payment method to save
                         lines: this.saleForm.lines.map(line => ({
                             product: line.product_name,
                             product_id: line.product_id, // Include product_id for backend
@@ -1494,6 +1518,12 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 async cancelSale(saleId) {
+                    const sale = this.sales.find(s => s.id === saleId);
+                    if (sale && sale.status === 'Annulé') {
+                        alert('Cette vente est déjà annulée');
+                        return;
+                    }
+
                     if (!confirm('⚠️ ATTENTION: Cette action est irréversible!\n\nÊtes-vous vraiment sûr de vouloir annuler cette vente?')) {
                         return;
                     }
@@ -1551,32 +1581,44 @@ if (!isset($_SESSION['user_id'])) {
                         const client = this.clients.find(c => c.name === sale.buyer);
                         const clientPhone = client ? client.phone : 'Non disponible';
 
+                        const cancelledWatermark = sale.status === 'Annulé' ? `
+                            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; color: rgba(255, 0, 0, 0.15); font-weight: bold; z-index: 1000; pointer-events: none;">
+                                ANNULÉ
+                            </div>
+                        ` : '';
+
                         const printContent = `
                             <!DOCTYPE html>
                             <html>
                             <head>
                                 <title>Facture #${sale.id}</title>
                                 <style>
-                                    body { font-family: Arial, sans-serif; margin: 20px; }
+                                    body { font-family: Arial, sans-serif; margin: 20px; position: relative; }
                                     .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
                                     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                                     th, td { border: 1px solid #000; padding: 8px; text-align: left; }
                                     th { background-color: #f0f0f0; font-weight: bold; }
                                     .total { font-weight: bold; font-size: 1.2em; margin-top: 20px; text-align: right; }
                                     .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #6B7280; border-top: 1px solid #ddd; padding-top: 20px; }
+                                    .status-badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 10px 0; }
+                                    .status-cancelled { background-color: #fee; color: #c00; border: 2px solid #c00; }
+                                    .status-done { background-color: #efe; color: #0a0; border: 2px solid #0a0; }
                                 </style>
                             </head>
                             <body>
+                                ${cancelledWatermark}
                                 <div class="header">
                                     <h1>GBEMIRO</h1>
                                     <p>Commerçialisation de boissons en gros et en détail<br>
                                     Lokossa, Quinji carrefour Abo, <br>
                                     téléphone 01 49 91 65 66</p>
                                     <h2>FACTURE #${sale.id}</h2>
+                                    ${sale.status === 'Annulé' ? '<div class="status-badge status-cancelled">❌ VENTE ANNULÉE</div>' : '<div class="status-badge status-done">✓ VENTE EFFECTUÉE</div>'}
                                 </div>
                                 <p><strong>Client:</strong> ${sale.buyer}</p>
                                 <p><strong>Téléphone:</strong> ${clientPhone}</p>
                                 <p><strong>Date:</strong> ${this.formatDate(sale.date_of_insertion)}</p>
+                                <p><strong>Mode de paiement:</strong> ${sale.payment_method === 'cash' ? 'Cash' : 'Crédit'}</p>
                                 <table>
                                     <thead>
                                         <tr>

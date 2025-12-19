@@ -17,8 +17,8 @@ switch ($action) {
         getAllExpenses();
         break;
 
-    case 'allPayments':
-        getAllPayments();
+    case 'allClaimsPayments':
+        getAllClaimsPayments();
         break;
 
     case 'allOrders':
