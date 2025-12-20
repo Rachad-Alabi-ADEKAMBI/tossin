@@ -75,13 +75,13 @@
             }
 
             try {
-                const response = await axios.post('http://127.0.0.1/Gbemiro/api/index.php?action=login', {
+                const response = await axios.post('http://127.0.0.1/gbemiro/api/index.php?action=login', {
                     username: username,
                     password: password
                 });
 
                 if (response.data.success) {
-                    window.location.href = 'index.php';
+                    window.location.href = response.data.redirect;
                 } else {
                     alert(response.data.message);
                 }

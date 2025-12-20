@@ -163,11 +163,13 @@ switch ($action) {
         break;
 
     case 'newClaimPayment':
-        // FormData envoyé via POST
-        $data = $_POST;
+        // Données JSON envoyées par Axios
+        $data = json_decode(file_get_contents('php://input'), true);
+
+        // Fichier éventuel (si FormData plus tard)
         $file = $_FILES['file'] ?? null;
 
-        if ($data) {
+        if (!empty($data)) {
             newClaimPayment($data, $file);
         } else {
             echo json_encode([
@@ -177,11 +179,29 @@ switch ($action) {
         }
         break;
 
+
     case 'updateClaimPayment':
-        $data = $_POST;
+        // Si FormData (avec fichier)
+        if (!empty($_POST)) {
+            $data = $_POST;
+        } else {
+            // Si JSON envoyé par Axios
+            $data = json_decode(file_get_contents("php://input"), true);
+        }
+
         $file = $_FILES['file'] ?? null;
+
+        if (!$data) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'Aucune donnée reçue'
+            ]);
+            return;
+        }
+
         updateClaimPayment($data, $file);
         break;
+
 
     case 'deleteClaimPayment':
         // Passer les données POST à la fonction
