@@ -235,45 +235,87 @@ function getAllExpenses()
     echo json_encode($expenses);
 }
 
-// Créer une nouvelle dépense
+// Ajouter une nouvelle dépense
 function newExpense()
 {
     global $pdo;
 
     $data = json_decode(file_get_contents("php://input"), true);
 
-    if (empty($data['name']) || empty($data['amount']) || empty($data['currency'])) {
+    // Vérifier les champs obligatoires
+    if (empty($data['name']) || empty($data['category']) || !isset($data['amount'])) {
         echo json_encode([
             'success' => false,
-            'message' => 'Champs requis : name, amount, currency'
+            'error' => 'Champs requis : name, category, amount'
         ]);
         return;
     }
 
+    $name = $data['name'];
+    $category = $data['category'];
+    $amount = floatval($data['amount']);
+    $comment = $data['comment'] ?? '';
+    $created_at = $data['created_at'] ?? date('Y-m-d H:i:s');
+
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO expenses (name, amount, currency, notes, created_at)
-            VALUES (:name, :amount, :currency, :notes, NOW())
+            INSERT INTO expenses (name, category, amount, comment, created_at)
+            VALUES (:name, :category, :amount, :comment, :created_at)
         ");
         $stmt->execute([
-            ':name'     => $data['name'],
-            ':amount'   => $data['amount'],
-            ':currency' => $data['currency'],
-            ':notes'    => $data['notes'] ?? null
+            ':name' => $name,
+            ':category' => $category,
+            ':amount' => $amount,
+            ':comment' => $comment,
+            ':created_at' => $created_at
         ]);
+
+        $expenseId = $pdo->lastInsertId();
+
+        // Notification
+        addNotification("Nouvelle dépense ajoutée : $name | Catégorie: $category | Montant: $amount");
 
         echo json_encode([
             'success' => true,
             'message' => 'Dépense ajoutée avec succès',
-            'id'      => $pdo->lastInsertId()
+            'id' => $expenseId
         ]);
     } catch (Exception $e) {
         echo json_encode([
             'success' => false,
-            'message' => 'Erreur lors de l’ajout : ' . $e->getMessage()
+            'error' => 'Erreur lors de l’ajout : ' . $e->getMessage()
         ]);
     }
 }
+
+// recuperer les notifications
+// Récupérer toutes les notifications
+function getAllNotifications()
+{
+    global $pdo;
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT id, comment, created_at
+            FROM notifications
+            ORDER BY created_at DESC
+        ");
+        $stmt->execute();
+
+        $notifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'notifications' => $notifications
+        ], JSON_UNESCAPED_UNICODE);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erreur récupération notifications : ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
+
 
 
 // Mettre à jour une dépense
@@ -2328,9 +2370,15 @@ function login($data)
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
 
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'];
+
+        // Chemin racine du projet (ex: /gbemiro)
+        $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/api');
+
         echo json_encode([
             'success' => true,
-            'redirect' => 'http://127.0.0.1/gbemiro/index.php'
+            'redirect' => $scheme . '://' . $host . $basePath . '/index.php'
         ]);
     } else {
         echo json_encode([
@@ -2347,6 +2395,6 @@ function logout()
     session_unset();
     session_destroy();
 
-    header('Location: ../login.php');
+    header('Location: /login.php');
     exit; // Important pour arrêter le script après la redirection
 }

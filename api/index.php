@@ -67,6 +67,10 @@ switch ($action) {
         getAllOrdersPayments();
         break;
 
+    case 'allNotifications':
+        getAllNotifications();
+        break;
+
     case 'newOrder':
         newOrder();
         break;

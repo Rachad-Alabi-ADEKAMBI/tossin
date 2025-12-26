@@ -8,41 +8,54 @@
         </div>
     </div>
 
-    <nav class="mt-8">
-        <a href="index.php" class="flex items-center px-6 py-3 text-primary bg-blue-50 border-r-4 border-primary">
-            <i class="fas fa-tachometer-alt mr-3"></i>
-            <span>Tableau de bord</span>
-        </a>
+    <nav class="mt-8 flex flex-col h-[calc(100%-4rem)]">
+        <div class="flex-1">
+            <a href="index.php" class="flex items-center px-6 py-3 text-primary bg-blue-50 border-r-4 border-primary">
+                <i class="fas fa-tachometer-alt mr-3"></i>
+                <span>Tableau de bord</span>
+            </a>
 
-        <a href="sales.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-            <i class="fas fa-file-invoice-dollar mr-3"></i>
-            <span>Factures</span>
-        </a>
+            <a href="sales.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                <i class="fas fa-file-invoice-dollar mr-3"></i>
+                <span>Factures</span>
+            </a>
 
-        <a href="products.php"
-            class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-            <i class="fas fa-boxes mr-3"></i>
-            <span>Produits</span>
-        </a>
+            <a href="claims.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                <i class="fas fa-money-bill-wave mr-3"></i>
+                <span>Créances</span>
+            </a>
 
-        <a href="orders.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-            <i class="fas fa-shopping-cart mr-3"></i>
-            <span>Commandes</span>
-        </a>
+            <a href="expenses.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                <i class="fas fa-wallet mr-3"></i>
+                <span>Dépenses</span>
+            </a>
 
-        <a href="claims.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-            <i class="fas fa-money-bill-wave mr-3"></i>
-            <span>Créances</span>
-        </a>
+            <a href="products.php"
+                class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                <i class="fas fa-boxes mr-3"></i>
+                <span>Produits</span>
+            </a>
 
-        <a href="expenses.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-            <i class="fas fa-wallet mr-3"></i>
-            <span>Dépenses</span>
-        </a>
+            <a href="orders.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                <i class="fas fa-shopping-cart mr-3"></i>
+                <span>Commandes</span>
+            </a>
+
+
+            <!-- Lien Notifications en bas -->
+            <a href="notifications.php"
+                class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors border-t">
+                <i class="fas fa-bell mr-3"></i>
+                <span>Notifications</span>
+            </a>
+        </div>
 
 
     </nav>
 </div>
+
+
+
 
 <!-- Overlay pour mobile -->
 <div id="overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>

@@ -712,7 +712,7 @@ if (!isset($_SESSION['user_id'])) {
                     this.showExpenseModal = true;
                 },
 
-                saveExpense() {
+                async saveExpense() {
                     const action = this.editingExpense ? 'updateExpense' : 'newExpense';
                     const payload = {
                         name: this.expenseForm.name,
@@ -725,23 +725,25 @@ if (!isset($_SESSION['user_id'])) {
                         })
                     };
 
-                    console.log('[v0] Saving expense to route:', action, 'with payload:', payload);
+                    console.log('[DEBUG] Envoi de la requête vers:', action, 'avec payload:', payload);
 
-                    api.post(`?action=${action}`, payload)
-                        .then(response => {
-                            if (response.data.error) {
-                                alert('Erreur: ' + response.data.error);
-                                return;
-                            }
+                    try {
+                        const response = await api.post(`?action=${action}`, payload);
 
-                            alert(this.editingExpense ? 'Dépense modifiée avec succès!' : 'Nouvelle dépense ajoutée avec succès!');
-                            this.closeExpenseModal();
-                            this.fetchExpenses();
-                        })
-                        .catch(error => {
-                            console.error('[v0] Error saving expense:', error);
-                            alert('Erreur lors de l\'enregistrement de la dépense');
-                        });
+                        console.log('[DEBUG] Réponse API:', response.data);
+
+                        if (!response.data.success) {
+                            alert('Erreur: ' + (response.data.message || 'Une erreur est survenue'));
+                            return;
+                        }
+
+                        alert(this.editingExpense ? 'Dépense modifiée avec succès!' : 'Nouvelle dépense ajoutée avec succès!');
+                        this.closeExpenseModal();
+                        await this.fetchExpenses();
+                    } catch (error) {
+                        console.error('[DEBUG] Erreur lors de l\'enregistrement de la dépense:', error);
+                        alert('Erreur lors de l\'enregistrement de la dépense');
+                    }
                 },
 
                 deleteExpense(expenseId) {

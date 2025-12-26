@@ -853,7 +853,7 @@ if (!isset($_SESSION['user_id'])) {
         } = Vue;
 
         const api = axios.create({
-            baseURL: 'http://127.0.0.1/gbemiro/api/index.php'
+            baseURL: 'api/index.php'
         });
 
         createApp({

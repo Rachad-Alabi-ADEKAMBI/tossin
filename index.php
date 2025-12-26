@@ -148,7 +148,7 @@ if (!isset($_SESSION['user_id'])) {
 
         // Crée une instance Axios avec une baseURL
         const api = axios.create({
-            baseURL: 'http://127.0.0.1/Gbemiro/api/index.php'
+            baseURL: 'api/index.php'
         });
 
         createApp({

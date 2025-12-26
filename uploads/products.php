@@ -9,6 +9,7 @@ if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
 
     exit;
+
 }
 
 ?>
@@ -38,6 +39,7 @@ if (!isset($_SESSION['user_id'])) {
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
     <style>
+
         .primary {
 
             color: #2563EB;
@@ -287,6 +289,7 @@ if (!isset($_SESSION['user_id'])) {
             color: #065F46;
 
         }
+
     </style>
 
 </head>
@@ -467,17 +470,17 @@ if (!isset($_SESSION['user_id'])) {
 
                                     <tr>
 
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-label="ID">ID</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
 
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-label="Produit">Produit</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Produit</th>
 
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-label="Stock">Stock</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
 
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-label="Prix d'achat">Prix d'achat</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix d'achat</th>
 
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-label="Prix de vente">Prix de vente</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix de vente</th>
 
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" data-label="Actions">Actions</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
 
                                     </tr>
 
@@ -487,19 +490,19 @@ if (!isset($_SESSION['user_id'])) {
 
                                     <tr v-for="product in paginatedProducts" :key="product.id" class="hover:bg-gray-50">
 
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" data-label="ID">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'ID'">
 
                                             #{{ product.id }}
 
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap" data-label="Produit">
+                                        <td class="px-6 py-4 whitespace-nowrap" :data-label="'Produit'">
 
                                             <div class="text-sm font-medium text-gray-900">{{ product.name }}</div>
 
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap" data-label="Stock">
+                                        <td class="px-6 py-4 whitespace-nowrap" :data-label="'Stock'">
 
                                             <span :class="['stock-badge', getStockClass(product.quantity)]">
 
@@ -509,13 +512,13 @@ if (!isset($_SESSION['user_id'])) {
 
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-label="Prix d'achat">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Prix d\'achat'">
 
                                             {{ formatCurrency(product.buying_price) }}
 
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap" data-label="Prix de vente">
+                                        <td class="px-6 py-4 whitespace-nowrap" :data-label="'Prix de vente'">
 
                                             <div class="text-sm">
 
@@ -529,7 +532,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                         </td>
 
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" data-label="Actions">
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
 
                                             <div class="flex space-x-2">
 
@@ -1077,19 +1080,21 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
-            <!-- Modal d'impression avec options multiples -->
+            <!-- Added print settings modal -->
+
+            <!-- Modal Paramètres d'impression -->
 
             <div v-if="showPrintSettingsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
 
                 <div class="flex items-center justify-center min-h-screen p-4">
 
-                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
 
                         <div class="flex justify-between items-center mb-6">
 
                             <h3 class="text-xl font-semibold text-gray-900">
 
-                                <i class="fas fa-cog mr-2"></i>Options d'impression
+                                <i class="fas fa-cog mr-2"></i>Paramètres d'impression
 
                             </h3>
 
@@ -1105,123 +1110,21 @@ if (!isset($_SESSION['user_id'])) {
 
                         <div class="space-y-4">
 
-                            <div class="border-b pb-4">
+                            <div class="flex items-center">
 
-                                <h4 class="font-semibold text-gray-900 mb-3">Sélectionner le type d'impression:</h4>
+                                <input type="checkbox" id="showPrices" v-model="printSettings.showPrices" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
 
+                                <label for="showPrices" class="ml-2 block text-sm text-gray-900">
 
+                                    Afficher les prix
 
-                                <!-- Option 1: Imprimer l'écran actuel -->
-
-                                <div class="flex items-start mb-3">
-
-                                    <input type="radio" id="printScreen" v-model="printSettings.printType" value="screen" class="h-4 w-4 text-blue-600 mt-1">
-
-                                    <label for="printScreen" class="ml-3 block text-sm text-gray-900">
-
-                                        <div class="font-medium">Imprimer l'écran actuel</div>
-
-                                        <div class="text-xs text-gray-500">Imprimer ce qui est visible avec filtres et tri appliqués</div>
-
-                                    </label>
-
-                                </div>
-
-
-
-                                <!-- Option 2: Quantités uniquement -->
-
-                                <div class="flex items-start mb-3">
-
-                                    <input type="radio" id="printQtyOnly" v-model="printSettings.printType" value="qty_only" class="h-4 w-4 text-blue-600 mt-1">
-
-                                    <label for="printQtyOnly" class="ml-3 block text-sm text-gray-900">
-
-                                        <div class="font-medium">Quantités sans prix</div>
-
-                                        <div class="text-xs text-gray-500">Afficher uniquement le produit et la quantité</div>
-
-                                    </label>
-
-                                </div>
-
-
-
-                                <!-- Option 3: Quantités avec prix -->
-
-                                <div class="flex items-start mb-3">
-
-                                    <input type="radio" id="printQtyPrices" v-model="printSettings.printType" value="qty_prices" class="h-4 w-4 text-blue-600 mt-1">
-
-                                    <label for="printQtyPrices" class="ml-3 block text-sm text-gray-900">
-
-                                        <div class="font-medium">Quantités avec tous les prix</div>
-
-                                        <div class="text-xs text-gray-500">Produit, quantité, prix d'achat et prix de vente</div>
-
-                                    </label>
-
-                                </div>
-
-
-
-                                <!-- Option 4: Estimation gros -->
-
-                                <div class="flex items-start mb-3">
-
-                                    <input type="radio" id="printBulk" v-model="printSettings.printType" value="estimation_bulk" class="h-4 w-4 text-blue-600 mt-1">
-
-                                    <label for="printBulk" class="ml-3 block text-sm text-gray-900">
-
-                                        <div class="font-medium">Estimation global - Prix de vente gros</div>
-
-                                        <div class="text-xs text-gray-500">Quantité × Prix gros (valeur totale)</div>
-
-                                    </label>
-
-                                </div>
-
-
-
-                                <!-- Option 5: Estimation demi-gros -->
-
-                                <div class="flex items-start mb-3">
-
-                                    <input type="radio" id="printSemiBulk" v-model="printSettings.printType" value="estimation_semi_bulk" class="h-4 w-4 text-blue-600 mt-1">
-
-                                    <label for="printSemiBulk" class="ml-3 block text-sm text-gray-900">
-
-                                        <div class="font-medium">Estimation global - Prix demi-gros</div>
-
-                                        <div class="text-xs text-gray-500">Quantité × Prix demi-gros (valeur totale)</div>
-
-                                    </label>
-
-                                </div>
-
-
-
-                                <!-- Option 6: Estimation détail -->
-
-                                <div class="flex items-start">
-
-                                    <input type="radio" id="printRetail" v-model="printSettings.printType" value="estimation_retail" class="h-4 w-4 text-blue-600 mt-1">
-
-                                    <label for="printRetail" class="ml-3 block text-sm text-gray-900">
-
-                                        <div class="font-medium">Estimation global - Prix détail</div>
-
-                                        <div class="text-xs text-gray-500">Quantité × Prix détail (valeur totale)</div>
-
-                                    </label>
-
-                                </div>
+                                </label>
 
                             </div>
 
 
 
-                            <div class="flex justify-end space-x-3 pt-4">
+                            <div class="flex justify-end space-x-3 pt-4 border-t">
 
                                 <button @click="showPrintSettingsModal = false" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
 
@@ -1244,6 +1147,8 @@ if (!isset($_SESSION['user_id'])) {
                 </div>
 
             </div>
+
+
 
             <!-- Zone d'impression cachée -->
 
@@ -1350,8 +1255,11 @@ if (!isset($_SESSION['user_id'])) {
 
 
     <script>
+
         const {
+
             createApp
+
         } = Vue;
 
 
@@ -1359,7 +1267,9 @@ if (!isset($_SESSION['user_id'])) {
         // Crée une instance Axios avec une baseURL
 
         const api = axios.create({
+
             baseURL: 'api/index.php'
+
         });
 
 
@@ -1367,6 +1277,7 @@ if (!isset($_SESSION['user_id'])) {
 
 
         createApp({
+
             data() {
 
                 return {
@@ -1387,10 +1298,9 @@ if (!isset($_SESSION['user_id'])) {
 
                     showPrintSettingsModal: false,
 
-
                     printSettings: {
 
-                        printType: 'screen' // Valeur par défaut
+                        showPrices: true
 
                     },
 
@@ -1430,7 +1340,7 @@ if (!isset($_SESSION['user_id'])) {
 
                         quantity: 0,
 
-                        comment: '' // Utiliser 'comment' au lieu de 'reason' pour correspondre au backend
+                        comment: ''
 
                     }
 
@@ -2018,6 +1928,13 @@ if (!isset($_SESSION['user_id'])) {
 
 
 
+                printProductsList() {
+
+                    this.showPrintSettingsModal = true;
+
+                },
+
+
 
                 confirmPrint() {
 
@@ -2026,22 +1943,6 @@ if (!isset($_SESSION['user_id'])) {
                     const printWindow = window.open('', '_blank');
 
                     const currentDate = new Date().toLocaleDateString('fr-FR');
-
-                    const printType = this.printSettings.printType;
-
-
-
-                    let productsToUse = [];
-
-                    if (printType === 'screen') {
-
-                        productsToUse = this.paginatedProducts; // Utilise la pagination pour l'écran actuel
-
-                    } else {
-
-                        productsToUse = this.filteredProducts; // Utilise tous les produits filtrés pour les autres types
-
-                    }
 
 
 
@@ -2053,7 +1954,7 @@ if (!isset($_SESSION['user_id'])) {
 
                         <head>
 
-                            <title>Impression Liste Produits</title>
+                            <title>Liste des Produits</title>
 
                             <style>
 
@@ -2071,8 +1972,6 @@ if (!isset($_SESSION['user_id'])) {
 
                                 .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #6B7280; border-top: 1px solid #ddd; padding-top: 20px; }
 
-                                .highlight { background-color: #ffffcc; font-weight: bold; }
-
                             </style>
 
                         </head>
@@ -2087,7 +1986,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                 Lokossa, Quinji carrefour Abo, téléphone 0149916566</p>
 
-                                <h2>${this.getPrintTitle(printType)}</h2>
+                                <h2>LISTE DES PRODUITS</h2>
 
                                 <p>Date d'impression: ${currentDate}</p>
 
@@ -2099,9 +1998,13 @@ if (!isset($_SESSION['user_id'])) {
 
                                 <h3>Résumé:</h3>
 
-                                <p><strong>Nombre de produits:</strong> ${productsToUse.length}</p>
+                                <p><strong>Nombre total de produits:</strong> ${this.products.length}</p>
 
-                                ${this.getPrintSummary(printType, productsToUse)}
+                                ${this.printSettings.showPrices ? `<p><strong>Valeur totale du stock:</strong> ${this.formatCurrency(this.totalStockValue)}</p>` : ''}
+
+                                <p><strong>Quantité totale:</strong> ${this.formatNumber(this.totalQuantity)} unités</p>
+
+                                <p><strong>Produits en stock faible:</strong> ${this.lowStockCount}</p>
 
                             </div>
 
@@ -2113,15 +2016,63 @@ if (!isset($_SESSION['user_id'])) {
 
                                     <tr>
 
-                                        ${this.getPrintTableHeaders(printType)}
+                                        <th>ID</th>
+
+                                        <th>Produit</th>
+
+                                        <th>Stock</th>
+
+                                        ${this.printSettings.showPrices ? `
+
+                                        <th>Prix d'achat</th>
+
+                                        <th>Prix gros</th>
+
+                                        <th>Prix demi-gros</th>
+
+                                        <th>Prix détail</th>
+
+                                        ` : ''}
 
                                     </tr>
 
                                 </thead>
 
-                                <tbody>
+                                <tbody>`;
 
-                                    ${this.getPrintTableRows(printType, productsToUse)}
+
+
+                    this.filteredProducts.forEach(product => {
+
+                        printContent += `
+
+                            <tr>
+
+                                <td>#${product.id}</td>
+
+                                <td>${product.name}</td>
+
+                                <td>${this.formatNumber(product.quantity)} unités</td>
+
+                                ${this.printSettings.showPrices ? `
+
+                                <td>${this.formatCurrency(product.buying_price)}</td>
+
+                                <td>${this.formatCurrency(product.bulk_price)}</td>
+
+                                <td>${this.formatCurrency(product.semi_bulk_price)}</td>
+
+                                <td>${this.formatCurrency(product.retail_price)}</td>
+
+                                ` : ''}
+
+                            </tr>`;
+
+                    });
+
+
+
+                    printContent += `
 
                                 </tbody>
 
@@ -2148,260 +2099,6 @@ if (!isset($_SESSION['user_id'])) {
                     printWindow.document.close();
 
                     printWindow.print();
-
-                },
-
-
-
-
-                getPrintTitle(printType) {
-
-                    const titles = {
-
-                        screen: 'LISTE DES PRODUITS - ÉCRAN ACTUEL',
-
-                        qty_only: 'LISTE DES PRODUITS - QUANTITÉS UNIQUEMENT',
-
-                        qty_prices: 'LISTE DES PRODUITS - QUANTITÉS ET PRIX',
-
-                        estimation_bulk: 'ESTIMATION GLOBALE - PRIX DE VENTE GROS',
-
-                        estimation_semi_bulk: 'ESTIMATION GLOBALE - PRIX DEMI-GROS',
-
-                        estimation_retail: 'ESTIMATION GLOBALE - PRIX DÉTAIL'
-
-                    };
-
-                    return titles[printType] || 'LISTE DES PRODUITS';
-
-                },
-
-
-
-
-                getPrintSummary(printType, products) {
-
-                    let summary = '';
-
-
-
-                    if (['estimation_bulk', 'estimation_semi_bulk', 'estimation_retail'].includes(printType)) {
-
-                        let totalEstimation = 0;
-
-                        let priceField = '';
-
-
-
-                        if (printType === 'estimation_bulk') {
-
-                            priceField = 'bulk_price';
-
-                            summary += '<p><strong>Quantité totale:</strong> ' + this.formatNumber(products.reduce((sum, p) => sum + p.quantity, 0)) + ' unités</p>';
-
-                            totalEstimation = products.reduce((sum, p) => sum + (p.quantity * p.bulk_price), 0);
-
-                            summary += '<p class="highlight"><strong>Valeur totale (Prix gros):</strong> ' + this.formatCurrency(totalEstimation) + '</p>';
-
-                        } else if (printType === 'estimation_semi_bulk') {
-
-                            priceField = 'semi_bulk_price';
-
-                            summary += '<p><strong>Quantité totale:</strong> ' + this.formatNumber(products.reduce((sum, p) => sum + p.quantity, 0)) + ' unités</p>';
-
-                            totalEstimation = products.reduce((sum, p) => sum + (p.quantity * p.semi_bulk_price), 0);
-
-                            summary += '<p class="highlight"><strong>Valeur totale (Prix demi-gros):</strong> ' + this.formatCurrency(totalEstimation) + '</p>';
-
-                        } else if (printType === 'estimation_retail') {
-
-                            priceField = 'retail_price';
-
-                            summary += '<p><strong>Quantité totale:</strong> ' + this.formatNumber(products.reduce((sum, p) => sum + p.quantity, 0)) + ' unités</p>';
-
-                            totalEstimation = products.reduce((sum, p) => sum + (p.quantity * p.retail_price), 0);
-
-                            summary += '<p class="highlight"><strong>Valeur totale (Prix détail):</strong> ' + this.formatCurrency(totalEstimation) + '</p>';
-
-                        }
-
-                    } else if (printType === 'qty_only') {
-
-                        summary += '<p><strong>Quantité totale:</strong> ' + this.formatNumber(products.reduce((sum, p) => sum + p.quantity, 0)) + ' unités</p>';
-
-                    } else { // 'screen' and 'qty_prices'
-
-                        summary += '<p><strong>Quantité totale:</strong> ' + this.formatNumber(products.reduce((sum, p) => sum + p.quantity, 0)) + ' unités</p>';
-
-                        let totalValue = products.reduce((sum, p) => sum + (p.quantity * p.buying_price), 0);
-
-                        summary += '<p><strong>Valeur d\'achat totale:</strong> ' + this.formatCurrency(totalValue) + '</p>';
-
-                    }
-
-
-
-                    return summary;
-
-                },
-
-
-
-
-                getPrintTableHeaders(printType) {
-
-                    if (printType === 'qty_only') {
-
-                        return '<th>ID</th><th>Produit</th><th>Stock</th>';
-
-                    } else if (printType === 'qty_prices') {
-
-                        return '<th>ID</th><th>Produit</th><th>Stock</th><th>Prix d\'achat</th><th>Prix gros</th><th>Prix demi-gros</th><th>Prix détail</th>';
-
-                    } else if (printType === 'estimation_bulk') {
-
-                        return '<th>ID</th><th>Produit</th><th>Quantité</th><th>Prix gros</th><th>Total</th>';
-
-                    } else if (printType === 'estimation_semi_bulk') {
-
-                        return '<th>ID</th><th>Produit</th><th>Quantité</th><th>Prix demi-gros</th><th>Total</th>';
-
-                    } else if (printType === 'estimation_retail') {
-
-                        return '<th>ID</th><th>Produit</th><th>Quantité</th><th>Prix détail</th><th>Total</th>';
-
-                    } else { // 'screen'
-
-                        return '<th>ID</th><th>Produit</th><th>Stock</th><th>Prix d\'achat</th><th>Prix gros</th><th>Prix demi-gros</th><th>Prix détail</th>';
-
-                    }
-
-                },
-
-
-
-
-                getPrintTableRows(printType, products) {
-
-                    let rows = '';
-
-
-
-                    products.forEach(product => {
-
-                        if (printType === 'qty_only') {
-
-                            rows += `<tr><td>#${product.id}</td><td>${product.name}</td><td>${this.formatNumber(product.quantity)}</td></tr>`;
-
-                        } else if (printType === 'qty_prices') {
-
-                            rows += `<tr>
-
-                                <td>#${product.id}</td>
-
-                                <td>${product.name}</td>
-
-                                <td>${this.formatNumber(product.quantity)} unités</td>
-
-                                <td>${this.formatCurrency(product.buying_price)}</td>
-
-                                <td>${this.formatCurrency(product.bulk_price)}</td>
-
-                                <td>${this.formatCurrency(product.semi_bulk_price)}</td>
-
-                                <td>${this.formatCurrency(product.retail_price)}</td>
-
-                            </tr>`;
-
-                        } else if (printType === 'estimation_bulk') {
-
-                            let total = product.quantity * product.bulk_price;
-
-                            rows += `<tr>
-
-                                <td>#${product.id}</td>
-
-                                <td>${product.name}</td>
-
-                                <td>${this.formatNumber(product.quantity)}</td>
-
-                                <td>${this.formatCurrency(product.bulk_price)}</td>
-
-                                <td class="highlight">${this.formatCurrency(total)}</td>
-
-                            </tr>`;
-
-                        } else if (printType === 'estimation_semi_bulk') {
-
-                            let total = product.quantity * product.semi_bulk_price;
-
-                            rows += `<tr>
-
-                                <td>#${product.id}</td>
-
-                                <td>${product.name}</td>
-
-                                <td>${this.formatNumber(product.quantity)}</td>
-
-                                <td>${this.formatCurrency(product.semi_bulk_price)}</td>
-
-                                <td class="highlight">${this.formatCurrency(total)}</td>
-
-                            </tr>`;
-
-                        } else if (printType === 'estimation_retail') {
-
-                            let total = product.quantity * product.retail_price;
-
-                            rows += `<tr>
-
-                                <td>#${product.id}</td>
-
-                                <td>${product.name}</td>
-
-                                <td>${this.formatNumber(product.quantity)}</td>
-
-                                <td>${this.formatCurrency(product.retail_price)}</td>
-
-                                <td class="highlight">${this.formatCurrency(total)}</td>
-
-                            </tr>`;
-
-                        } else { // 'screen'
-
-                            rows += `<tr>
-
-                                <td>#${product.id}</td>
-
-                                <td>${product.name}</td>
-
-                                <td>${this.formatNumber(product.quantity)} unités</td>
-
-                                <td>${this.formatCurrency(product.buying_price)}</td>
-
-                                <td>${this.formatCurrency(product.bulk_price)}</td>
-
-                                <td>${this.formatCurrency(product.semi_bulk_price)}</td>
-
-                                <td>${this.formatCurrency(product.retail_price)}</td>
-
-                            </tr>`;
-
-                        }
-
-                    });
-
-
-
-                    return rows;
-
-                },
-
-
-
-                printProductsList() {
-
-                    this.showPrintSettingsModal = true;
 
                 },
 
@@ -2457,7 +2154,9 @@ if (!isset($_SESSION['user_id'])) {
 
                                 Lokossa, Quinji carrefour Abo, téléphone 0149916566</p>
 
-                                <h2>Fiche Produit</h2>
+                                <h2>FICHE PRODUIT #${product.id}</h2>
+
+                                <p>Date d'impression: ${currentDate}</p>
 
                             </div>
 
@@ -2467,35 +2166,23 @@ if (!isset($_SESSION['user_id'])) {
 
                                 <div class="detail-row">
 
-                                    <div class="label">ID Produit:</div>
-
-                                    <div class="value">#${product.id}</div>
-
-                                </div>
-
-                                <div class="detail-row">
-
-                                    <div class="label">Nom:</div>
+                                    <div class="label">Nom du produit:</div>
 
                                     <div class="value">${product.name}</div>
 
                                 </div>
 
+                                
+
                                 <div class="detail-row">
 
-                                    <div class="label">Quantité en stock:</div>
+                                    <div class="label">Stock actuel:</div>
 
-                                    <div class="value">${this.formatNumber(product.quantity)} unités</div>
+                                    <div class="value" style="font-size: 20px; font-weight: bold; color: #2563EB;">${this.formatNumber(product.quantity)} unités</div>
 
                                 </div>
 
-                            </div>
-
-                            
-
-                            <div class="price-section">
-
-                                <h3>Informations de Prix</h3>
+                                
 
                                 <div class="detail-row">
 
@@ -2505,11 +2192,19 @@ if (!isset($_SESSION['user_id'])) {
 
                                 </div>
 
+                            </div>
+
+                            
+
+                            <div class="price-section">
+
+                                <h3 style="margin-top: 0;">Prix de vente</h3>
+
                                 <div class="detail-row">
 
-                                    <div class="label">Prix de vente gros:</div>
+                                    <div class="label">Prix en gros:</div>
 
-                                    <div class="value">${this.formatCurrency(product.bulk_price)}</div>
+                                    <div class="value" style="font-size: 18px; font-weight: bold;">${this.formatCurrency(product.bulk_price)}</div>
 
                                 </div>
 
@@ -2517,7 +2212,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                     <div class="label">Prix demi-gros:</div>
 
-                                    <div class="value">${this.formatCurrency(product.semi_bulk_price)}</div>
+                                    <div class="value" style="font-size: 18px; font-weight: bold;">${this.formatCurrency(product.semi_bulk_price)}</div>
 
                                 </div>
 
@@ -2525,7 +2220,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                     <div class="label">Prix détail:</div>
 
-                                    <div class="value">${this.formatCurrency(product.retail_price)}</div>
+                                    <div class="value" style="font-size: 18px; font-weight: bold;">${this.formatCurrency(product.retail_price)}</div>
 
                                 </div>
 
@@ -2537,7 +2232,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                 <p>Merci pour votre confiance!</p>
 
-                                <p>Document généré le ${currentDate} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+                                <p>Document généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
 
                             </div>
 
@@ -2774,22 +2469,14 @@ if (!isset($_SESSION['user_id'])) {
                 nextPage() {
 
                     if (this.currentPage < this.totalPages) this.currentPage++;
-
                 },
 
                 goToPage(page) {
-
                     this.currentPage = page;
-
                 }
-
             }
 
         }).mount('#app');
     </script>
-
 </body>
-
-
-
 </html>

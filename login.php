@@ -75,7 +75,7 @@
             }
 
             try {
-                const response = await axios.post('http://127.0.0.1/gbemiro/api/index.php?action=login', {
+                const response = await axios.post('api/index.php?action=login', {
                     username: username,
                     password: password
                 });
@@ -92,7 +92,7 @@
         }
 
         function logout() {
-            axios.post('http://127.0.0.1/Gbemiro/api/index.php?action=logout')
+            axios.post('api/index.php?action=logout')
                 .then(res => {
                     if (res.data.success) window.location.href = res.data.redirect;
                 });
