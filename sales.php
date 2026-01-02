@@ -415,6 +415,14 @@ if (!isset($_SESSION['user_id'])) {
                                         <option value="crédit">Crédit</option>
                                     </select>
                                 </div>
+
+                                <!-- Added sale date selector with default to today -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-calendar mr-1"></i>Date de la vente
+                                    </label>
+                                    <input v-model="saleForm.date_of_operation" type="date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                </div>
                             </div>
 
                             <!-- Products section with improved layout -->
@@ -865,9 +873,10 @@ if (!isset($_SESSION['user_id'])) {
                     saleForm: {
                         selectedClient: null,
                         currency: 'FCFA',
+                        date_of_operation: new Date().toISOString().split('T')[0],
                         lines: [],
                         notes: '',
-                        payment_method: 'cash' // Added default payment method
+                        payment_method: 'cash', // Added default payment method
                     },
                     newClientForm: {
                         name: '',
@@ -1171,6 +1180,7 @@ if (!isset($_SESSION['user_id'])) {
                         this.clientSearchTerm = sale.buyer;
 
                         this.saleForm.payment_method = sale.payment_method || 'cash';
+                        this.saleForm.date_of_operation = sale.date_of_insertion.split(' ')[0]; // Set the date
 
                         // Charger les lignes de produits
                         this.saleForm.lines = saleProducts.map(sp => {
@@ -1220,7 +1230,8 @@ if (!isset($_SESSION['user_id'])) {
                         currency: 'FCFA',
                         lines: [],
                         notes: '',
-                        payment_method: 'cash' // Reset to default payment method
+                        payment_method: 'cash', // Reset to default payment method
+                        date_of_operation: new Date().toISOString().split('T')[0] // Reset to today's date
                     };
                 },
 
@@ -1243,7 +1254,8 @@ if (!isset($_SESSION['user_id'])) {
                         currency: 'FCFA',
                         lines: [],
                         notes: '',
-                        payment_method: 'cash' // Reset payment method
+                        payment_method: 'cash', // Reset payment method
+                        date_of_operation: new Date().toISOString().split('T')[0] // Reset date
                     };
                     this.showRecapModal = false;
                 },
@@ -1474,6 +1486,8 @@ if (!isset($_SESSION['user_id'])) {
                         total: this.totalAmount,
                         currency: 'FCFA',
                         payment_method: this.saleForm.payment_method, // Added payment method to save
+                        created_at: new Date().toISOString(),
+                        date_of_operation: this.saleForm.date_of_operation,
                         lines: this.saleForm.lines.map(line => ({
                             product: line.product_name,
                             product_id: line.product_id, // Include product_id for backend
