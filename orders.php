@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gbemiro - Gestion des Commandes</title>
+    <title>TOBI LODA - Gestion des Commandes</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -1726,8 +1726,11 @@
                         </head>
                         <body>
                             <div class="header">
-                                <h1>GBEMIRO</h1>
-                                <h2>BON DE COMMANDE</h2>
+                               <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
                                 <div style="font-size: 14px; color: #6B7280; margin-top: 5px;">N° ${order.number}</div>
                             </div>
                             

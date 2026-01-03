@@ -4,7 +4,9 @@
     <div class="flex items-center justify-center h-16 bg-primary">
         <div class="flex items-center space-x-2">
             <i class="fas fa-building text-white text-2xl"></i>
-            <span class="text-white text-xl font-bold">Gbemiro</span>
+            <span class="text-white text-xl font-bold">
+                TOBI LODA
+            </span>
         </div>
     </div>
 

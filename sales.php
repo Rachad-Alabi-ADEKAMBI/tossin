@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Ventes - Gbemiro</title>
+    <title>Gestion des Ventes - Tobi Loda</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -219,24 +219,27 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
 
                     <!-- Updated statistics: removed average sale, added product count stats -->
+                    <!-- Updated statistics to show only today's sales in the summary -->
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <h3 class="text-sm font-semibold text-gray-600 mb-3">
+                            <i class="fas fa-calendar-day mr-2"></i>Statistiques du jour ({{ formatDate(new Date()) }})
+                        </h3>
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div class="bg-green-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Total des ventes</p>
-                                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalSales, 'FCFA') }}</p>
+                                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(todayTotalSales, 'FCFA') }}</p>
                             </div>
                             <div class="bg-blue-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Nombre de ventes</p>
-                                <p class="text-2xl font-bold text-blue-600">{{ filteredSales.length }}</p>
+                                <p class="text-2xl font-bold text-blue-600">{{ todaySalesCount }}</p>
                             </div>
-                            <!-- Added total products count -->
                             <div class="bg-purple-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Total produits vendus</p>
-                                <p class="text-2xl font-bold text-purple-600">{{ Math.round(totalProductsCount) }}</p>
+                                <p class="text-2xl font-bold text-purple-600">{{ Math.round(todayTotalProductsCount) }}</p>
                             </div>
                             <div class="bg-orange-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Articles</p>
-                                <p class="text-2xl font-bold text-orange-600">{{ totalUniqueProducts }}</p>
+                                <p class="text-2xl font-bold text-orange-600">{{ todayTotalUniqueProducts }}</p>
                             </div>
                         </div>
                     </div>
@@ -774,7 +777,12 @@ if (!isset($_SESSION['user_id'])) {
 
                         <div class="print-area">
                             <div class="text-center mb-6 hidden print:block">
-                                <h1 class="text-2xl font-bold">GBEMIRO</h1>
+                                <h1>ETS TOBI LODA ET FILS</h1>
+                                <p>Commerçialisation de boissons<br>
+                                <p>IFU 0202371384670
+                                <p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
                                 <p class="text-sm">Historique des ventes</p>
                                 <p class="text-xs text-gray-600">Généré le {{ new Date().toLocaleDateString('fr-FR') }}</p>
                             </div>
@@ -838,8 +846,10 @@ if (!isset($_SESSION['user_id'])) {
     </div>
 
     <script>
+        const BASE_URL = 'api/index.php';
+
         const api = axios.create({
-            baseURL: 'api/index.php'
+            baseURL: BASE_URL
         });
 
         const {
@@ -1006,17 +1016,45 @@ if (!isset($_SESSION['user_id'])) {
 
                 totalProductsCount() {
                     return this.filteredSales.reduce((sum, sale) => {
-                        // Ensure sale.items is an array before calculating
-                        const items = Array.isArray(sale.items) ? sale.items : [];
-                        return sum + items.reduce((itemSum, item) => itemSum + parseFloat(item.quantity || 0), 0);
+                        const saleProducts = this.salesProducts.filter(product => product.sale_id === sale.id);
+                        return sum + saleProducts.reduce((itemSum, product) => itemSum + parseFloat(product.quantity || 0), 0);
                     }, 0);
                 },
 
                 totalUniqueProducts() {
                     return this.filteredSales.reduce((sum, sale) => {
-                        // Ensure sale.items is an array before calculating
-                        const items = Array.isArray(sale.items) ? sale.items : [];
-                        return sum + items.length;
+                        const saleProducts = this.salesProducts.filter(product => product.sale_id === sale.id);
+                        return sum + saleProducts.length;
+                    }, 0);
+                },
+
+                todaySales() {
+                    const today = new Date().toISOString().split('T')[0];
+                    return this.sales.filter(sale => {
+                        const saleDate = sale.date_of_insertion.split(' ')[0];
+                        return saleDate === today;
+                    });
+                },
+
+                todayTotalSales() {
+                    return this.todaySales.reduce((sum, sale) => sum + parseFloat(sale.total), 0);
+                },
+
+                todaySalesCount() {
+                    return this.todaySales.length;
+                },
+
+                todayTotalProductsCount() {
+                    return this.todaySales.reduce((sum, sale) => {
+                        const saleProducts = this.salesProducts.filter(product => product.sale_id === sale.id);
+                        return sum + saleProducts.reduce((itemSum, product) => itemSum + parseFloat(product.quantity || 0), 0);
+                    }, 0);
+                },
+
+                todayTotalUniqueProducts() {
+                    return this.todaySales.reduce((sum, sale) => {
+                        const saleProducts = this.salesProducts.filter(product => product.sale_id === sale.id);
+                        return sum + saleProducts.length;
                     }, 0);
                 },
 
@@ -1087,59 +1125,34 @@ if (!isset($_SESSION['user_id'])) {
                     try {
                         const response = await api.get('?action=allSales');
                         this.sales = response.data.map(sale => {
-                            // Ensure lines is always an array, parsing if it's a string
                             const lines = typeof sale.items === 'string' ? JSON.parse(sale.items) : (Array.isArray(sale.items) ? sale.items : []);
                             return {
                                 ...sale,
                                 lines: lines.map(item => ({
-                                    // Adjust properties to match expected structure if necessary
-                                    product: item.product_name || item.product, // Handle potential naming differences
+                                    product: item.product_name || item.product,
                                     quantity: parseFloat(item.quantity),
-                                    price: parseFloat(item.unit_price || item.price), // Handle potential naming differences
-                                    // Add other relevant properties if needed
+                                    price: parseFloat(item.unit_price || item.price),
                                 }))
                             };
                         });
-                        // No need to call loadSalesProducts separately if items are already fetched/parsed in `fetchSales`
                     } catch (error) {
                         console.error('Erreur lors de la récupération des ventes:', error);
                     }
                 },
 
-                // This method might be redundant if `items` are correctly fetched and parsed in `fetchSales`
-                // async loadSalesProducts() {
-                //     try {
-                //         const response = await api.get('?action=allSalesProducts');
-                //         const products = response.data;
-
-                //         this.sales.forEach(sale => {
-                //             sale.lines = products.filter(product => product.sale_id == sale.id).map(product => ({
-                //                 id: product.id,
-                //                 product: product.name,
-                //                 quantity: product.quantity,
-                //                 price: parseFloat(product.price)
-                //             }));
-                //         });
-                //     } catch (error) {
-                //         console.error('Erreur lors du chargement des produits:', error);
-                //     }
-                // },
-
                 async fetchProducts() {
                     try {
                         const response = await api.get('?action=allProducts');
                         this.products = response.data;
-                        // Ensure filteredProducts is updated when products change
-                        if (this.showSaleModal) { // Only update if modal is open to avoid unnecessary re-renders
+                        if (this.showSaleModal) {
                             this.saleForm.lines.forEach((line, index) => {
                                 line.filteredProducts = this.products;
-                                // Re-filter if the search term is still active
                                 if (line.productSearchTerm) {
                                     this.filterProducts(index);
                                 }
                             });
                         } else {
-                            this.filteredProducts = this.products; // Initialize or update the general list
+                            this.filteredProducts = this.products;
                         }
                     } catch (error) {
                         console.error('Erreur lors de la récupération des produits:', error);
@@ -1163,15 +1176,12 @@ if (!isset($_SESSION['user_id'])) {
                     }
 
                     try {
-                        // Charger les produits de cette vente depuis l'API
                         const response = await api.get('?action=allSalesProducts');
                         const saleProducts = response.data.filter(product => product.sale_id === sale.id);
 
-                        // Passer en mode édition
                         this.isEditMode = true;
                         this.editingSaleId = sale.id;
 
-                        // Trouver le client
                         const client = this.clients.find(c => c.name === sale.buyer);
                         this.saleForm.selectedClient = client || {
                             name: sale.buyer,
@@ -1180,9 +1190,8 @@ if (!isset($_SESSION['user_id'])) {
                         this.clientSearchTerm = sale.buyer;
 
                         this.saleForm.payment_method = sale.payment_method || 'cash';
-                        this.saleForm.date_of_operation = sale.date_of_insertion.split(' ')[0]; // Set the date
+                        this.saleForm.date_of_operation = sale.date_of_insertion.split(' ')[0];
 
-                        // Charger les lignes de produits
                         this.saleForm.lines = saleProducts.map(sp => {
                             const product = this.products.find(p => p.name === sp.name);
 
@@ -1191,17 +1200,16 @@ if (!isset($_SESSION['user_id'])) {
                                 product_name: sp.name,
                                 productSearchTerm: sp.name,
                                 showProductDropdown: false,
-                                filteredProducts: this.products, // Ensure filteredProducts is available
-                                priceType: 'retail_price', // Default to retail, will be set if available
+                                filteredProducts: this.products,
+                                priceType: 'retail_price',
                                 retail_price: product ? parseFloat(product.retail_price) : 0,
                                 semi_bulk_price: product ? parseFloat(product.semi_bulk_price) : 0,
                                 bulk_price: product ? parseFloat(product.bulk_price) : 0,
                                 quantity: parseFloat(sp.quantity),
                                 price: parseFloat(sp.price),
                                 total: parseFloat(sp.quantity) * parseFloat(sp.price),
-                                // Available stock calculation needs to consider the quantity already in this sale
-                                availableStock: product ? parseFloat(product.quantity) : parseFloat(sp.quantity), // Initial available stock from product list
-                                originalQuantity: parseFloat(sp.quantity) // Garder la quantité originale pour le calcul du stock
+                                availableStock: product ? parseFloat(product.quantity) : parseFloat(sp.quantity),
+                                originalQuantity: parseFloat(sp.quantity)
                             };
                         });
 
@@ -1230,8 +1238,8 @@ if (!isset($_SESSION['user_id'])) {
                         currency: 'FCFA',
                         lines: [],
                         notes: '',
-                        payment_method: 'cash', // Reset to default payment method
-                        date_of_operation: new Date().toISOString().split('T')[0] // Reset to today's date
+                        payment_method: 'cash',
+                        date_of_operation: new Date().toISOString().split('T')[0]
                     };
                 },
 
@@ -1254,15 +1262,13 @@ if (!isset($_SESSION['user_id'])) {
                         currency: 'FCFA',
                         lines: [],
                         notes: '',
-                        payment_method: 'cash', // Reset payment method
-                        date_of_operation: new Date().toISOString().split('T')[0] // Reset date
+                        payment_method: 'cash',
+                        date_of_operation: new Date().toISOString().split('T')[0]
                     };
                     this.showRecapModal = false;
                 },
 
                 applyFilters() {
-                    // The filters are reactive due to computed properties.
-                    // Resetting to the first page ensures the user sees the first results after filtering.
                     this.currentPage = 1;
                 },
 
@@ -1284,9 +1290,8 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 selectClient(client) {
-                    // Update saleForm.selectedClient with selected client info
                     this.saleForm.selectedClient = client;
-                    this.clientSearchTerm = client.name; // Display selected client name in search input
+                    this.clientSearchTerm = client.name;
                     this.showClientDropdown = false;
                 },
 
@@ -1308,7 +1313,6 @@ if (!isset($_SESSION['user_id'])) {
                             alert('Client créé avec succès!');
                             await this.fetchClients();
 
-                            // Automatically select the newly created client
                             const newClient = {
                                 id: response.data.client_id,
                                 name: this.newClientForm.name,
@@ -1330,24 +1334,20 @@ if (!isset($_SESSION['user_id'])) {
                     }
                 },
 
-                // Method to filter products and exclude already selected ones
                 filterProducts(index) {
                     const line = this.saleForm.lines[index];
                     const term = line.productSearchTerm.toLowerCase();
 
-                    // Get IDs of products already selected in other lines
                     const selectedProductIds = this.saleForm.lines
                         .filter((l, i) => i !== index && l.product_id)
                         .map(l => l.product_id);
 
-                    // Filter by search term AND exclude already selected products
                     line.filteredProducts = this.products.filter(product =>
                         product.name.toLowerCase().includes(term) &&
                         !selectedProductIds.includes(product.id)
                     );
                 },
 
-                // Method to validate quantity and check stock
                 validateQuantity(index) {
                     const line = this.saleForm.lines[index];
 
@@ -1360,7 +1360,6 @@ if (!isset($_SESSION['user_id'])) {
                     if (product) {
                         let availableStock = parseFloat(product.quantity);
 
-                        // En mode édition, ajouter la quantité originale au stock disponible
                         if (this.isEditMode && line.originalQuantity) {
                             availableStock += line.originalQuantity;
                         }
@@ -1374,18 +1373,14 @@ if (!isset($_SESSION['user_id'])) {
                     this.updateLineTotal(index);
                 },
 
-                // Method to select a product for a line item in the sale form
                 selectProduct(index, product) {
                     const line = this.saleForm.lines[index];
                     line.product_id = product.id;
                     line.product_name = product.name;
                     line.productSearchTerm = product.name;
 
-                    // Calculer le stock disponible
                     let availableStock = parseFloat(product.quantity);
 
-                    // En mode édition, si c'est un nouveau produit ajouté, le stock reste normal
-                    // Si c'est un produit existant remplacé, garder la quantité actuelle
                     if (!this.isEditMode || !line.originalQuantity) {
                         line.originalQuantity = 0;
                     }
@@ -1401,11 +1396,10 @@ if (!isset($_SESSION['user_id'])) {
                     }
                     line.price = parseFloat(product[line.priceType]);
 
-                    line.showProductDropdown = false; // Hide dropdown after selection
-                    this.updateLineTotal(index); // Recalculate total for this line
+                    line.showProductDropdown = false;
+                    this.updateLineTotal(index);
                 },
 
-                // Method to update the unit price based on the selected price type
                 changePriceType(index) {
                     const line = this.saleForm.lines[index];
                     if (line.priceType && line[line.priceType]) {
@@ -1414,51 +1408,45 @@ if (!isset($_SESSION['user_id'])) {
                     }
                 },
 
-                // Method to add a product line to the saleForm.lines array
                 addProductLine() {
                     this.saleForm.lines.push({
                         product_id: '',
                         product_name: '',
                         productSearchTerm: '',
                         showProductDropdown: false,
-                        filteredProducts: this.products, // Ensure filteredProducts is available here
-                        priceType: 'retail_price', // Default price type
+                        filteredProducts: this.products,
+                        priceType: 'retail_price',
                         retail_price: 0,
                         semi_bulk_price: 0,
                         bulk_price: 0,
                         quantity: 1,
-                        price: 0, // Default price
+                        price: 0,
                         total: 0,
                         availableStock: 0,
                         originalQuantity: 0
                     });
                 },
 
-                // Remove product line from saleForm.lines
                 removeProductLine(index) {
                     this.saleForm.lines.splice(index, 1);
                 },
 
-                // Update product details based on selection in saleForm.lines
                 updateProductDetails(index) {
                     const line = this.saleForm.lines[index];
                     const product = this.products.find(p => p.id == line.product_id);
                     if (product) {
                         line.product_name = product.name;
-                        line.price = parseFloat(product.retail_price); // Default to retail price
+                        line.price = parseFloat(product.retail_price);
                         this.updateLineTotal(index);
                     }
                 },
 
-                // Method to calculate the total for a single line item
                 updateLineTotal(index) {
                     const line = this.saleForm.lines[index];
                     line.total = (line.quantity || 0) * (line.price || 0);
                 },
 
-                // Method to show the recap modal
                 showConfirmationModal() {
-                    // Check if all fields are filled
                     if (!this.saleForm.selectedClient) {
                         alert('Veuillez sélectionner un client');
                         return;
@@ -1469,7 +1457,6 @@ if (!isset($_SESSION['user_id'])) {
                         return;
                     }
 
-                    // Check that all lines have a product selected
                     for (let line of this.saleForm.lines) {
                         if (!line.product_id || !line.quantity || line.quantity <= 0) {
                             alert('Veuillez vérifier que tous les produits ont une quantité valide');
@@ -1485,34 +1472,26 @@ if (!isset($_SESSION['user_id'])) {
                         buyer: this.saleForm.selectedClient.name,
                         total: this.totalAmount,
                         currency: 'FCFA',
-                        payment_method: this.saleForm.payment_method, // Added payment method to save
+                        payment_method: this.saleForm.payment_method,
                         created_at: new Date().toISOString(),
                         date_of_operation: this.saleForm.date_of_operation,
                         lines: this.saleForm.lines.map(line => ({
                             product: line.product_name,
-                            product_id: line.product_id, // Include product_id for backend
+                            product_id: line.product_id,
                             quantity: line.quantity,
                             price: line.price,
-                            price_type: line.priceType // Store price type
+                            price_type: line.priceType
                         }))
                     };
 
-                    // En mode édition, ajouter l'ID de la vente
                     if (this.isEditMode) {
                         saleData.id = this.editingSaleId;
                     }
 
                     const action = this.isEditMode ? 'updateSale' : 'newSale';
 
-                    console.log(`[v0] Requête de ${this.isEditMode ? 'mise à jour' : 'création'} de vente:`, {
-                        route: `?action=${action}`,
-                        data: saleData
-                    });
-
                     try {
                         const response = await api.post(`?action=${action}`, saleData);
-
-                        console.log('[v0] Réponse:', response.data);
 
                         if (!response.data.success) {
                             alert('Erreur: ' + (response.data.message || 'Une erreur est survenue.'));
@@ -1524,9 +1503,9 @@ if (!isset($_SESSION['user_id'])) {
                         this.closeSaleModal();
                         await this.fetchSales();
                         await this.fetchSalesProducts();
-                        await this.fetchProducts(); // Actualiser les produits pour mettre à jour les stocks
+                        await this.fetchProducts();
                     } catch (error) {
-                        console.error('[v0] Erreur lors de l\'enregistrement:', error);
+                        console.error('Erreur lors de l\'enregistrement:', error);
                         alert('Erreur lors de l\'enregistrement de la vente');
                     }
                 },
@@ -1549,7 +1528,7 @@ if (!isset($_SESSION['user_id'])) {
 
                         if (response.data.success) {
                             alert('Vente annulée avec succès!');
-                            this.fetchSales(); // Refresh the list
+                            this.fetchSales();
                         } else {
                             alert("Erreur lors de l'annulation de la vente");
                         }
@@ -1560,16 +1539,15 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 async viewSaleDetails(sale) {
-                    // Ensure sale.items is an array and properly formatted if needed
                     if (typeof sale.items === 'string') {
                         try {
                             sale.items = JSON.parse(sale.items);
                         } catch (e) {
                             console.error("Erreur lors du parsing des items pour la vente:", sale.id, e);
-                            sale.items = []; // Set to empty array if parsing fails
+                            sale.items = [];
                         }
                     } else if (!Array.isArray(sale.items)) {
-                        sale.items = []; // Ensure it's an array
+                        sale.items = [];
                     }
 
                     this.selectedSale = sale;
@@ -1591,9 +1569,11 @@ if (!isset($_SESSION['user_id'])) {
                             return;
                         }
 
-                        // Trouver les informations du client
                         const client = this.clients.find(c => c.name === sale.buyer);
                         const clientPhone = client ? client.phone : 'Non disponible';
+
+                        const totalArticles = saleProducts.length;
+                        const totalQuantity = saleProducts.reduce((sum, product) => sum + parseFloat(product.quantity || 0), 0);
 
                         const cancelledWatermark = sale.status === 'Annulé' ? `
                             <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 120px; color: rgba(255, 0, 0, 0.15); font-weight: bold; z-index: 1000; pointer-events: none;">
@@ -1613,6 +1593,8 @@ if (!isset($_SESSION['user_id'])) {
                                     th, td { border: 1px solid #000; padding: 8px; text-align: left; }
                                     th { background-color: #f0f0f0; font-weight: bold; }
                                     .total { font-weight: bold; font-size: 1.2em; margin-top: 20px; text-align: right; }
+                                    .summary { margin-top: 20px; background-color: #f9f9f9; padding: 15px; border-radius: 8px; }
+                                    .summary-item { display: flex; justify-content: space-between; margin-bottom: 8px; }
                                     .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #6B7280; border-top: 1px solid #ddd; padding-top: 20px; }
                                     .status-badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: bold; margin: 10px 0; }
                                     .status-cancelled { background-color: #fee; color: #c00; border: 2px solid #c00; }
@@ -1622,16 +1604,16 @@ if (!isset($_SESSION['user_id'])) {
                             <body>
                                 ${cancelledWatermark}
                                 <div class="header">
-                                    <h1>GBEMIRO</h1>
-                                    <p>Commerçialisation de boissons en gros et en détail<br>
+                                    <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
                                     Lokossa, Quinji carrefour Abo, <br>
                                     téléphone 01 49 91 65 66</p>
                                     <h2>FACTURE #${sale.id}</h2>
                                     ${sale.status === 'Annulé' ? '<div class="status-badge status-cancelled">❌ VENTE ANNULÉE</div>' : '<div class="status-badge status-done">✓ VENTE EFFECTUÉE</div>'}
                                 </div>
                                 <p><strong>Client:</strong> ${sale.buyer}</p>
-                                <p><strong>Téléphone:</strong> ${clientPhone}</p>
-                                <p><strong>Date:</strong> ${this.formatDate(sale.date_of_insertion)}</p>
+                                 <p><strong>Date:</strong> ${this.formatDate(sale.date_of_insertion)}</p>
                                 <p><strong>Mode de paiement:</strong> ${sale.payment_method === 'cash' ? 'Cash' : 'Crédit'}</p>
                                 <table>
                                     <thead>
@@ -1653,7 +1635,21 @@ if (!isset($_SESSION['user_id'])) {
                                         `).join('')}
                                     </tbody>
                                 </table>
-                                <p class="total">Total: ${this.formatCurrency(sale.total)}</p>
+                                
+                                <div class="summary">
+                                    <div class="summary-item">
+                                        <span><strong>Nombre d'articles:</strong></span>
+                                        <span><strong>${totalArticles}</strong></span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span><strong>Quantité totale:</strong></span>
+                                        <span><strong>${this.formatNumber(totalQuantity)}</strong></span>
+                                    </div>
+                                    <div class="summary-item" style="border-top: 2px solid #333; padding-top: 10px; margin-top: 10px; font-size: 1.2em;">
+                                        <span><strong>TOTAL:</strong></span>
+                                        <span style="color: #059669;"><strong>${this.formatCurrency(sale.total)}</strong></span>
+                                    </div>
+                                </div>
                                 
                                 <div class="footer">
                                     <p>Merci pour votre confiance!</p>
@@ -1674,7 +1670,6 @@ if (!isset($_SESSION['user_id'])) {
                 },
 
                 printSalesList() {
-                    // Créer un modal pour afficher l'historique
                     const modalContent = `
                         <div class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50" id="print-modal">
                             <div class="flex items-center justify-center min-h-screen p-4">
@@ -1694,8 +1689,8 @@ if (!isset($_SESSION['user_id'])) {
                                     </div>
 
                                     <div class="print-area">
-                                        <div class="text-center mb-6">
-                                            <h1 class="text-2xl font-bold">GBEMIRO</h1>
+                                        <div class="text-center mb-6 hidden print:block">
+                                            <h1 class="text-2xl font-bold">TOBI LODA</h1>
                                             <p class="text-sm text-gray-600">Historique des Ventes</p>
                                             <p class="text-sm text-gray-600">Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
                                         </div>
@@ -1736,7 +1731,6 @@ if (!isset($_SESSION['user_id'])) {
                         </div>
                     `;
 
-                    // Injecter le modal dans le DOM
                     const modalDiv = document.createElement('div');
                     modalDiv.innerHTML = modalContent;
                     document.body.appendChild(modalDiv);
@@ -1768,36 +1762,29 @@ if (!isset($_SESSION['user_id'])) {
 
                 formatDate(date) {
                     if (!date) return '';
-                    // Ensure date is a valid Date object
                     const d = new Date(date);
-                    if (isNaN(d)) return ''; // Return empty string for invalid dates
+                    if (isNaN(d)) return '';
                     return d.toLocaleDateString('fr-FR');
                 },
 
                 formatNumber(num) {
-                    // Ensure num is a number, default to 0 if not
                     const number = parseFloat(num);
                     return (isNaN(number) ? 0 : number).toLocaleString('fr-FR');
                 },
 
                 formatCurrency(amount, currency = 'FCFA') {
-                    // Display amounts without decimals (integers) in FCFA
                     const number = parseFloat(amount);
                     const roundedAmount = Math.round(isNaN(number) ? 0 : number);
                     return `${roundedAmount.toLocaleString('fr-FR')} ${currency}`;
                 },
 
                 calculateTotalProducts(sale) {
-                    // Filtrer les produits qui appartiennent à cette vente
                     const saleProducts = this.salesProducts.filter(product => product.sale_id === sale.id);
-                    // Calculer la somme totale des quantités
                     return saleProducts.reduce((sum, product) => sum + parseInt(product.quantity || 0), 0);
                 },
 
                 calculateUniqueProducts(sale) {
-                    // Filtrer les produits qui appartiennent à cette vente
                     const saleProducts = this.salesProducts.filter(product => product.sale_id === sale.id);
-                    // Retourner le nombre de produits
                     return saleProducts.length;
                 },
             },

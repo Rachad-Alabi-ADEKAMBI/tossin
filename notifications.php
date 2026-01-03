@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Notifications - Gbemiro</title>
+    <title>Notifications - TOBI LODA</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -274,9 +274,12 @@ if (!isset($_SESSION['user_id'])) {
             <div class="print-area hidden">
                 <div class="p-8">
                     <div class="text-center mb-8">
-                        <h1 class="text-3xl font-bold text-gray-900 mb-2">GBEMIRO</h1>
-                        <p class="text-gray-600">Commerçialisation de boissons en gros et en détail</p>
-                        <p class="text-gray-600">Lokossa, Quinji carrefour Abo, téléphone 0149916566</p>
+                        <h1>ETS TOBI LODA ET FILS</h1>
+                        <p>Commerçialisation de boissons<br>
+                        <p>IFU 0202371384670
+                        <p>
+                            Lokossa, Quinji carrefour Abo, <br>
+                            téléphone 01 49 91 65 66</p>
                         <h2 class="text-2xl font-bold text-gray-900 mt-6 mb-2">LISTE DES NOTIFICATIONS</h2>
                         <p class="text-gray-600">Date d'impression: {{ new Date().toLocaleDateString('fr-FR') }}</p>
                     </div>
@@ -553,9 +556,11 @@ if (!isset($_SESSION['user_id'])) {
                         </head>
                         <body>
                             <div class="header">
-                                <h1>GBEMIRO</h1>
-                                <p>Commerçialisation de boissons en gros et en détail<br>
-                                Lokossa, Quinji carrefour Abo, téléphone 0149916566</p>
+                               <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
                                 <h2>LISTE DES NOTIFICATIONS</h2>
                                 <p>Date d'impression: ${currentDate}</p>
                             </div>

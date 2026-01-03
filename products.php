@@ -27,7 +27,7 @@ if (!isset($_SESSION['user_id'])) {
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Gestion des Produits - Gbemiro</title>
+    <title>Gestion des Produits - TOBI LODA</title>
 
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
@@ -2081,11 +2081,11 @@ if (!isset($_SESSION['user_id'])) {
 
                             <div class="header">
 
-                                <h1>GBEMIRO</h1>
-
-                                <p>Commerçialisation de boissons en gros et en détail<br>
-
-                                Lokossa, Quinji carrefour Abo, téléphone 0149916566</p>
+                               <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
 
                                 <h2>${this.getPrintTitle(printType)}</h2>
 
@@ -2451,12 +2451,9 @@ if (!isset($_SESSION['user_id'])) {
 
                             <div class="header">
 
-                                <h1>GBEMIRO</h1>
-
-                                <p>Commerçialisation de boissons en gros et en détail<br>
-
-                                Lokossa, Quinji carrefour Abo, téléphone 0149916566</p>
-
+                                <h1>ETS TOBI LODA ET FILS</h1><br>
+                                    <p>IFU 0202371384670<p>
+                               <p> Lokossa, Quinji carrefour Abo, téléphone 01 49 91 65 66</p>
                                 <h2>Fiche Produit</h2>
 
                             </div>
@@ -2629,11 +2626,11 @@ if (!isset($_SESSION['user_id'])) {
 
                             <div class="header">
 
-                                <h1>GBEMIRO</h1>
-
-                                <p>Commerçialisation de boissons en gros et en détail<br>
-
-                                Lokossa, Quinji carrefour Abo, téléphone 0149916566</p>
+                                <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
 
                                 <h2>HISTORIQUE DU PRODUIT</h2>
 

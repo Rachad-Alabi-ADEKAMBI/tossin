@@ -13,7 +13,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestion des Créances - Gbemiro</title>
+    <title>Gestion des Créances - TOBI LODA</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -1492,10 +1492,11 @@ if (!isset($_SESSION['user_id'])) {
                         </head>
                         <body>
                             <div class="header">
-                                <h1>GBEMIRO</h1>
-                                <p>Commerçialisation de boissons en gros et en détail<br>
-                                Lokossa, Quinji carrefour Abo, <br>
-                                téléphone 01 49 91 65 66</p>
+                               <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
                                 <h2>Historique des paiements</h2>
                                 <p>Date d'impression: ${currentDate}</p>
                             </div>
@@ -1593,10 +1594,11 @@ if (!isset($_SESSION['user_id'])) {
                         </head>
                         <body>
                             <div class="header">
-                                <h1>GBEMIRO</h1>
-                                <p>Commerçialisation de boissons en gros et en détail<br>
-                                Lokossa, Quinji carrefour Abo, <br>
-                                téléphone 01 49 91 65 66</p>
+                               <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
                                 <h2>LISTE DES CRÉANCES</h2>
                                 <p>Date d'impression: ${currentDate}</p>
                             </div>
@@ -1641,7 +1643,7 @@ if (!isset($_SESSION['user_id'])) {
                             </table>
                             <div class="footer">
                                 <p>Merci pour votre confiance!</p>
-                                <p>GBEMIRO - Lokossa, Quinji carrefour Abo - Tél: 01 49 91 65 66</p>
+                                <p>Ets TOBI LODA - Lokossa, Quinji carrefour Abo - Tél: 01 49 91 65 66</p>
                                 <p>Document généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
                             </div>
                         </body>
@@ -1677,10 +1679,11 @@ if (!isset($_SESSION['user_id'])) {
                         </head>
                         <body>
                             <div class="header">
-                                <h1>GBEMIRO</h1>
-                                <p>Commerçialisation de boissons en gros et en détail<br>
-                                Lokossa, Quinji carrefour Abo, <br>
-                                téléphone 01 49 91 65 66</p>
+                               <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
                                 <h2>DÉTAILS DU CLIENT</h2>
                                 <p>Date d'impression: ${currentDate}</p>
                             </div>
@@ -1771,7 +1774,7 @@ if (!isset($_SESSION['user_id'])) {
                             
                             <div class="footer">
                                 <p>Merci pour votre confiance!</p>
-                                <p>GBEMIRO - Lokossa, Quinji carrefour Abo - Tél: 01 49 91 65 66</p>
+                                <p>TOBI LODA - Lokossa, Quinji carrefour Abo - Tél: 01 49 91 65 66</p>
                                 <p>Document généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
                             </div>
                         </body>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gbemiro - Connexion</title>
+    <title>TOBI LODA - Connexion</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script>
@@ -28,7 +28,7 @@
             <div class="bg-primary rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
                 <i class="fas fa-building text-white text-3xl"></i>
             </div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">Gbemiro</h1>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">ETS TOBI LODA</h1>
             <p class="text-gray-600">Gestion d'entreprise moderne</p>
         </div>
 
@@ -62,7 +62,7 @@
         </form>
 
         <div class="mt-6 text-center">
-            <p class="text-sm text-gray-500">© 2025 Gbemiro. Tous droits réservés.</p>
+            <p class="text-sm text-gray-500">© 2026 TOBI LODA. Tous droits réservés.</p>
         </div>
     </div>
 
