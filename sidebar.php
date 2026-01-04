@@ -1,12 +1,9 @@
 <!-- Sidebar -->
 <div id="sidebar"
     class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
-    <div class="flex items-center justify-center h-16 bg-primary">
-        <div class="flex items-center space-x-2">
-            <i class="fas fa-building text-white text-2xl"></i>
-            <span class="text-white text-xl font-bold">
-                TOBI LODA
-            </span>
+    <div class="flex items-center justify-center bg-primary">
+        <div class="flex items-center space-x-2" style="height: 165px;">
+            <img src="public/images/logo.png" alt="">
         </div>
     </div>
 
@@ -27,16 +24,18 @@
                 <span>Créances</span>
             </a>
 
-            <a href="expenses.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
-                <i class="fas fa-wallet mr-3"></i>
-                <span>Dépenses</span>
-            </a>
 
             <a href="products.php"
                 class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
                 <i class="fas fa-boxes mr-3"></i>
                 <span>Produits</span>
             </a>
+
+            <a href="expenses.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
+                <i class="fas fa-wallet mr-3"></i>
+                <span>Dépenses</span>
+            </a>
+
 
             <a href="orders.php" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-100 hover:text-primary transition-colors">
                 <i class="fas fa-shopping-cart mr-3"></i>

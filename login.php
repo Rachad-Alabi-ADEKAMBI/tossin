@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TOBI LODA - Connexion</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" type="image/x-icon" href="public/images/logo.png">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -25,10 +26,7 @@
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center">
     <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
         <div class="text-center mb-8">
-            <div class="bg-primary rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                <i class="fas fa-building text-white text-3xl"></i>
-            </div>
-            <h1 class="text-3xl font-bold text-gray-900 mb-2">ETS TOBI LODA</h1>
+            <img src="public/images//logo.png" style="width: 200px; height: 150px; margin: auto;" alt="">
             <p class="text-gray-600">Gestion d'entreprise moderne</p>
         </div>
 
@@ -62,7 +60,11 @@
         </form>
 
         <div class="mt-6 text-center">
-            <p class="text-sm text-gray-500">© 2026 TOBI LODA. Tous droits réservés.</p>
+            <p class="text-sm text-gray-500">© 2026 TOBI LODA. Tous droits réservés. <br> Made with Blood, tears and sweat by
+                <a href="https://rachad-alabi-adekambi.github.io/portfolio/">
+                    <strong style="color:#2563EB">RA</strong>
+                </a>
+            </p>
         </div>
     </div>
 

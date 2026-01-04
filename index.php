@@ -17,7 +17,7 @@ if (!isset($_SESSION['user_id'])) {
     <title>TOBI LODA - Tableau de Bord</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Added Vue.js and axios for dynamic dashboard -->
+    <link rel="icon" type="image/x-icon" href="public/images/logo.png">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
@@ -96,17 +96,7 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
                 </div>
 
-                <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-sm font-medium text-gray-600">Nombre de Commandes</p>
-                            <p class="text-2xl font-bold text-gray-900">{{ nombreCommandes }}</p>
-                        </div>
-                        <div class="bg-purple-100 p-3 rounded-full">
-                            <i class="fas fa-shopping-cart text-purple-600 text-xl"></i>
-                        </div>
-                    </div>
-                </div>
+
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">

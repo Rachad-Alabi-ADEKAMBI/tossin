@@ -18,7 +18,6 @@ if (!isset($_SESSION['user_id'])) {
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <link rel="icon" type="image/x-icon" href="public/images/logo.png">
     <style>
         .primary {
             color: #2563EB;
@@ -183,6 +182,9 @@ if (!isset($_SESSION['user_id'])) {
                                 <button @click="printSalesList" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm">
                                     <i class="fas fa-print mr-2"></i>Imprimer
                                 </button>
+                                <button @click="downloadSalesList" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm">
+                                    <i class="fas fa-download mr-2"></i>Télécharger
+                                </button>
                                 <button @click="openNewSaleModal" class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center shadow-md font-bold">
                                     <i class="fas fa-plus mr-2"></i>Nouvelle vente
                                 </button>
@@ -325,7 +327,10 @@ if (!isset($_SESSION['user_id'])) {
                                                 <button @click="printInvoice(sale)" class="text-blue-600 hover:text-blue-800 text-xl" title="Imprimer facture">
                                                     <i class="fas fa-print"></i>
                                                 </button>
-
+                                                <!-- Ajout du bouton télécharger sur chaque ligne -->
+                                                <button @click="downloadInvoice(sale)" class="text-indigo-600 hover:text-indigo-800 text-xl" title="Télécharger facture">
+                                                    <i class="fas fa-download"></i>
+                                                </button>
                                                 <button @click="cancelSale(sale.id)" :disabled="sale.status === 'Annulé'" :class="sale.status === 'Annulé' ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'" class="text-xl" title="Annuler">
                                                     <i class="fas fa-ban"></i>
                                                 </button>
