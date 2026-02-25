@@ -432,6 +432,7 @@ function getAllSales()
             comment,
             payment_method,
             date_of_insertion,
+            date_of_operation,
             buyer,
             CASE 
                 WHEN status = 'annulé' THEN 'Annulé'
@@ -445,6 +446,7 @@ function getAllSales()
     $sales = $stmt->fetchAll(PDO::FETCH_ASSOC);
     echo json_encode($sales, JSON_UNESCAPED_UNICODE);
 }
+
 
 //add notifications
 function addNotification($comment)
@@ -1126,6 +1128,7 @@ function newSale()
         : date('Y-m-d');
 
     $paymentMethod = $data['payment_method'] ?? null;
+    $comment       = $data['comment'] ?? null;
 
     /* ===============================
        CLIENT
@@ -1165,6 +1168,7 @@ function newSale()
                 total_quantity,
                 total_products,
                 total,
+                comment,
                 payment_method,
                 date_of_operation,
                 date_of_insertion,
@@ -1175,6 +1179,7 @@ function newSale()
                 :total_quantity,
                 :total_products,
                 :total,
+                :comment,
                 :payment_method,
                 :date_of_operation,
                 :date_of_insertion,
@@ -1188,6 +1193,7 @@ function newSale()
             ':total_quantity'     => $totalQuantity,
             ':total_products'     => count($data['lines']),
             ':total'              => (float)$data['total'],
+            ':comment'            => $comment,
             ':payment_method'     => $paymentMethod,
             ':date_of_operation'  => $dateOfOperation,
             ':date_of_insertion'  => $createdAt,
@@ -1231,7 +1237,6 @@ function newSale()
         =============================== */
         foreach ($data['lines'] as $line) {
 
-            // sales_products.date_of_insertion = date_of_operation
             $stmtSaleProduct->execute([
                 ':date_of_insertion' => $dateOfOperation,
                 ':name'              => $line['product'],
@@ -1265,7 +1270,6 @@ function newSale()
         =============================== */
         if ($paymentMethod === 'crédit') {
 
-            // Calcul de la date d'échéance en PHP
             $dueDate = date('Y-m-d', strtotime($dateOfOperation . ' +7 days'));
 
             $stmtClaim = $pdo->prepare("
@@ -1294,7 +1298,9 @@ function newSale()
                 ':date_of_insertion' => $createdAt,
                 ':date_of_claim'     => $dateOfOperation,
                 ':due_date'          => $dueDate,
-                ':notes'             => 'Créance facture #' . $saleId
+                ':notes'             => !empty($comment)
+                    ? $comment
+                    : 'Créance facture #' . $saleId
             ]);
         }
 
@@ -1328,6 +1334,12 @@ function updateSale()
 
     $saleId = (int)$data['id'];
 
+    $dateOfOperation = !empty($data['date_of_operation'])
+        ? date('Y-m-d', strtotime($data['date_of_operation']))
+        : date('Y-m-d');
+
+    $comment = $data['comment'] ?? null;
+
     try {
         $pdo->beginTransaction();
 
@@ -1343,24 +1355,6 @@ function updateSale()
         }
 
         $clientId = $client['id'];
-
-        /* ===============================
-           INFO VENTE
-        =============================== */
-        $stmtSaleInfo = $pdo->prepare("
-            SELECT payment_method
-            FROM sales
-            WHERE id = :id
-            LIMIT 1
-        ");
-        $stmtSaleInfo->execute([':id' => $saleId]);
-        $saleInfo = $stmtSaleInfo->fetch(PDO::FETCH_ASSOC);
-
-        if (!$saleInfo) {
-            throw new Exception('Vente introuvable');
-        }
-
-        $oldPaymentMethod = $saleInfo['payment_method'];
 
         /* ===============================
            ANCIENNES LIGNES
@@ -1382,6 +1376,9 @@ function updateSale()
         =============================== */
         $newProducts = [];
         foreach ($data['lines'] as $line) {
+            if (empty($line['product']) || !isset($line['quantity'], $line['price'])) {
+                throw new Exception('Ligne invalide');
+            }
             $newProducts[$line['product']] = (int)$line['quantity'];
         }
 
@@ -1392,25 +1389,29 @@ function updateSale()
             ->execute([':id' => $saleId]);
 
         /* ===============================
-           MAJ VENTE (payment_method uniquement)
+           MAJ VENTE
         =============================== */
-        $totalQty = array_sum($newProducts);
-
         $pdo->prepare("
             UPDATE sales SET
-                total_quantity = :qty,
-                total_products = :products,
-                total = :total,
+                client_id = :client_id,
                 buyer = :buyer,
-                payment_method = :payment_method
+                total_quantity = :total_quantity,
+                total_products = :total_products,
+                total = :total,
+                payment_method = :payment_method,
+                date_of_operation = :date_of_operation,
+                comment = :comment
             WHERE id = :id
         ")->execute([
-            ':qty'            => $totalQty,
-            ':products'       => count($newProducts),
-            ':total'          => (float)$data['total'],
-            ':buyer'          => $data['buyer'],
-            ':payment_method' => $data['payment_method'],
-            ':id'             => $saleId
+            ':client_id'         => $clientId,
+            ':buyer'             => $data['buyer'],
+            ':total_quantity'    => array_sum($newProducts),
+            ':total_products'    => count($newProducts),
+            ':total'             => (float)$data['total'],
+            ':payment_method'    => $data['payment_method'],
+            ':date_of_operation' => $dateOfOperation,
+            ':comment'           => $comment,
+            ':id'                => $saleId
         ]);
 
         /* ===============================
@@ -1418,40 +1419,40 @@ function updateSale()
         =============================== */
         $stmtInsertSaleProduct = $pdo->prepare("
             INSERT INTO sales_products (date_of_insertion, name, quantity, price, sale_id)
-            VALUES (NOW(), :name, :qty, :price, :sale_id)
+            VALUES (:date, :name, :qty, :price, :sale_id)
         ");
 
-        $stmtGetProduct = $pdo->prepare("SELECT id FROM products WHERE name = :name LIMIT 1");
-        $stmtUpdateStock = $pdo->prepare("UPDATE products SET quantity = quantity + :qty WHERE id = :id");
-        $stmtHistory = $pdo->prepare("
+        $stmtGetProduct   = $pdo->prepare("SELECT id FROM products WHERE name = :name LIMIT 1");
+        $stmtUpdateStock  = $pdo->prepare("UPDATE products SET quantity = quantity + :qty WHERE id = :id");
+        $stmtHistory      = $pdo->prepare("
             INSERT INTO products_history (product_id, quantity, comment, created_at)
             VALUES (:product_id, :quantity, :comment, NOW())
         ");
 
         /* ===============================
-           AJUSTEMENT DES STOCKS
+           RESTITUTION STOCK (produits supprimés)
         =============================== */
-        // Produits supprimés
         foreach ($oldProducts as $name => $oldQty) {
             if (!isset($newProducts[$name])) {
                 $stmtGetProduct->execute([':name' => $name]);
-                $product = $stmtGetProduct->fetch(PDO::FETCH_ASSOC);
-                if (!$product) continue;
+                if ($product = $stmtGetProduct->fetch(PDO::FETCH_ASSOC)) {
+                    $stmtUpdateStock->execute([
+                        ':qty' => $oldQty,
+                        ':id'  => $product['id']
+                    ]);
 
-                $stmtUpdateStock->execute([
-                    ':qty' => $oldQty,
-                    ':id'  => $product['id']
-                ]);
-
-                $stmtHistory->execute([
-                    ':product_id' => $product['id'],
-                    ':quantity'   => $oldQty,
-                    ':comment'    => "Restitution stock — modification facture #{$saleId}"
-                ]);
+                    $stmtHistory->execute([
+                        ':product_id' => $product['id'],
+                        ':quantity'   => $oldQty,
+                        ':comment'    => "Restitution stock — modification facture #{$saleId}"
+                    ]);
+                }
             }
         }
 
-        // Produits ajoutés ou modifiés
+        /* ===============================
+           INSERT + AJUSTEMENT STOCK
+        =============================== */
         foreach ($newProducts as $name => $newQty) {
             $oldQty = $oldProducts[$name] ?? 0;
             $diff = $newQty - $oldQty;
@@ -1465,6 +1466,7 @@ function updateSale()
             }
 
             $stmtInsertSaleProduct->execute([
+                ':date'    => $dateOfOperation,
                 ':name'    => $name,
                 ':qty'     => $newQty,
                 ':price'   => $price,
@@ -1473,61 +1475,91 @@ function updateSale()
 
             if ($diff !== 0) {
                 $stmtGetProduct->execute([':name' => $name]);
-                $product = $stmtGetProduct->fetch(PDO::FETCH_ASSOC);
-                if (!$product) continue;
+                if ($product = $stmtGetProduct->fetch(PDO::FETCH_ASSOC)) {
+                    $stmtUpdateStock->execute([
+                        ':qty' => -$diff,
+                        ':id'  => $product['id']
+                    ]);
 
-                $stmtUpdateStock->execute([
-                    ':qty' => -$diff,
-                    ':id'  => $product['id']
-                ]);
-
-                $stmtHistory->execute([
-                    ':product_id' => $product['id'],
-                    ':quantity'   => -$diff,
-                    ':comment'    => "Ajustement stock — modification facture #{$saleId}"
-                ]);
+                    $stmtHistory->execute([
+                        ':product_id' => $product['id'],
+                        ':quantity'   => -$diff,
+                        ':comment'    => "Ajustement stock — modification facture #{$saleId}"
+                    ]);
+                }
             }
         }
 
         /* ===============================
-           CREANCE
+           CREANCE (COMMENTAIRE SYNCHRONISÉ)
         =============================== */
-        $claimNote = 'Créance facture #' . $saleId;
+        $claimNote = !empty($comment)
+            ? $comment
+            : 'Créance facture #' . $saleId;
 
         if ($data['payment_method'] === 'crédit') {
 
-            $stmtCheckClaim = $pdo->prepare("SELECT id FROM claims WHERE notes = :notes LIMIT 1");
-            $stmtCheckClaim->execute([':notes' => $claimNote]);
-            $claim = $stmtCheckClaim->fetch(PDO::FETCH_ASSOC);
+            $dueDate = date('Y-m-d', strtotime($dateOfOperation . ' +7 days'));
 
-            $dueDate = date('Y-m-d', strtotime('+7 days'));
+            $stmt = $pdo->prepare("
+                SELECT id FROM claims
+                WHERE notes LIKE :note
+                LIMIT 1
+            ");
+            $stmt->execute([
+                ':note' => '%facture #' . $saleId . '%'
+            ]);
+            $claim = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($claim) {
                 $pdo->prepare("
                     UPDATE claims SET
                         amount = :amount,
-                        date_of_claim = CURDATE(),
-                        due_date = :due_date
+                        date_of_claim = :date_claim,
+                        due_date = :due_date,
+                        notes = :notes
                     WHERE id = :id
                 ")->execute([
-                    ':amount'   => (float)$data['total'],
-                    ':due_date' => $dueDate,
-                    ':id'       => $claim['id']
+                    ':amount'     => (float)$data['total'],
+                    ':date_claim' => $dateOfOperation,
+                    ':due_date'   => $dueDate,
+                    ':notes'      => $claimNote,
+                    ':id'         => $claim['id']
                 ]);
             } else {
                 $pdo->prepare("
-                    INSERT INTO claims (client_id, amount, date_of_insertion, date_of_claim, due_date, notes, status)
-                    VALUES (:client_id, :amount, NOW(), CURDATE(), :due_date, :notes, 'actif')
+                    INSERT INTO claims (
+                        client_id,
+                        amount,
+                        date_of_insertion,
+                        date_of_claim,
+                        due_date,
+                        notes,
+                        status
+                    ) VALUES (
+                        :client_id,
+                        :amount,
+                        NOW(),
+                        :date_claim,
+                        :due_date,
+                        :notes,
+                        'actif'
+                    )
                 ")->execute([
                     ':client_id' => $clientId,
                     ':amount'    => (float)$data['total'],
+                    ':date_claim' => $dateOfOperation,
                     ':due_date'  => $dueDate,
                     ':notes'     => $claimNote
                 ]);
             }
         } else {
-            $pdo->prepare("DELETE FROM claims WHERE notes = :notes")
-                ->execute([':notes' => $claimNote]);
+            $pdo->prepare("
+                DELETE FROM claims
+                WHERE notes LIKE :note
+            ")->execute([
+                ':note' => '%facture #' . $saleId . '%'
+            ]);
         }
 
         $pdo->commit();

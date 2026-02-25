@@ -363,6 +363,7 @@ if (!isset($_SESSION['user_id'])) {
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date dette</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Échéance</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant initial</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payé</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restant</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
@@ -395,6 +396,9 @@ if (!isset($_SESSION['user_id'])) {
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'Montant initial'">
                                                 {{ formatCurrency(claim.amount) }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" :data-label="'Notes'">
+                                                {{ claim.notes }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600" :data-label="'Payé'">
                                                 {{ formatCurrency(getClaimPaid(claim.id)) }}
@@ -558,6 +562,7 @@ if (!isset($_SESSION['user_id'])) {
                                         <p class="text-sm text-gray-600">Montant initial</p>
                                         <p class="text-lg font-semibold text-blue-600">{{ formatCurrency(selectedClaim.amount) }}</p>
                                     </div>
+
                                     <div class="bg-green-50 p-3 rounded-lg">
                                         <p class="text-sm text-gray-600">Montant payé</p>
                                         <p class="text-lg font-semibold text-green-600">{{ formatCurrency(selectedClaimPaid) }}</p>
@@ -566,6 +571,7 @@ if (!isset($_SESSION['user_id'])) {
                                         <p class="text-sm text-gray-600">Montant restant</p>
                                         <p class="text-lg font-semibold text-red-600">{{ formatCurrency(selectedClaimRemaining) }}</p>
                                     </div>
+
                                 </div>
                             </div>
 

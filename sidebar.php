@@ -1,7 +1,7 @@
 <!-- Sidebar -->
 <div id="sidebar"
     class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
-    <div class="flex items-center justify-center bg-primary">
+    <div class="flex items-center justify-center">
         <div class="flex items-center space-x-2" style="height: 165px;">
             <img src="public/images/logo.png" alt="">
         </div>

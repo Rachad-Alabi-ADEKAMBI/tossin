@@ -1,12 +1,3 @@
-<?php
-session_start();
-
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
-}
-?>
-
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -181,7 +172,11 @@ if (!isset($_SESSION['user_id'])) {
                             <div class="flex flex-wrap gap-2">
                                 <!-- Ajout du bouton Télécharger à côté de l'impression générale -->
                                 <button @click="printSalesList" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm">
-                                    <i class="fas fa-print mr-2"></i>Imprimer
+                                    <i class="fas fa-print mr-2"></i>Imprimer Liste
+                                </button>
+                                <button @click="window.location.reload()"
+                                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm">
+                                    <i class="fas fa-rotate-right mr-2"></i>Recharger la page
                                 </button>
                                 <button @click="openNewSaleModal" class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center shadow-md font-bold">
                                     <i class="fas fa-plus mr-2"></i>Nouvelle vente
@@ -261,14 +256,6 @@ if (!isset($_SESSION['user_id'])) {
                                 <p class="text-sm text-gray-600 mb-1">Nombre de ventes</p>
                                 <p class="text-2xl font-bold text-blue-600">{{ todaySalesCount }}</p>
                             </div>
-                            <div class="bg-purple-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">Total produits vendus</p>
-                                <p class="text-2xl font-bold text-purple-600">{{ Math.round(todayTotalProductsCount) }}</p>
-                            </div>
-                            <div class="bg-orange-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">Articles</p>
-                                <p class="text-2xl font-bold text-orange-600">{{ todayTotalUniqueProducts }}</p>
-                            </div>
                         </div>
                     </div>
 
@@ -286,6 +273,8 @@ if (!isset($_SESSION['user_id'])) {
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité totale</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Articles</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                                        <!-- Ajout de la colonne Profil client avant Actions -->
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commentaire</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -298,7 +287,8 @@ if (!isset($_SESSION['user_id'])) {
                                             <div class="text-sm font-medium text-gray-900">{{ sale.buyer }}</div>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-label="Date">
-                                            {{ formatDate(sale.date_of_insertion) }}
+                                            <!-- Utilisation de date_of_operation -->
+                                            {{ formatDate(sale.date_of_operation) }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm" data-label="Statut">
                                             <span v-if="sale.status === 'Fait'" class="px-3 py-1 bg-green-100 text-green-800 rounded-full font-semibold text-xs">
@@ -308,14 +298,21 @@ if (!isset($_SESSION['user_id'])) {
                                                 <i class="fas fa-times-circle mr-1"></i>Annulé
                                             </span>
                                         </td>
+                                        <!-- Affichage de total_quantity et total_products depuis l'API -->
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-label="Quantité totale">
-                                            {{ calculateTotalProducts(sale) }}
+                                            {{ sale.total_quantity }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" data-label="Articles">
-                                            {{ calculateUniqueProducts(sale) }}
+                                            {{ sale.total_products }}
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600" data-label="Montant">
                                             {{ formatCurrency(sale.total) }}
+                                        </td>
+                                        <!-- Nouvelle colonne Bouton Profil du client avec couleurs primaires de la page -->
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" data-label="Commentaire">
+                                            <p>
+                                                {{ sale.comment }}
+                                            </p>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" data-label="Actions">
                                             <div class="flex space-x-3">
@@ -453,6 +450,14 @@ if (!isset($_SESSION['user_id'])) {
                                     </label>
                                     <input v-model="saleForm.date_of_operation" type="date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
+
+                                <!-- Ajout du champ commentaire -->
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        <i class="fas fa-comment mr-1"></i>Commentaire
+                                    </label>
+                                    <textarea v-model="saleForm.comment" rows="3" placeholder="Ajouter un commentaire (optionnel)..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                                </div>
                             </div>
 
                             <!-- Products section with improved layout -->
@@ -476,7 +481,7 @@ if (!isset($_SESSION['user_id'])) {
                                                 type="text"
                                                 placeholder="Rechercher un produit..."
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
-                                            <i class="fas fa-search absolute right-3 top-8 text-gray-400 text-xs"></i>
+                                            <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
 
                                             <!-- Product dropdown list -->
                                             <div v-if="line.showProductDropdown && line.filteredProducts && line.filteredProducts.length > 0"
@@ -491,7 +496,18 @@ if (!isset($_SESSION['user_id'])) {
                                             </div>
                                         </div>
 
-                                        <!-- Added price type selector -->
+                                        <!-- Déplacé l'input du type de prix après la quantité et défini "gros" par défaut -->
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-700 mb-1">
+                                                <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
+                                            </label>
+                                            <!-- Suppression de la valeur par défaut 1 et du placeholder -->
+                                            <input v-model.number="line.quantity" type="number" min="0.01" step="0.01" required
+                                                @input="validateQuantity(index)"
+                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
+                                        </div>
+
+                                        <!-- Type de prix maintenant après la quantité -->
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-tag mr-1"></i>Type Prix
@@ -501,24 +517,15 @@ if (!isset($_SESSION['user_id'])) {
                                                 <option value="bulk_price">Gros</option>
                                                 <option value="semi_bulk_price">Semi-gros</option>
                                                 <option value="retail_price">Détail</option>
-
                                             </select>
                                         </div>
 
-                                        <div>
-                                            <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
-                                            </label>
-                                            <input v-model.number="line.quantity" type="number" min="1" required
-                                                @input="validateQuantity(index)"
-                                                class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
-                                        </div>
-
-                                        <!-- Made price input editable -->
+                                        <!-- Prix unitaire sans affichage de 0 -->
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire
                                             </label>
+                                            <!-- Suppression de la valeur par défaut 0 et du placeholder -->
                                             <input v-model.number="line.price" type="number" step="1" min="0" required
                                                 @input="updateLineTotal(index)"
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm bg-white">
@@ -528,7 +535,7 @@ if (!isset($_SESSION['user_id'])) {
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
                                                 <i class="fas fa-calculator mr-1"></i>Total
                                             </label>
-                                            <input :value="Math.round(line.total) + ' FCFA'" type="text" readonly
+                                            <input :value="formatCurrency(line.total)" type="text" readonly
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm bg-gray-100">
                                         </div>
 
@@ -658,7 +665,13 @@ if (!isset($_SESSION['user_id'])) {
                                 </div>
                                 <div>
                                     <p class="text-sm text-gray-600">Date</p>
-                                    <p class="text-lg font-semibold text-gray-900">{{ formatDate(selectedSale.date_of_insertion) }}</p>
+                                    <!-- Affichage de date_of_operation dans les détails -->
+                                    <p class="text-lg font-semibold text-gray-900">{{ formatDate(selectedSale.date_of_operation) }}</p>
+                                </div>
+                                <!-- Affichage du commentaire dans les détails -->
+                                <div v-if="selectedSale.comment" class="md:col-span-2">
+                                    <p class="text-sm text-gray-600">Commentaire</p>
+                                    <p class="text-lg font-semibold text-gray-900">{{ selectedSale.comment }}</p>
                                 </div>
                             </div>
 
@@ -704,86 +717,6 @@ if (!isset($_SESSION['user_id'])) {
                                 </button>
                                 <button @click="closeDetailsModal" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg transition-colors">
                                     <i class="fas fa-times mr-2"></i>Fermer
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Added modal of summary/confirmation -->
-            <div v-if="showRecapModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-3xl w-full p-6 max-h-screen overflow-y-auto">
-                        <div class="flex justify-between items-center mb-6">
-                            <h3 class="text-xl font-semibold text-gray-900">
-                                <i class="fas fa-receipt mr-2"></i>Récapitulatif de la vente
-                            </h3>
-                            <button @click="showRecapModal = false" class="text-gray-400 hover:text-gray-600">
-                                <i class="fas fa-times text-xl"></i>
-                            </button>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div class="bg-blue-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600">Client</p>
-                                <p class="text-lg font-semibold">{{ saleForm.selectedClient ? saleForm.selectedClient.name : 'N/A' }}</p>
-                            </div>
-
-                            <!-- Added payment method display in recap -->
-                            <div class="bg-purple-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600">Mode de paiement</p>
-                                <p class="text-lg font-semibold">{{ saleForm.payment_method === 'cash' ? 'Cash' : 'Crédit' }}</p>
-                            </div>
-
-                            <div class="border border-gray-200 rounded-lg overflow-hidden">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead class="bg-gray-50">
-                                        <tr>
-                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Produit</th>
-                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qté</th>
-                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">P.U.</th>
-                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        <tr v-for="(line, index) in saleForm.lines" :key="index">
-                                            <td class="px-4 py-3 text-sm" data-label="Produit">{{ line.product_name }}</td>
-                                            <td class="px-4 py-3 text-sm" data-label="Type de prix">
-                                                <span v-if="line.priceType === 'retail_price'" class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Détail</span>
-                                                <span v-if="line.priceType === 'semi_bulk_price'" class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Semi-gros</span>
-                                                <span v-if="line.priceType === 'bulk_price'" class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs">Gros</span>
-                                            </td>
-                                            <td class="px-4 py-3 text-sm" data-label="Quantité">{{ Math.round(line.quantity) }}</td>
-                                            <td class="px-4 py-3 text-sm" data-label="Prix">{{ Math.round(line.price) }} FCFA</td>
-                                            <td class="px-4 py-3 text-sm font-semibold" data-label="Total">{{ Math.round(line.total) }} FCFA</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="bg-gray-50 p-4 rounded-lg space-y-2">
-                                <div class="flex justify-between">
-                                    <span class="text-sm text-gray-600">Total produits:</span>
-                                    <span class="text-sm font-semibold">{{ Math.round(totalProductsInForm) }}</span>
-                                </div>
-                                <div class="flex justify-between">
-                                    <span class="text-sm text-gray-600">Articles:</span>
-                                    <span class="text-sm font-semibold">{{ uniqueProductsInForm }}</span>
-                                </div>
-                                <div class="flex justify-between border-t border-gray-300 pt-2 mt-2">
-                                    <span class="text-lg font-bold">Total général:</span>
-                                    <span class="text-lg font-bold text-green-600">{{ Math.round(totalAmount) }} FCFA</span>
-                                </div>
-                            </div>
-
-                            <div class="flex justify-end space-x-3 mt-6">
-                                <button type="button" @click="showRecapModal = false" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
-                                    Retour
-                                </button>
-                                <button type="button" @click="saveSale" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg">
-                                    <i class="fas fa-check mr-2"></i>Confirmer la vente
                                 </button>
                             </div>
                         </div>
@@ -855,7 +788,7 @@ if (!isset($_SESSION['user_id'])) {
                                             {{ sale.buyer }}
                                         </td>
                                         <td class="px-4 py-3 text-sm" data-label="Date">
-                                            {{ formatDate(sale.date_of_insertion) }}
+                                            {{ formatDate(sale.date_of_operation) }}
                                         </td>
                                         <td class="px-4 py-3 text-sm" data-label="Quantité">
                                             {{ calculateTotalProducts(sale) }}
@@ -886,20 +819,65 @@ if (!isset($_SESSION['user_id'])) {
 
             <!-- Modal de confirmation finalisation -->
             <div v-if="showConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 z-[100] flex items-center justify-center p-4">
-                <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border-t-8 border-green-500">
+                <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 border-t-8 border-green-500 max-h-[90vh] overflow-y-auto">
                     <div class="text-center mb-6">
                         <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-shopping-cart text-3xl"></i>
                         </div>
                         <h3 class="text-2xl font-bold text-gray-900">Confirmer la vente</h3>
-                        <p class="text-gray-600 mt-2">Voulez-vous finaliser cette opération de vente ?</p>
+                        <p class="text-gray-600 mt-2">Vérifiez les détails avant de valider</p>
                     </div>
+
+                    <!-- Added detailed items summary with quantity and total -->
+                    <!-- Récapitulatif des articles -->
                     <div class="bg-gray-50 p-4 rounded-xl mb-6">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-gray-500">Total à payer</span>
-                            <span class="text-xl font-bold text-green-600">{{ formatCurrency(totalAmount) }}</span>
+                        <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
+                            <i class="fas fa-list mr-2 text-blue-600"></i>Articles commandés
+                        </h4>
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            <div v-for="(line, index) in saleForm.lines" :key="index" class="flex justify-between items-center bg-white p-3 rounded-lg border border-gray-200 hover:shadow-sm transition-shadow">
+                                <div class="flex-1">
+                                    <p class="font-medium text-gray-900">{{ line.product_name }}</p>
+                                    <p class="text-sm text-gray-600">{{ line.quantity }} x {{ formatCurrency(line.price) }}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-green-600">{{ formatCurrency(line.total) }}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ligne de séparation -->
+                        <div class="border-t-2 border-gray-300 mt-4 pt-4">
+                            <!-- Sous-total et TVA si applicable -->
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-gray-700">Sous-total</span>
+                                <span class="font-semibold text-gray-900">{{ formatCurrency(totalAmountBeforeTax) }}</span>
+                            </div>
+
+                            <!-- Total à payer en évidence -->
+                            <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg">
+                                <span class="text-lg font-bold text-gray-900">Total à payer</span>
+                                <span class="text-2xl font-bold text-green-600">{{ formatCurrency(totalAmount) }}</span>
+                            </div>
+
+                            <!-- Nombre total d'articles -->
+                            <div class="flex justify-between items-center mt-3 text-sm text-gray-600">
+                                <span>Nombre d'articles</span>
+                                <span class="font-semibold">{{ totalItemsCount }}</span>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Informations client -->
+                    <div class="bg-blue-50 p-4 rounded-xl mb-6">
+                        <h4 class="font-semibold text-gray-800 mb-2 flex items-center">
+                            <i class="fas fa-user mr-2 text-blue-600"></i>Informations client
+                        </h4>
+                        <p class="text-gray-900 font-medium">{{ saleForm.selectedClient.name }}</p>
+                        <p v-if="saleForm.selectedClient.phone" class="text-gray-600 text-sm">{{ saleForm.selectedClient.phone }}</p>
+                        <p v-if="saleForm.comment" class="text-gray-600 text-sm italic mt-2">💬 {{ saleForm.comment }}</p>
+                    </div>
+
                     <div class="flex flex-col space-y-3">
                         <!-- Bouton de confirmation rendu extrêmement visible -->
                         <button @click="processSale"
@@ -912,6 +890,150 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
                 </div>
             </div>
+
+            <!-- Nouveau modal de profil client inspiré de claims.php -->
+            <div v-if="showClientProfileModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+                <div class="flex items-center justify-center min-h-screen p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full p-6 max-h-screen overflow-y-auto">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-xl font-semibold text-gray-900">
+                                <i class="fas fa-user-circle mr-2"></i>Profil du Client
+                            </h3>
+                            <button @click="closeClientProfileModal" class="text-gray-400 hover:text-gray-600">
+                                <i class="fas fa-times text-xl"></i>
+                            </button>
+                        </div>
+
+                        <div v-if="selectedClientProfile">
+                            <!-- Infos client -->
+                            <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg mb-6">
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <p class="text-sm text-gray-600">Nom</p>
+                                        <p class="text-lg font-semibold text-gray-900">{{ selectedClientProfile.name }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600">Téléphone</p>
+                                        <p class="text-lg font-semibold text-gray-900">{{ selectedClientProfile.phone }}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm text-gray-600">Dette totale</p>
+                                        <p class="text-lg font-semibold text-red-600">{{ formatCurrency(selectedClientProfile.totalDebt) }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Résumé descriptif -->
+                            <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded">
+                                <p class="text-sm text-gray-800 leading-relaxed">
+                                    <strong>{{ selectedClientProfile.name }}</strong> a acheté pour un montant total de
+                                    <strong class="text-green-600">{{ formatCurrency(selectedClientProfile.totalSales) }}</strong>.
+                                    Il a actuellement <strong class="text-red-600">{{ selectedClientProfile.activeClaims }}</strong> créance(s) active(s)
+                                    pour un montant total de <strong class="text-red-600">{{ formatCurrency(selectedClientProfile.totalDebt) }}</strong>.
+                                    L'historique de ses créances se trouve plus bas.
+                                    <a href="claims.php" class="text-primary hover:text-secondary underline font-medium">
+                                        Accéder à la page des créances
+                                    </a> pour ajouter un paiement à cette créance ou en créer une nouvelle.
+                                </p>
+                            </div>
+
+                            <!-- Créances du client -->
+                            <div class="mb-6" v-if="clientProfileClaims.length > 0">
+                                <h4 class="text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-file-invoice-dollar mr-2"></i>Créances actives ({{ selectedClientProfile.activeClaims }})
+                                </h4>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Restant</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200">
+                                            <tr v-for="claim in clientProfileClaims" :key="claim.id" class="hover:bg-gray-50">
+                                                <td class="px-4 py-3 text-sm text-gray-900" :data-label="'Date'">{{ formatDate(claim.date_of_claim) }}</td>
+                                                <td class="px-4 py-3 text-sm font-medium text-gray-900" :data-label="'Montant'">{{ formatCurrency(claim.amount) }}</td>
+                                                <td class="px-4 py-3 text-sm font-medium text-red-600" :data-label="'Restant'">{{ formatCurrency(claim.remaining) }}</td>
+                                                <td class="px-4 py-3 text-sm" :data-label="'Statut'">
+                                                    <span v-if="claim.remaining > 0" class="px-2 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                                                        Active
+                                                    </span>
+                                                    <span v-else class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                                                        Payée
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div v-else class="mb-6">
+                                <h4 class="text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-file-invoice-dollar mr-2"></i>Créances
+                                </h4>
+                                <div class="bg-gray-50 p-8 text-center rounded-lg">
+                                    <i class="fas fa-inbox text-5xl text-gray-400 mb-3"></i>
+                                    <p class="text-gray-500">Aucune créance enregistrée pour ce client</p>
+                                </div>
+                            </div>
+
+                            <!-- Achats du client -->
+                            <div>
+                                <h4 class="text-lg font-semibold text-gray-800 mb-4">
+                                    <i class="fas fa-shopping-cart mr-2"></i>Historique des achats ({{ clientProfileSales.length }})
+                                </h4>
+                                <div class="overflow-x-auto">
+                                    <table class="min-w-full bg-white border border-gray-200 rounded-lg">
+                                        <thead class="bg-gray-50">
+                                            <tr>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">N° Facture</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quantité</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Articles</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
+                                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-200">
+                                            <tr v-if="clientProfileSales.length === 0">
+                                                <td colspan="6" class="px-4 py-8 text-center text-gray-500">
+                                                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                                                    <p>Aucun achat enregistré</p>
+                                                </td>
+                                            </tr>
+                                            <tr v-for="sale in clientProfileSales" :key="sale.id" class="hover:bg-gray-50">
+                                                <td class="px-4 py-3 text-sm font-medium text-gray-900" :data-label="'N° Facture'">#{{ sale.id }}</td>
+                                                <td class="px-4 py-3 text-sm text-gray-900" :data-label="'Date'">{{ formatDate(sale.date_of_operation) }}</td>
+                                                <td class="px-4 py-3 text-sm text-gray-500" :data-label="'Quantité'">{{ sale.total_quantity }}</td>
+                                                <td class="px-4 py-3 text-sm text-gray-500" :data-label="'Articles'">{{ sale.total_products }}</td>
+                                                <td class="px-4 py-3 text-sm font-medium text-green-600" :data-label="'Montant'">{{ formatCurrency(sale.total) }}</td>
+                                                <td class="px-4 py-3 text-sm" :data-label="'Statut'">
+                                                    <span v-if="sale.status === 'Fait'" class="px-3 py-1 bg-green-100 text-green-800 rounded-full font-semibold text-xs">
+                                                        <i class="fas fa-check-circle mr-1"></i>Fait
+                                                    </span>
+                                                    <span v-else-if="sale.status === 'Annulé'" class="px-3 py-1 bg-red-100 text-red-800 rounded-full font-semibold text-xs">
+                                                        <i class="fas fa-times-circle mr-1"></i>Annulé
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-3 mt-6">
+                                <button @click="closeClientProfileModal" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-times mr-2"></i>Fermer
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
 
         </div>
     </div>
@@ -937,6 +1059,7 @@ if (!isset($_SESSION['user_id'])) {
                 const salesProducts = ref([]);
                 const products = ref([]);
                 const clients = ref([]);
+                const claims = ref([]); // Ajout de claims
                 const currentSale = ref({
                     buyer: '',
                     phone: '',
@@ -960,7 +1083,8 @@ if (!isset($_SESSION['user_id'])) {
                     date_of_operation: new Date().toISOString().split('T')[0],
                     lines: [],
                     notes: '',
-                    payment_method: 'cash', // Added default payment method
+                    payment_method: 'cash',
+                    comment: '',
                 });
                 const newClientForm = ref({
                     name: '',
@@ -978,6 +1102,11 @@ if (!isset($_SESSION['user_id'])) {
                 const showConfirmModal = ref(false); // Added for the new confirmation modal
 
                 const showAllFilters = ref(false);
+
+                const showClientProfileModal = ref(false);
+                const selectedClientProfile = ref(null);
+                const clientProfileClaims = ref([]);
+                const clientProfileSales = ref([]);
 
                 const toggleFilters = () => {
                     showAllFilters.value = !showAllFilters.value;
@@ -1009,6 +1138,11 @@ if (!isset($_SESSION['user_id'])) {
                         const response = await api.get('?action=allSales');
                         sales.value = response.data.map(sale => {
                             const lines = typeof sale.items === 'string' ? JSON.parse(sale.items) : (Array.isArray(sale.items) ? sale.items : []);
+                            // Assurer que date_of_operation est présent, sinon utiliser date_of_insertion
+                            sale.date_of_operation = sale.date_of_operation || sale.date_of_insertion;
+                            // Ensure total_quantity and total_products are present from API response
+                            sale.total_quantity = sale.total_quantity || 0;
+                            sale.total_products = sale.total_products || 0;
                             return {
                                 ...sale,
                                 lines: lines.map(item => ({
@@ -1052,6 +1186,15 @@ if (!isset($_SESSION['user_id'])) {
                     }
                 };
 
+                const fetchClaims = async () => {
+                    try {
+                        const response = await api.get('?action=allClaims');
+                        claims.value = response.data;
+                    } catch (error) {
+                        console.error('Erreur lors de la récupération des créances:', error);
+                    }
+                };
+
                 const editSale = async (sale) => {
                     if (sale.status === 'Annulé') {
                         alert('Impossible de modifier une vente annulée');
@@ -1073,7 +1216,9 @@ if (!isset($_SESSION['user_id'])) {
                         clientSearchTerm.value = sale.buyer;
 
                         saleForm.value.payment_method = sale.payment_method || 'cash';
-                        saleForm.value.date_of_operation = sale.date_of_insertion.split(' ')[0];
+                        // Utilisation de date_of_operation si disponible
+                        saleForm.value.date_of_operation = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
+                        saleForm.value.comment = sale.comment || '';
 
                         saleForm.value.lines = saleProducts.map(sp => {
                             const product = products.value.find(p => p.name === sp.name);
@@ -1084,7 +1229,7 @@ if (!isset($_SESSION['user_id'])) {
                                 productSearchTerm: sp.name,
                                 showProductDropdown: false,
                                 filteredProducts: products.value,
-                                priceType: 'retail_price',
+                                priceType: 'bulk_price',
                                 retail_price: product ? parseFloat(product.retail_price) : 0,
                                 semi_bulk_price: product ? parseFloat(product.semi_bulk_price) : 0,
                                 bulk_price: product ? parseFloat(product.bulk_price) : 0,
@@ -1122,7 +1267,8 @@ if (!isset($_SESSION['user_id'])) {
                         lines: [],
                         notes: '',
                         payment_method: 'cash',
-                        date_of_operation: new Date().toISOString().split('T')[0]
+                        date_of_operation: new Date().toISOString().split('T')[0],
+                        comment: ''
                     };
                 };
 
@@ -1146,7 +1292,8 @@ if (!isset($_SESSION['user_id'])) {
                         lines: [],
                         notes: '',
                         payment_method: 'cash',
-                        date_of_operation: new Date().toISOString().split('T')[0]
+                        date_of_operation: new Date().toISOString().split('T')[0],
+                        comment: ''
                     };
                     showRecapModal.value = false;
                 };
@@ -1154,29 +1301,44 @@ if (!isset($_SESSION['user_id'])) {
                 const applyFilters = () => {
                     let filtered = [...sales.value];
 
+                    if (exactDate.value) {
+                        filtered = filtered.filter(sale => {
+                            const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
+                            return saleDate === exactDate.value;
+                        });
+                    }
+
+                    if (startDate.value && endDate.value) {
+                        filtered = filtered.filter(sale => {
+                            const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
+                            return saleDate >= startDate.value && saleDate <= endDate.value;
+                        });
+                    } else if (startDate.value) {
+                        filtered = filtered.filter(sale => {
+                            const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
+                            return saleDate >= startDate.value;
+                        });
+                    } else if (endDate.value) {
+                        filtered = filtered.filter(sale => {
+                            const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
+                            return saleDate <= endDate.value;
+                        });
+                    }
+
                     if (searchTerm.value) {
                         const term = searchTerm.value.toLowerCase();
-                        filtered = filtered.filter(s =>
-                            s.buyer.toLowerCase().includes(term) ||
-                            s.id.toString().includes(term)
+                        filtered = filtered.filter(sale =>
+                            sale.buyer.toLowerCase().includes(term) ||
+                            sale.id.toString().includes(term) ||
+                            (sale.comment && sale.comment.toLowerCase().includes(term))
                         );
-                    }
-
-                    if (exactDate.value) {
-                        filtered = filtered.filter(s => s.date_of_insertion.startsWith(exactDate.value));
-                    }
-
-                    if (startDate.value) {
-                        filtered = filtered.filter(s => s.date_of_insertion >= startDate.value);
-                    }
-
-                    if (endDate.value) {
-                        filtered = filtered.filter(s => s.date_of_insertion <= endDate.value + ' 23:59:59');
                     }
 
                     filtered.sort((a, b) => {
                         if (sortBy.value === 'date') {
-                            return new Date(b.date_of_insertion) - new Date(a.date_of_insertion);
+                            const dateA = new Date(a.date_of_operation || a.date_of_insertion);
+                            const dateB = new Date(b.date_of_operation || b.date_of_insertion);
+                            return dateB - dateA;
                         } else if (sortBy.value === 'buyer') {
                             return a.buyer.localeCompare(b.buyer);
                         } else if (sortBy.value === 'total') {
@@ -1187,8 +1349,9 @@ if (!isset($_SESSION['user_id'])) {
                         return 0;
                     });
 
-                    filteredSales.value = filtered;
+                    // filteredSales.value = filtered; // Moved to computed property filteredSales
                     currentPage.value = 1;
+                    return filtered; // Return filtered data for computed property
                 };
 
                 const clearFilters = () => {
@@ -1198,6 +1361,7 @@ if (!isset($_SESSION['user_id'])) {
                     endDate.value = '';
                     sortBy.value = 'date';
                     currentPage.value = 1;
+                    applyFilters(); // Reapply filters to update the list
                 };
 
                 const filterClients = () => {
@@ -1310,8 +1474,9 @@ if (!isset($_SESSION['user_id'])) {
                     line.semi_bulk_price = parseFloat(product.semi_bulk_price);
                     line.bulk_price = parseFloat(product.bulk_price);
 
+                    // Set default price type to 'bulk_price' and update price accordingly
                     if (!line.priceType) {
-                        line.priceType = 'retail_price';
+                        line.priceType = 'bulk_price';
                     }
                     line.price = parseFloat(product[line.priceType]);
 
@@ -1334,12 +1499,12 @@ if (!isset($_SESSION['user_id'])) {
                         productSearchTerm: '',
                         showProductDropdown: false,
                         filteredProducts: products.value,
-                        priceType: 'retail_price',
+                        priceType: 'bulk_price',
                         retail_price: 0,
                         semi_bulk_price: 0,
                         bulk_price: 0,
-                        quantity: 1,
-                        price: 0,
+                        quantity: null, // Default to null for quantity
+                        price: null, // Default to null for price
                         total: 0,
                         availableStock: 0,
                         originalQuantity: 0
@@ -1377,13 +1542,13 @@ if (!isset($_SESSION['user_id'])) {
                     }
 
                     for (let line of saleForm.value.lines) {
-                        if (!line.product_id || !line.quantity || line.quantity <= 0) {
-                            alert('Veuillez vérifier que tous les produits ont une quantité valide');
+                        if (!line.product_id || line.quantity === null || line.quantity <= 0 || line.price === null || line.price <= 0) {
+                            alert('Veuillez vérifier que tous les produits ont une quantité et un prix valides');
                             return;
                         }
                     }
 
-                    showRecapModal.value = true;
+                    showConfirmModal.value = true; // Show the confirmation modal
                 };
 
                 const saveSale = async () => {
@@ -1394,6 +1559,7 @@ if (!isset($_SESSION['user_id'])) {
                         payment_method: saleForm.value.payment_method,
                         created_at: new Date().toISOString(),
                         date_of_operation: saleForm.value.date_of_operation,
+                        comment: saleForm.value.comment || null,
                         lines: saleForm.value.lines.map(line => ({
                             product: line.product_name,
                             product_id: line.product_id,
@@ -1418,7 +1584,7 @@ if (!isset($_SESSION['user_id'])) {
                         }
 
                         alert(isEditMode.value ? 'Vente modifiée avec succès!' : 'Nouvelle vente ajoutée avec succès!');
-                        showRecapModal.value = false;
+                        showConfirmModal.value = false; // Close confirmation modal after saving
                         closeSaleModal();
                         await fetchSales();
                         await fetchSalesProducts();
@@ -1532,7 +1698,8 @@ if (!isset($_SESSION['user_id'])) {
                                     ${sale.status === 'Annulé' ? '<div class="status-badge status-cancelled">❌ VENTE ANNULÉE</div>' : '<div class="status-badge status-done">✓ VENTE EFFECTUÉE</div>'}
                                 </div>
                                 <p><strong>Client:</strong> ${sale.buyer}</p>
-                                 <p><strong>Date:</strong> ${formatDate(sale.date_of_insertion)}</p>
+                                 <!-- Affichage de date_of_operation dans l'impression -->
+                                 <p><strong>Date:</strong> ${formatDate(sale.date_of_operation)}</p>
                                 <p><strong>Mode de paiement:</strong> ${sale.payment_method === 'cash' ? 'Cash' : 'Crédit'}</p>
                                 <table>
                                     <thead>
@@ -1617,12 +1784,12 @@ if (!isset($_SESSION['user_id'])) {
                                       <table class="min-w-full divide-y divide-gray-200 border">
     <thead class="bg-gray-50">
         <tr>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">N° Facture</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Client</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Date</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Qté Totale</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Articles</th>
-            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase border">Montant</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border">N° Facture</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border">Client</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border">Date</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border">Qté Totale</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border">Articles</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase border">Montant</th>
         </tr>
     </thead>
     <tbody class="bg-white divide-y divide-gray-200">
@@ -1635,7 +1802,7 @@ if (!isset($_SESSION['user_id'])) {
                     ${sale.buyer}
                 </td>
                 <td class="px-4 py-2 text-sm border" data-label="Date">
-                    ${formatDate(sale.date_of_insertion)}
+                    ${formatDate(sale.date_of_operation)}
                 </td>
                 <td class="px-4 py-2 text-sm border" data-label="Qté Totale">
                     ${calculateTotalProducts(sale)}
@@ -1680,6 +1847,59 @@ if (!isset($_SESSION['user_id'])) {
                     window.print();
                 };
 
+                const showClientProfile = async (sale) => {
+                    try {
+                        // Trouver le client par son nom
+                        const client = clients.value.find(c => c.name === sale.buyer);
+
+                        if (!client) {
+                            alert('Client introuvable');
+                            return;
+                        }
+
+                        // Récupérer toutes les ventes du client
+                        const clientSales = sales.value.filter(s => s.buyer === sale.buyer);
+
+                        // Récupérer toutes les créances du client
+                        const clientClaims = claims.value.filter(c => c.client_id === client.id);
+
+                        // Calculer la dette totale
+                        const totalDebt = clientClaims.reduce((sum, claim) => {
+                            return sum + parseFloat(claim.remaining || 0);
+                        }, 0);
+
+                        // Calculer le total des achats
+                        const totalSales = clientSales.reduce((sum, s) => {
+                            return sum + parseFloat(s.total || 0);
+                        }, 0);
+
+                        // Nombre de créances actives (avec montant restant > 0)
+                        const activeClaims = clientClaims.filter(c => parseFloat(c.remaining || 0) > 0).length;
+
+                        selectedClientProfile.value = {
+                            ...client,
+                            totalDebt,
+                            totalSales,
+                            activeClaims,
+                            salesCount: clientSales.length
+                        };
+
+                        clientProfileClaims.value = clientClaims.filter(c => parseFloat(c.remaining || 0) > 0);
+                        clientProfileSales.value = clientSales;
+                        showClientProfileModal.value = true;
+                    } catch (error) {
+                        console.error('Erreur lors du chargement du profil client:', error);
+                        alert('Erreur lors du chargement du profil client');
+                    }
+                };
+
+                const closeClientProfileModal = () => {
+                    showClientProfileModal.value = false;
+                    selectedClientProfile.value = null;
+                    clientProfileClaims.value = [];
+                    clientProfileSales.value = [];
+                };
+
                 const previousPage = () => {
                     if (currentPage.value > 1) {
                         currentPage.value--;
@@ -1715,11 +1935,22 @@ if (!isset($_SESSION['user_id'])) {
                 };
 
                 const calculateTotalProducts = (sale) => {
+                    // Use sale.lines directly for current sale calculations within sale form
+                    // and salesProducts for global calculations
+                    if (sale.lines) {
+                        return sale.lines.reduce((sum, line) => sum + parseFloat(line.quantity || 0), 0);
+                    }
+                    // Fallback for existing data structure if needed
                     const saleProducts = salesProducts.value.filter(product => product.sale_id === sale.id);
                     return saleProducts.reduce((sum, product) => sum + parseInt(product.quantity || 0), 0);
                 };
 
                 const calculateUniqueProducts = (sale) => {
+                    // Use sale.lines directly for current sale calculations
+                    if (sale.lines) {
+                        return sale.lines.length;
+                    }
+                    // Fallback for existing data structure if needed
                     const saleProducts = salesProducts.value.filter(product => product.sale_id === sale.id);
                     return saleProducts.length;
                 };
@@ -1734,24 +1965,24 @@ if (!isset($_SESSION['user_id'])) {
 
                     if (exactDate.value) {
                         filtered = filtered.filter(sale => {
-                            const saleDate = sale.date_of_insertion.split(' ')[0];
+                            const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
                             return saleDate === exactDate.value;
                         });
                     }
 
                     if (startDate.value && endDate.value) {
                         filtered = filtered.filter(sale => {
-                            const saleDate = sale.date_of_insertion.split(' ')[0];
+                            const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
                             return saleDate >= startDate.value && saleDate <= endDate.value;
                         });
                     } else if (startDate.value) {
                         filtered = filtered.filter(sale => {
-                            const saleDate = sale.date_of_insertion.split(' ')[0];
+                            const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
                             return saleDate >= startDate.value;
                         });
                     } else if (endDate.value) {
                         filtered = filtered.filter(sale => {
-                            const saleDate = sale.date_of_insertion.split(' ')[0];
+                            const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
                             return saleDate <= endDate.value;
                         });
                     }
@@ -1760,7 +1991,8 @@ if (!isset($_SESSION['user_id'])) {
                         const term = searchTerm.value.toLowerCase();
                         filtered = filtered.filter(sale =>
                             sale.buyer.toLowerCase().includes(term) ||
-                            sale.id.toString().includes(term)
+                            sale.id.toString().includes(term) ||
+                            (sale.comment && sale.comment.toLowerCase().includes(term))
                         );
                     }
 
@@ -1768,7 +2000,9 @@ if (!isset($_SESSION['user_id'])) {
                     filtered.sort((a, b) => {
                         switch (sortBy.value) {
                             case 'date':
-                                return new Date(b.date_of_insertion) - new Date(a.date_of_insertion);
+                                const dateA = new Date(a.date_of_operation || a.date_of_insertion);
+                                const dateB = new Date(b.date_of_operation || b.date_of_insertion);
+                                return dateB - dateA;
                             case 'buyer':
                                 return a.buyer.localeCompare(b.buyer);
                             case 'total':
@@ -1827,22 +2061,26 @@ if (!isset($_SESSION['user_id'])) {
 
                 const totalProductsCount = computed(() => {
                     return filteredSales.value.reduce((sum, sale) => {
-                        const saleProducts = salesProducts.value.filter(product => product.sale_id === sale.id);
-                        return sum + saleProducts.reduce((itemSum, product) => itemSum + parseFloat(product.quantity || 0), 0);
+                        // Use the sale.lines if available (for new format), otherwise fallback
+                        const saleLines = sale.lines || (salesProducts.value.filter(product => product.sale_id === sale.id));
+                        const quantities = saleLines.map(item => parseFloat(item.quantity || 0));
+                        return sum + quantities.reduce((itemSum, quantity) => itemSum + quantity, 0);
                     }, 0);
                 });
 
+
                 const totalUniqueProducts = computed(() => {
                     return filteredSales.value.reduce((sum, sale) => {
-                        const saleProducts = salesProducts.value.filter(product => product.sale_id === sale.id);
-                        return sum + saleProducts.length;
+                        // Use the sale.lines if available (for new format), otherwise fallback
+                        const saleLines = sale.lines || (salesProducts.value.filter(product => product.sale_id === sale.id));
+                        return sum + saleLines.length;
                     }, 0);
                 });
 
                 const todaySales = computed(() => {
                     const today = new Date().toISOString().split('T')[0];
                     return sales.value.filter(sale => {
-                        const saleDate = sale.date_of_insertion.split(' ')[0];
+                        const saleDate = sale.date_of_operation ? sale.date_of_operation.split(' ')[0] : sale.date_of_insertion.split(' ')[0];
                         return saleDate === today;
                     });
                 });
@@ -1857,15 +2095,18 @@ if (!isset($_SESSION['user_id'])) {
 
                 const todayTotalProductsCount = computed(() => {
                     return todaySales.value.reduce((sum, sale) => {
-                        const saleProducts = salesProducts.value.filter(product => product.sale_id === sale.id);
-                        return sum + saleProducts.reduce((itemSum, product) => itemSum + parseFloat(product.quantity || 0), 0);
+                        // Use sale.lines if available
+                        const saleLines = sale.lines || (salesProducts.value.filter(product => product.sale_id === sale.id));
+                        return sum + saleLines.reduce((itemSum, line) => itemSum + parseFloat(line.quantity || 0), 0);
                     }, 0);
                 });
 
+
                 const todayTotalUniqueProducts = computed(() => {
                     return todaySales.value.reduce((sum, sale) => {
-                        const saleProducts = salesProducts.value.filter(product => product.sale_id === sale.id);
-                        return sum + saleProducts.length;
+                        // Use sale.lines if available
+                        const saleLines = sale.lines || (salesProducts.value.filter(product => product.sale_id === sale.id));
+                        return sum + saleLines.length;
                     }, 0);
                 });
 
@@ -1887,9 +2128,8 @@ if (!isset($_SESSION['user_id'])) {
                     return saleForm.value.lines.reduce((sum, line) => sum + (parseFloat(line.quantity) || 0), 0);
                 });
 
-                // Added computed for total products and unique products in the form
                 const totalProductsInForm = computed(() => {
-                    return saleForm.value.lines.reduce((sum, line) => sum + (line.quantity || 0), 0);
+                    return saleForm.value.lines.reduce((sum, line) => sum + (parseFloat(line.quantity) || 0), 0);
                 });
 
                 const uniqueProductsInForm = computed(() => {
@@ -1898,6 +2138,14 @@ if (!isset($_SESSION['user_id'])) {
 
                 const totalAmount = computed(() => {
                     return saleForm.value.lines.reduce((sum, line) => sum + (line.total || 0), 0);
+                });
+
+                const totalAmountBeforeTax = computed(() => {
+                    return totalAmount.value; // Can be modified if taxes are added later
+                });
+
+                const totalItemsCount = computed(() => {
+                    return saleForm.value.lines.reduce((sum, line) => sum + (parseFloat(line.quantity) || 0), 0);
                 });
 
                 const selectedSaleTotal = computed(() => {
@@ -1916,6 +2164,7 @@ if (!isset($_SESSION['user_id'])) {
                     fetchSalesProducts();
                     fetchProducts();
                     fetchClients();
+                    fetchClaims(); // Ajout du fetch des créances
 
                     document.addEventListener('click', (e) => {
                         if (!e.target.closest('.relative')) {
@@ -1937,6 +2186,7 @@ if (!isset($_SESSION['user_id'])) {
                     salesProducts,
                     products,
                     clients,
+                    claims, // Ajout de claims
                     currentSale,
                     filteredClients,
                     searchTerm,
@@ -1961,15 +2211,18 @@ if (!isset($_SESSION['user_id'])) {
                     isEditMode,
                     editingSaleId,
                     showPrintListModal,
-                    showConfirmModal, // Added for the new confirmation modal
-                    showAllFilters, // State for toggling filters
-                    toggleFilters, // Function to toggle filters
+                    showConfirmModal,
+                    showAllFilters,
+                    showClientProfile,
+                    closeClientProfileModal,
+                    toggleFilters,
                     downloadInvoice,
                     downloadSalesList,
                     fetchSalesProducts,
                     fetchSales,
                     fetchProducts,
                     fetchClients,
+                    fetchClaims, // Ajout de la méthode
                     editSale,
                     openNewSaleModal,
                     closeSaleModal,
@@ -1996,6 +2249,8 @@ if (!isset($_SESSION['user_id'])) {
                     printSalesList,
                     closePrintListModal,
                     printListNow,
+                    showClientProfile,
+                    closeClientProfileModal,
                     previousPage,
                     nextPage,
                     goToPage,
@@ -2027,6 +2282,8 @@ if (!isset($_SESSION['user_id'])) {
                     totalProductsInForm,
                     uniqueProductsInForm,
                     totalAmount,
+                    totalAmountBeforeTax, // Added for confirmation modal
+                    totalItemsCount, // Added for confirmation modal
                     selectedSaleTotal,
                     selectedSaleTotalQuantity
                 };
