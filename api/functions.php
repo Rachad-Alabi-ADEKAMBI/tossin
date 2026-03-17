@@ -1027,8 +1027,24 @@ function newOrder()
 {
     global $pdo;
 
-    // Lire les données JSON envoyées par Axios
-    $data = json_decode(file_get_contents("php://input"), true);
+    header('Content-Type: application/json');
+
+    // Lire les données JSON envoyées
+    $rawInput = file_get_contents("php://input");
+    $data = json_decode($rawInput, true);
+
+    // DEBUG (optionnel)
+    // file_put_contents('debug.log', $rawInput . PHP_EOL, FILE_APPEND);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'JSON invalide',
+            'error' => json_last_error_msg()
+        ]);
+        return;
+    }
 
     if (
         !$data ||
@@ -1038,22 +1054,23 @@ function newOrder()
         empty($data['currency']) ||
         empty($data['status'])
     ) {
+        http_response_code(422);
         echo json_encode([
             'success' => false,
-            'message' => 'Champs obligatoires manquants : seller, total, status, currency ou lines'
+            'message' => 'Champs obligatoires manquants',
+            'received' => $data
         ]);
         return;
     }
 
     try {
-        // Démarrer une transaction
         $pdo->beginTransaction();
 
-        // Insérer la commande dans la table orders
         $stmt = $pdo->prepare("
             INSERT INTO orders (date_of_insertion, seller, total, status, currency) 
             VALUES (NOW(), :seller, :total, :status, :currency)
         ");
+
         $stmt->execute([
             ':seller'   => $data['seller'],
             ':total'    => $data['total'],
@@ -1061,43 +1078,59 @@ function newOrder()
             ':currency' => $data['currency']
         ]);
 
-        // Récupérer l'ID de la commande nouvellement insérée
         $orderId = $pdo->lastInsertId();
 
-        // Insérer chaque produit de la commande dans la table products
         $stmtProduct = $pdo->prepare("
             INSERT INTO orders_products (date_of_insertion, name, quantity, price, order_id) 
             VALUES (NOW(), :name, :quantity, :price, :order_id)
         ");
 
-        foreach ($data['lines'] as $line) {
+        foreach ($data['lines'] as $index => $line) {
+
+            // Validation robuste
+            if (
+                !isset($line['name']) || trim($line['name']) === '' ||
+                !isset($line['quantity']) || !is_numeric($line['quantity']) || $line['quantity'] <= 0 ||
+                !isset($line['price']) || !is_numeric($line['price']) || $line['price'] < 0
+            ) {
+                throw new Exception("Ligne invalide à l'index $index");
+            }
+
             $stmtProduct->execute([
-                ':name'     => $line['product'],
+                ':name'     => $line['name'],
                 ':quantity' => $line['quantity'],
                 ':price'    => $line['price'],
                 ':order_id' => $orderId
             ]);
         }
 
-        // Valider la transaction
         $pdo->commit();
 
+        http_response_code(201);
         echo json_encode([
             'success' => true,
-            'message' => 'Commande et produits insérés avec succès',
+            'message' => 'Commande créée',
             'order_id' => $orderId
         ]);
-    } catch (Exception $e) {
-        // Annuler en cas d'erreur
-        $pdo->rollBack();
 
+    } catch (Exception $e) {
+
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+
+        // DEBUG (optionnel)
+        file_put_contents('error.log', $e->getMessage() . PHP_EOL, FILE_APPEND);
+
+        http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Erreur lors de l\'insertion: ' . $e->getMessage()
+            'message' => 'Erreur serveur',
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString() // à retirer en production
         ]);
     }
 }
-
 
 // Nouvelle vente
 function newSale()
