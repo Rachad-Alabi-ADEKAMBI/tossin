@@ -158,7 +158,7 @@
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" v-cloak>
         <div class="bg-gray-50 min-h-screen">
             <?php include 'sidebar.php'; ?>
 
@@ -166,25 +166,25 @@
                 <header class="bg-white shadow-sm border-b">
                     <div class="px-6 py-4">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-                            <h1 class="text-2xl font-bold text-gray-900">
+                            <h1 class="text-3xl font-bold text-gray-900">
                                 <i class="fas fa-file-invoice mr-2"></i>Gestion des Ventes
                             </h1>
                             <div class="flex flex-wrap gap-2">
                                 <!-- Ajout du bouton Télécharger à côté de l'impression générale -->
                                 <button @click="printSalesList" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm">
-                                    <i class="fas fa-print mr-2"></i>Imprimer Liste
-                                </button>
-                                <button @click="window.location.reload()"
-                                    class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center shadow-sm">
-                                    <i class="fas fa-rotate-right mr-2"></i>Recharger la page
+                                    <i class="fas fa-print mr-2"></i>Imprimer
                                 </button>
                                 <button @click="openNewSaleModal" class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center shadow-md font-bold">
-                                    <i class="fas fa-plus mr-2"></i>Nouvelle vente
+                                    <i class="fas fa-plus mr-2"></i>Vendre
                                 </button>
                             </div>
+                            <div class="hidden lg:flex items-center space-x-1 text-sm text-gray-500 border-l pl-3 ml-3">
+                                <i class="fas fa-user-circle"></i>
+                                <span class="font-medium"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin') ?></span>
+                                <span class="text-xs text-gray-400">· Admin</span>
+                            </div>
                         </div>
-                    </div>
-                </header>
+                    </header>
 
                 <div class="p-6">
                     <!-- Filters Section -->
@@ -241,20 +241,19 @@
                         </div>
                     </div>
 
-                    <!-- Updated statistics: removed average sale, added product count stats -->
-                    <!-- Updated statistics to show only today's sales in the summary -->
+                    <!-- Chiffre d'affaires du jour et de la veille -->
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
                         <h3 class="text-sm font-semibold text-gray-600 mb-3">
-                            <i class="fas fa-calendar-day mr-2"></i>Statistiques du jour ({{ formatDate(new Date()) }})
+                            <i class="fas fa-chart-line mr-2"></i>Aperçu chiffre d'affaires
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
                             <div class="bg-green-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">Total des ventes</p>
-                                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(todayTotalSales, 'FCFA') }}</p>
+                                <p class="text-sm text-gray-600 mb-1">Chiffre d'affaires du jour</p>
+                                <p class="text-base md:text-2xl font-bold text-green-600">{{ formatCurrency(todayTotalSales, 'FCFA') }}</p>
                             </div>
                             <div class="bg-blue-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">Nombre de ventes</p>
-                                <p class="text-2xl font-bold text-blue-600">{{ todaySalesCount }}</p>
+                                <p class="text-sm text-gray-600 mb-1">Chiffre d'affaires de la veille</p>
+                                <p class="text-base md:text-2xl font-bold text-blue-600">{{ formatCurrency(yesterdayTotal, 'FCFA') }}</p>
                             </div>
                         </div>
                     </div>
@@ -566,7 +565,7 @@
                                     </div>
                                     <div class="flex justify-between items-center">
                                         <span class="text-lg font-semibold text-gray-900">Montant total:</span>
-                                        <span class="text-2xl font-bold text-green-600">{{ formatCurrency(saleTotal) }}</span>
+                                        <span class="text-base md:text-2xl font-bold text-green-600">{{ formatCurrency(saleTotal) }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -578,7 +577,7 @@
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm text-gray-600">Total général</p>
-                                    <p class="text-2xl font-bold text-green-600">{{ Math.round(totalAmount) }} FCFA</p>
+                                    <p class="text-base md:text-2xl font-bold text-green-600">{{ Math.round(totalAmount) }} FCFA</p>
                                 </div>
                             </div>
 
@@ -707,7 +706,7 @@
                                 </div>
                                 <div class="flex justify-between items-center">
                                     <span class="text-lg font-semibold text-gray-900">Total de la vente:</span>
-                                    <span class="text-2xl font-bold text-green-600">{{ formatCurrency(selectedSaleTotal, selectedSale.currency) }}</span>
+                                    <span class="text-base md:text-2xl font-bold text-green-600">{{ formatCurrency(selectedSaleTotal, selectedSale.currency) }}</span>
                                 </div>
                             </div>
 
@@ -824,7 +823,7 @@
                         <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
                             <i class="fas fa-shopping-cart text-3xl"></i>
                         </div>
-                        <h3 class="text-2xl font-bold text-gray-900">Confirmer la vente</h3>
+                        <h3 class="text-base md:text-2xl font-bold text-gray-900">Confirmer la vente</h3>
                         <p class="text-gray-600 mt-2">Vérifiez les détails avant de valider</p>
                     </div>
 
@@ -857,7 +856,7 @@
                             <!-- Total à payer en évidence -->
                             <div class="flex justify-between items-center bg-green-100 p-3 rounded-lg">
                                 <span class="text-lg font-bold text-gray-900">Total à payer</span>
-                                <span class="text-2xl font-bold text-green-600">{{ formatCurrency(totalAmount) }}</span>
+                                <span class="text-base md:text-2xl font-bold text-green-600">{{ formatCurrency(totalAmount) }}</span>
                             </div>
 
                             <!-- Nombre total d'articles -->
@@ -1107,6 +1106,7 @@
                 const selectedClientProfile = ref(null);
                 const clientProfileClaims = ref([]);
                 const clientProfileSales = ref([]);
+                const yesterdayTotal = ref(0);
 
                 const toggleFilters = () => {
                     showAllFilters.value = !showAllFilters.value;
@@ -1192,6 +1192,17 @@
                         claims.value = response.data;
                     } catch (error) {
                         console.error('Erreur lors de la récupération des créances:', error);
+                    }
+                };
+
+                const fetchDashboardStats = async () => {
+                    try {
+                        const response = await api.get('?action=dashboardStats');
+                        if (response.data.success) {
+                            yesterdayTotal.value = response.data.yesterdayTotal;
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors de la récupération des stats:', error);
                     }
                 };
 
@@ -2164,7 +2175,8 @@
                     fetchSalesProducts();
                     fetchProducts();
                     fetchClients();
-                    fetchClaims(); // Ajout du fetch des créances
+                    fetchClaims();
+                    fetchDashboardStats();
 
                     document.addEventListener('click', (e) => {
                         if (!e.target.closest('.relative')) {
@@ -2222,7 +2234,8 @@
                     fetchSales,
                     fetchProducts,
                     fetchClients,
-                    fetchClaims, // Ajout de la méthode
+                    fetchClaims,
+                    fetchDashboardStats,
                     editSale,
                     openNewSaleModal,
                     closeSaleModal,
@@ -2273,6 +2286,7 @@
                     todaySales,
                     todayTotalSales,
                     todaySalesCount,
+                    yesterdayTotal,
                     todayTotalProductsCount,
                     todayTotalUniqueProducts,
                     currentSaleTotalProducts,

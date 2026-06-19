@@ -2436,6 +2436,189 @@ function login($data)
     }
 }
 
+function getFinancialReport()
+{
+    global $pdo;
+
+    $period = $_GET['period'] ?? 'this_month';
+    $startDate = $_GET['start_date'] ?? null;
+    $endDate = $_GET['end_date'] ?? null;
+
+    switch ($period) {
+        case 'today':
+            $start = date('Y-m-d');
+            $end = date('Y-m-d');
+            break;
+        case 'yesterday':
+            $start = date('Y-m-d', strtotime('-1 day'));
+            $end = $start;
+            break;
+        case 'this_week':
+            $start = date('Y-m-d', strtotime('monday this week'));
+            $end = date('Y-m-d');
+            break;
+        case 'last_month':
+            $start = date('Y-m-01', strtotime('-1 month'));
+            $end = date('Y-m-t', strtotime('-1 month'));
+            break;
+        case 'this_quarter':
+            $month = date('n');
+            $qStart = ceil($month / 3) * 3 - 2;
+            $start = date('Y-' . str_pad($qStart, 2, '0', STR_PAD_LEFT) . '-01');
+            $end = date('Y-m-d');
+            break;
+        case 'this_year':
+            $start = date('Y-01-01');
+            $end = date('Y-m-d');
+            break;
+        case 'custom':
+            $start = $startDate ?: date('Y-m-01');
+            $end = $endDate ?: date('Y-m-d');
+            break;
+        default:
+            $start = date('Y-m-01');
+            $end = date('Y-m-d');
+    }
+
+    // Ventes de la période (non annulées)
+    $salesStmt = $pdo->prepare("
+        SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
+        FROM sales
+        WHERE DATE(date_of_insertion) BETWEEN :start AND :end
+          AND (status IS NULL OR status != 'annulé')
+    ");
+    $salesStmt->execute([':start' => $start, ':end' => $end]);
+    $salesData = $salesStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Ventes par méthode de paiement
+    $salesByMethod = $pdo->prepare("
+        SELECT COALESCE(payment_method, 'non spécifié') AS method, COALESCE(SUM(total), 0) AS total, COUNT(*) AS count
+        FROM sales
+        WHERE DATE(date_of_insertion) BETWEEN :start AND :end
+          AND (status IS NULL OR status != 'annulé')
+        GROUP BY method
+        ORDER BY total DESC
+    ");
+    $salesByMethod->execute([':start' => $start, ':end' => $end]);
+
+    // Dépenses de la période
+    $expensesStmt = $pdo->prepare("
+        SELECT COUNT(*) AS count, COALESCE(SUM(amount), 0) AS total
+        FROM expenses
+        WHERE DATE(created_at) BETWEEN :start AND :end
+    ");
+    $expensesStmt->execute([':start' => $start, ':end' => $end]);
+    $expensesData = $expensesStmt->fetch(PDO::FETCH_ASSOC);
+
+    // Dépenses par catégorie
+    $expensesByCategory = $pdo->prepare("
+        SELECT category, COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
+        FROM expenses
+        WHERE DATE(created_at) BETWEEN :start AND :end
+        GROUP BY category
+        ORDER BY total DESC
+    ");
+    $expensesByCategory->execute([':start' => $start, ':end' => $end]);
+
+    // COGS estimé (quantité vendue × prix d'achat actuel du produit)
+    $cogsStmt = $pdo->prepare("
+        SELECT COALESCE(SUM(sp.quantity * p.buying_price), 0) AS total
+        FROM sales_products sp
+        JOIN sales s ON s.id = sp.sale_id
+        LEFT JOIN products p ON p.name = sp.name
+        WHERE DATE(s.date_of_insertion) BETWEEN :start AND :end
+          AND (s.status IS NULL OR s.status != 'annulé')
+    ");
+    $cogsStmt->execute([':start' => $start, ':end' => $end]);
+    $cogs = (float) $cogsStmt->fetchColumn();
+
+    // Top produits vendus
+    $topProducts = $pdo->prepare("
+        SELECT sp.name, SUM(sp.quantity) AS qty, SUM(sp.quantity * sp.price) AS total
+        FROM sales_products sp
+        JOIN sales s ON s.id = sp.sale_id
+        WHERE DATE(s.date_of_insertion) BETWEEN :start AND :end
+          AND (s.status IS NULL OR s.status != 'annulé')
+        GROUP BY sp.name
+        ORDER BY total DESC
+        LIMIT 10
+    ");
+    $topProducts->execute([':start' => $start, ':end' => $end]);
+
+    // Valeur du stock actuel
+    $stockValue = $pdo->query("
+        SELECT COALESCE(SUM(quantity * buying_price), 0) FROM products
+    ")->fetchColumn();
+
+    // Créances totales impayées
+    $receivables = $pdo->query("
+        SELECT COALESCE(SUM(c.amount - COALESCE((SELECT SUM(amount) FROM claims_payments WHERE claim_id = c.id), 0)), 0)
+        FROM claims c
+        WHERE c.status = 'actif'
+    ")->fetchColumn();
+
+    $revenue = (float) $salesData['total'];
+    $expenses = (float) $expensesData['total'];
+    $grossProfit = $revenue - $cogs;
+    $netProfit = $grossProfit - $expenses;
+
+    echo json_encode([
+        'success' => true,
+        'period' => ['start' => $start, 'end' => $end, 'label' => $period],
+        'revenue' => $revenue,
+        'salesCount' => (int) $salesData['count'],
+        'cogs' => $cogs,
+        'grossProfit' => $grossProfit,
+        'expenses' => $expenses,
+        'expensesCount' => (int) $expensesData['count'],
+        'netProfit' => $netProfit,
+        'stockValue' => (float) $stockValue,
+        'receivables' => (float) $receivables,
+        'salesByMethod' => $salesByMethod->fetchAll(PDO::FETCH_ASSOC),
+        'expensesByCategory' => $expensesByCategory->fetchAll(PDO::FETCH_ASSOC),
+        'topProducts' => $topProducts->fetchAll(PDO::FETCH_ASSOC),
+    ]);
+}
+
+function getDashboardStats()
+{
+    global $pdo;
+
+    $todaySales = $pdo->query("
+        SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
+        FROM sales
+        WHERE DATE(date_of_insertion) = CURDATE() AND (status IS NULL OR status != 'annulé')
+    ")->fetch(PDO::FETCH_ASSOC);
+
+    $yesterdayTotal = $pdo->query("
+        SELECT COALESCE(SUM(total), 0)
+        FROM sales
+        WHERE DATE(date_of_insertion) = CURDATE() - INTERVAL 1 DAY AND (status IS NULL OR status != 'annulé')
+    ")->fetchColumn();
+
+    $claimsDueSoon = $pdo->query("
+        SELECT COUNT(*)
+        FROM claims
+        WHERE due_date BETWEEN CURDATE() AND CURDATE() + INTERVAL 3 DAY
+          AND (status IS NULL OR LOWER(status) = 'actif')
+    ")->fetchColumn();
+
+    $lowStockCount = $pdo->query("
+        SELECT COUNT(*)
+        FROM products
+        WHERE quantity < 20
+    ")->fetchColumn();
+
+    echo json_encode([
+        'success' => true,
+        'todaySalesCount' => (int) $todaySales['count'],
+        'todaySalesTotal' => (float) $todaySales['total'],
+        'yesterdayTotal'  => (float) $yesterdayTotal,
+        'claimsDueSoon'   => (int) $claimsDueSoon,
+        'lowStockCount'   => (int) $lowStockCount,
+    ]);
+}
+
 // logout
 function logout()
 {

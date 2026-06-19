@@ -196,7 +196,7 @@
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" v-cloak>
         <div class="bg-gray-50 min-h-screen">
             <?php include 'sidebar.php'; ?>
 
@@ -204,24 +204,38 @@
                 <header class="bg-white shadow-sm border-b">
                     <div class="px-6 py-4">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-                            <h1 class="text-2xl font-bold text-gray-900">Gestion des Commandes</h1>
+                            <h1 class="text-3xl font-bold text-gray-900">Gestion des Commandes</h1>
                             <button @click="openNewOrderModal"
                                 class="bg-accent hover:bg-yellow-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center">
                                 <i class="fas fa-plus mr-2"></i>Nouvelle commande
                             </button>
+                            <div class="hidden lg:flex items-center space-x-1 text-sm text-gray-500 border-l pl-3 ml-3">
+                                <i class="fas fa-user-circle"></i>
+                                <span class="font-medium"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin') ?></span>
+                                <span class="text-xs text-gray-400">· Admin</span>
+                            </div>
                         </div>
                     </div>
                 </header>
 
                 <div class="p-6">
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">
+                                <i class="fas fa-filter mr-2"></i>Filtres
+                            </h2>
+                            <button @click="toggleFilters" class="md:hidden text-primary font-medium flex items-center">
+                                <span>{{ showAllFilters ? 'Masquer les options' : "Plus d'options" }}</span>
+                                <i :class="['fas ml-2', showAllFilters ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                            </button>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
                                 <input v-model="searchTerm" @input="applyFilters" type="text" placeholder="N° commande ou fournisseur..."
                                     class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
-                            <div>
+                            <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
                                 <select v-model="statusFilter" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                     <option value="all">Tous</option>
@@ -230,7 +244,7 @@
                                     <option value="Livrée">Livrée</option>
                                 </select>
                             </div>
-                            <div class="flex items-end">
+                            <div :class="['md:block flex items-end', showAllFilters ? 'block' : 'hidden']">
                                 <button @click="applyFilters" class="w-full bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors">
                                     <i class="fas fa-filter mr-2"></i>Filtrer
                                 </button>
@@ -1041,6 +1055,7 @@
                     loading: false,
                     orders: [],
                     filteredOrders: [],
+                    showAllFilters: false,
                     searchTerm: '',
                     statusFilter: 'all',
                     currentPage: 1,
@@ -1137,6 +1152,9 @@
                 }
             },
             methods: {
+                toggleFilters() {
+                    this.showAllFilters = !this.showAllFilters;
+                },
                 async loadOrders() {
                     this.loading = true;
                     try {
@@ -1209,8 +1227,8 @@
                 },
                 formatCurrency(amount, currency = 'N') {
                     const formatted = new Intl.NumberFormat('fr-FR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
                     }).format(amount);
                     return `${formatted} ${currency}`;
                 },

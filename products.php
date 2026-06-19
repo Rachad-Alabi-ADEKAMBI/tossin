@@ -296,7 +296,7 @@ if (!isset($_SESSION['user_id'])) {
 
 <body>
 
-    <div id="app">
+    <div id="app" v-cloak>
 
         <div class="bg-gray-50 min-h-screen">
 
@@ -312,7 +312,7 @@ if (!isset($_SESSION['user_id'])) {
 
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
 
-                            <h1 class="text-2xl font-bold text-gray-900">
+                            <h1 class="text-3xl font-bold text-gray-900">
 
                                 <i class="fas fa-box-open mr-2"></i>Gestion des Produits
 
@@ -335,14 +335,16 @@ if (!isset($_SESSION['user_id'])) {
                                 </button>
 
                             </div>
-
+                            <div class="hidden lg:flex items-center space-x-1 text-sm text-gray-500 border-l pl-3 ml-3">
+                                <i class="fas fa-user-circle"></i>
+                                <span class="font-medium"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin') ?></span>
+                                <span class="text-xs text-gray-400">· Admin</span>
+                            </div>
                         </div>
 
                     </div>
 
                 </header>
-
-
 
                 <div class="p-6">
 
@@ -350,108 +352,68 @@ if (!isset($_SESSION['user_id'])) {
 
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
 
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div class="bg-blue-50 p-4 rounded-lg">
-
                                 <p class="text-sm text-gray-600 mb-1">Total produits</p>
-
-                                <p class="text-2xl font-bold text-blue-600">{{ products.length }}</p>
-
+                                <p class="text-base md:text-2xl font-bold text-blue-600">{{ products.length }}</p>
                             </div>
-
                             <div class="bg-green-50 p-4 rounded-lg">
-
                                 <p class="text-sm text-gray-600 mb-1">Valeur du stock</p>
-
-                                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalStockValue) }}</p>
-
+                                <p class="text-base md:text-2xl font-bold text-green-600">{{ formatCurrency(totalStockValue) }}</p>
                             </div>
-
                             <div class="bg-yellow-50 p-4 rounded-lg">
-
                                 <p class="text-sm text-gray-600 mb-1">Stock faible</p>
-
-                                <p class="text-2xl font-bold text-yellow-600">{{ lowStockCount }}</p>
-
+                                <p class="text-base md:text-2xl font-bold text-yellow-600">{{ lowStockCount }}</p>
                             </div>
-
                             <div class="bg-purple-50 p-4 rounded-lg">
-
                                 <p class="text-sm text-gray-600 mb-1">Total quantité</p>
-
-                                <p class="text-2xl font-bold text-purple-600">{{ formatNumber(totalQuantity) }}</p>
-
+                                <p class="text-base md:text-2xl font-bold text-purple-600">{{ formatNumber(totalQuantity) }}</p>
                             </div>
-
                         </div>
 
                     </div>
 
 
 
-                    <!-- Filtres -->
-
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-                            <div>
-
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
-
-                                <input v-model="searchTerm" @input="applyFilters" type="text" placeholder="Nom du produit, ID..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-
-                            </div>
-
-                            <div>
-
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
-
-                                <select v-model="sortBy" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-
-                                    <option value="name">Nom</option>
-
-                                    <option value="quantity">Quantité</option>
-
-                                    <option value="price">Prix</option>
-
-                                    <option value="date">Date</option>
-
-                                </select>
-
-                            </div>
-
-                            <div>
-
-                                <label class="block text-sm font-medium text-gray-700 mb-2">État du stock</label>
-
-                                <select v-model="stockFilter" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-
-                                    <option value="all">Tous</option>
-
-                                    <option value="low">Stock faible (&lt;20)</option>
-
-                                    <option value="medium">Stock moyen (20-100)</option>
-
-                                    <option value="good">Stock bon (&gt;100)</option>
-
-                                </select>
-
-                            </div>
-
-                            <div class="flex items-end">
-
-                                <button @click="applyFilters" class="w-full bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors">
-
-                                    <i class="fas fa-filter mr-2"></i>Filtrer
-
-                                </button>
-
-                            </div>
-
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">
+                                <i class="fas fa-filter mr-2"></i>Filtres
+                            </h2>
+                            <button @click="toggleFilters" class="md:hidden text-primary font-medium flex items-center">
+                                <span>{{ showAllFilters ? 'Masquer les options' : "Plus d'options" }}</span>
+                                <i :class="['fas ml-2', showAllFilters ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                            </button>
                         </div>
-
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
+                                <input v-model="searchTerm" @input="applyFilters" type="text" placeholder="Nom du produit, ID..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
+                                <select v-model="sortBy" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="name">Nom</option>
+                                    <option value="quantity">Quantité</option>
+                                    <option value="price">Prix</option>
+                                    <option value="date">Date</option>
+                                </select>
+                            </div>
+                            <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">État du stock</label>
+                                <select v-model="stockFilter" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="all">Tous</option>
+                                    <option value="low">Stock faible (&lt;20)</option>
+                                    <option value="medium">Stock moyen (20-100)</option>
+                                    <option value="good">Stock bon (&gt;100)</option>
+                                </select>
+                            </div>
+                            <div :class="['md:block flex items-end', showAllFilters ? 'block' : 'hidden']">
+                                <button @click="applyFilters" class="w-full bg-primary hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors">
+                                    <i class="fas fa-filter mr-2"></i>Filtrer
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
 
@@ -854,7 +816,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                 <p class="text-sm text-gray-600 mt-2">Stock actuel</p>
 
-                                <p class="text-2xl font-bold text-blue-600">{{ formatNumber(selectedProduct?.quantity) }}</p>
+                                <p class="text-base md:text-2xl font-bold text-blue-600">{{ formatNumber(selectedProduct?.quantity) }}</p>
 
                             </div>
 
@@ -996,7 +958,7 @@ if (!isset($_SESSION['user_id'])) {
 
                             <p class="text-sm text-gray-600 mt-2">Stock actuel</p>
 
-                            <p class="text-2xl font-bold text-blue-600">{{ formatNumber(selectedProduct?.quantity) }} unités</p>
+                            <p class="text-base md:text-2xl font-bold text-blue-600">{{ formatNumber(selectedProduct?.quantity) }} unités</p>
 
                         </div>
 
@@ -1374,6 +1336,7 @@ if (!isset($_SESSION['user_id'])) {
 
                     products: [],
 
+                    showAllFilters: false,
                     filteredProducts: [],
 
                     history: [],
@@ -1533,6 +1496,9 @@ if (!isset($_SESSION['user_id'])) {
 
             methods: {
 
+                toggleFilters() {
+                    this.showAllFilters = !this.showAllFilters;
+                },
                 loadProducts() {
 
                     api.get('?action=allProducts')

@@ -224,6 +224,14 @@ switch ($action) {
         logout();
         break;
 
+    case 'dashboardStats':
+        getDashboardStats();
+        break;
+
+    case 'financialReport':
+        getFinancialReport();
+        break;
+
     default:
         echo json_encode(['error' => 'Action non reconnue']);
         break;

@@ -128,7 +128,7 @@ if (!isset($_SESSION['user_id'])) {
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" v-cloak>
         <div class="bg-gray-50 min-h-screen">
             <?php include 'sidebar.php'; ?>
 
@@ -136,7 +136,7 @@ if (!isset($_SESSION['user_id'])) {
                 <header class="bg-white shadow-sm border-b">
                     <div class="px-6 py-4">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-                            <h1 class="text-2xl font-bold text-gray-900">Gestion des Dépenses</h1>
+                            <h1 class="text-3xl font-bold text-gray-900">Gestion des Dépenses</h1>
                             <div class="flex space-x-3">
                                 <button @click="printExpensesList" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
                                     <i class="fas fa-print mr-2"></i>Imprimer
@@ -146,19 +146,32 @@ if (!isset($_SESSION['user_id'])) {
                                     <i class="fas fa-plus mr-2"></i>Nouvelle dépense
                                 </button>
                             </div>
+                            <div class="hidden lg:flex items-center space-x-1 text-sm text-gray-500 border-l pl-3 ml-3">
+                                <i class="fas fa-user-circle"></i>
+                                <span class="font-medium"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin') ?></span>
+                                <span class="text-xs text-gray-400">· Admin</span>
+                            </div>
                         </div>
                     </div>
                 </header>
 
                 <div class="p-6">
-                    <!-- Updated filters section: removed currency, added category and date filters -->
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">
+                                <i class="fas fa-filter mr-2"></i>Filtres
+                            </h2>
+                            <button @click="toggleFilters" class="md:hidden text-primary font-medium flex items-center">
+                                <span>{{ showAllFilters ? 'Masquer les options' : "Plus d'options" }}</span>
+                                <i :class="['fas ml-2', showAllFilters ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                            </button>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
                                 <input v-model="searchTerm" @input="applyFilters" type="text" placeholder="Nom de la dépense..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
-                            <div>
+                            <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Catégorie</label>
                                 <select v-model="categoryFilter" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                     <option value="all">Toutes</option>
@@ -174,7 +187,7 @@ if (!isset($_SESSION['user_id'])) {
                                     <option value="Autres dépenses">Autres dépenses (imprévus, pénalités, frais divers non classés)</option>
                                 </select>
                             </div>
-                            <div>
+                            <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
                                 <select v-model="sortBy" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                     <option value="date">Date</option>
@@ -183,12 +196,12 @@ if (!isset($_SESSION['user_id'])) {
                                     <option value="category">Catégorie</option>
                                 </select>
                             </div>
-                            <div>
+                            <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Date précise</label>
                                 <input v-model="specificDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                        <div :class="['grid md:grid-cols-2 gap-4 mt-4', showAllFilters ? 'grid' : 'hidden']">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Date de début</label>
                                 <input v-model="startDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
@@ -198,7 +211,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <input v-model="endDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
                         </div>
-                        <div class="flex justify-end gap-3 mt-4">
+                        <div :class="['flex justify-end gap-3 mt-4 md:flex', showAllFilters ? 'flex' : 'hidden']">
                             <button @click="resetFilters" class="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg transition-colors">
                                 <i class="fas fa-redo mr-2"></i>Réinitialiser
                             </button>
@@ -209,18 +222,14 @@ if (!isset($_SESSION['user_id'])) {
                     </div>
 
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
                             <div class="bg-red-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Total des dépenses</p>
-                                <p class="text-2xl font-bold text-red-600">{{ formatCurrency(totalExpenses) }} XOF</p>
+                                <p class="text-base md:text-2xl font-bold text-red-600">{{ formatCurrency(totalExpenses) }} XOF</p>
                             </div>
                             <div class="bg-blue-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Nombre de dépenses</p>
-                                <p class="text-2xl font-bold text-blue-600">{{ filteredExpenses.length }}</p>
-                            </div>
-                            <div class="bg-green-50 p-4 rounded-lg">
-                                <p class="text-sm text-gray-600 mb-1">Dépense moyenne</p>
-                                <p class="text-2xl font-bold text-green-600">{{ formatCurrency(averageExpense) }} XOF</p>
+                                <p class="text-base md:text-2xl font-bold text-blue-600">{{ filteredExpenses.length }}</p>
                             </div>
                         </div>
                     </div>
@@ -417,6 +426,7 @@ if (!isset($_SESSION['user_id'])) {
         createApp({
             data() {
                 return {
+                    showAllFilters: false,
                     searchTerm: '',
                     sortBy: 'date',
                     categoryFilter: 'all',
@@ -523,12 +533,12 @@ if (!isset($_SESSION['user_id'])) {
                     return this.filteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
                 },
 
-                averageExpense() {
-                    return this.filteredExpenses.length > 0 ? this.totalExpenses / this.filteredExpenses.length : 0;
-                }
             },
 
             methods: {
+                toggleFilters() {
+                    this.showAllFilters = !this.showAllFilters;
+                },
                 fetchExpenses() {
                     console.log('[v0] Fetching expenses from route: ?action=allExpenses');
                     api.get('?action=allExpenses')
@@ -547,8 +557,8 @@ if (!isset($_SESSION['user_id'])) {
 
                 formatCurrency(amount) {
                     return new Intl.NumberFormat('fr-FR', {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
                     }).format(amount);
                 },
 
@@ -644,7 +654,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <h3>Résumé:</h3>
                                 <p><strong>Nombre de dépenses:</strong> ${this.filteredExpenses.length}</p>
                                 <p><strong>Total des dépenses:</strong> ${this.formatCurrency(this.totalExpenses)} XOF</p>
-                                <p><strong>Dépense moyenne:</strong> ${this.formatCurrency(this.averageExpense)} XOF</p>
+
                             </div>
                             
                             <table>

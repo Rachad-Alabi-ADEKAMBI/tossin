@@ -120,7 +120,7 @@ if (!isset($_SESSION['user_id'])) {
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" v-cloak>
         <div class="bg-gray-50 min-h-screen">
             <?php include 'sidebar.php'; ?>
 
@@ -128,7 +128,7 @@ if (!isset($_SESSION['user_id'])) {
                 <header class="bg-white shadow-sm border-b">
                     <div class="px-6 py-4">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-                            <h1 class="text-2xl font-bold text-gray-900">
+                            <h1 class="text-3xl font-bold text-gray-900">
                                 <i class="fas fa-bell mr-2"></i>Notifications
                             </h1>
                             <div class="flex space-x-3">
@@ -139,6 +139,11 @@ if (!isset($_SESSION['user_id'])) {
                                     <i class="fas fa-check-double mr-2"></i>Tout marquer comme lu
                                 </button>
                             </div>
+                            <div class="hidden lg:flex items-center space-x-1 text-sm text-gray-500 border-l pl-3 ml-3">
+                                <i class="fas fa-user-circle"></i>
+                                <span class="font-medium"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin') ?></span>
+                                <span class="text-xs text-gray-400">· Admin</span>
+                            </div>
                         </div>
                     </div>
                 </header>
@@ -146,22 +151,22 @@ if (!isset($_SESSION['user_id'])) {
                 <div class="p-6">
                     <!-- Statistiques -->
                     <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <div class="bg-blue-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Total notifications</p>
-                                <p class="text-2xl font-bold text-blue-600">{{ notifications.length }}</p>
+                                <p class="text-base md:text-2xl font-bold text-blue-600">{{ notifications.length }}</p>
                             </div>
                             <div class="bg-red-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Dépenses</p>
-                                <p class="text-2xl font-bold text-red-600">{{ depenseCount }}</p>
+                                <p class="text-base md:text-2xl font-bold text-red-600">{{ depenseCount }}</p>
                             </div>
                             <div class="bg-yellow-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Créances</p>
-                                <p class="text-2xl font-bold text-yellow-600">{{ creanceCount }}</p>
+                                <p class="text-base md:text-2xl font-bold text-yellow-600">{{ creanceCount }}</p>
                             </div>
                             <div class="bg-green-50 p-4 rounded-lg">
                                 <p class="text-sm text-gray-600 mb-1">Ventes</p>
-                                <p class="text-2xl font-bold text-green-600">{{ venteCount }}</p>
+                                <p class="text-base md:text-2xl font-bold text-green-600">{{ venteCount }}</p>
                             </div>
                         </div>
                     </div>
@@ -281,7 +286,7 @@ if (!isset($_SESSION['user_id'])) {
                         <p>
                             Lokossa, Quinji carrefour Abo, <br>
                             téléphone 01 49 91 65 66</p>
-                        <h2 class="text-2xl font-bold text-gray-900 mt-6 mb-2">LISTE DES NOTIFICATIONS</h2>
+                        <h2 class="text-base md:text-2xl font-bold text-gray-900 mt-6 mb-2">LISTE DES NOTIFICATIONS</h2>
                         <p class="text-gray-600">Date d'impression: {{ new Date().toLocaleDateString('fr-FR') }}</p>
                     </div>
 

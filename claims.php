@@ -127,7 +127,7 @@ if (!isset($_SESSION['user_id'])) {
 </head>
 
 <body>
-    <div id="app">
+    <div id="app" v-cloak>
         <div class="bg-gray-50 min-h-screen">
             <?php include 'sidebar.php'; ?>
 
@@ -135,20 +135,25 @@ if (!isset($_SESSION['user_id'])) {
                 <header class="bg-white shadow-sm border-b">
                     <div class="px-6 py-4">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
-                            <h1 class="text-2xl font-bold text-gray-900">
+                            <h1 class="text-3xl font-bold text-gray-900">
                                 <i class="fas fa-file-invoice-dollar mr-2"></i>Gestion des Créances
                             </h1>
-                            <div class="flex space-x-3">
+                            <div class="flex flex-wrap gap-2">
                                 <button @click="showClientsTab = !showClientsTab" :class="showClientsTab ? 'bg-primary' : 'bg-gray-500'" class="hover:bg-secondary text-white px-4 py-2 rounded-lg transition-colors flex items-center">
                                     <i :class="showClientsTab ? 'fas fa-file-invoice-dollar' : 'fas fa-users'" class="mr-2"></i>
-                                    {{ showClientsTab ? 'Voir Créances' : 'Voir Clients' }}
+                                    {{ showClientsTab ? 'Créances' : 'Clients' }}
                                 </button>
                                 <button @click="printClaimsList" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
                                     <i class="fas fa-print mr-2"></i>Imprimer
                                 </button>
-                                <button v-if="!showClientsTab" @click="openNewClaimModal" class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center">
+                                <button v-if="!showClientsTab" @click="openNewClaimModal" class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center w-full sm:w-auto">
                                     <i class="fas fa-plus mr-2"></i>Nouvelle créance
                                 </button>
+                            </div>
+                            <div class="hidden lg:flex items-center space-x-1 text-sm text-gray-500 border-l pl-3 ml-3">
+                                <i class="fas fa-user-circle"></i>
+                                <span class="font-medium"><?= htmlspecialchars($_SESSION['username'] ?? 'Admin') ?></span>
+                                <span class="text-xs text-gray-400">· Admin</span>
                             </div>
                         </div>
                     </div>
@@ -159,15 +164,21 @@ if (!isset($_SESSION['user_id'])) {
                     <div v-if="showClientsTab">
                         <!-- Filtres pour clients -->
                         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                            <h2 class="text-lg font-semibold text-gray-800 mb-4">
-                                <i class="fas fa-filter mr-2"></i>Filtres
-                            </h2>
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-lg font-semibold text-gray-800">
+                                    <i class="fas fa-filter mr-2"></i>Filtres
+                                </h2>
+                                <button @click="toggleFilters" class="md:hidden text-primary font-medium flex items-center">
+                                    <span>{{ showAllFilters ? 'Masquer les options' : "Plus d'options" }}</span>
+                                    <i :class="['fas ml-2', showAllFilters ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                                </button>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher client</label>
                                     <input v-model="clientSearchTerm" @input="filterClients" type="text" placeholder="Nom du client..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
-                                <div>
+                                <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
                                     <select v-model="clientSortBy" @change="filterClients" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                         <option value="name">Nom</option>
@@ -175,7 +186,7 @@ if (!isset($_SESSION['user_id'])) {
                                         <option value="purchases">Nombre d'achats</option>
                                     </select>
                                 </div>
-                                <div class="flex items-end">
+                                <div :class="['md:block flex items-end', showAllFilters ? 'block' : 'hidden']">
                                     <button @click="clearClientFilters" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
                                         <i class="fas fa-times mr-2"></i>Réinitialiser
                                     </button>
@@ -185,22 +196,22 @@ if (!isset($_SESSION['user_id'])) {
 
                         <!-- Statistiques clients -->
                         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div class="bg-blue-50 p-4 rounded-lg">
                                     <p class="text-sm text-gray-600 mb-1">Total clients</p>
-                                    <p class="text-2xl font-bold text-blue-600">{{ clientsWithData.length }}</p>
+                                    <p class="text-base md:text-2xl font-bold text-blue-600">{{ clientsWithData.length }}</p>
                                 </div>
                                 <div class="bg-red-50 p-4 rounded-lg">
                                     <p class="text-sm text-gray-600 mb-1">Créances totales</p>
-                                    <p class="text-2xl font-bold text-red-600">{{ formatCurrency(totalClientsDebt) }}</p>
+                                    <p class="text-base md:text-2xl font-bold text-red-600">{{ formatCurrency(totalClientsDebt) }}</p>
                                 </div>
                                 <div class="bg-green-50 p-4 rounded-lg">
                                     <p class="text-sm text-gray-600 mb-1">Total ventes clients</p>
-                                    <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalClientsSales) }}</p>
+                                    <p class="text-base md:text-2xl font-bold text-green-600">{{ formatCurrency(totalClientsSales) }}</p>
                                 </div>
                                 <div class="bg-purple-50 p-4 rounded-lg">
                                     <p class="text-sm text-gray-600 mb-1">Clients avec créances</p>
-                                    <p class="text-2xl font-bold text-purple-600">{{ clientsWithDebt }}</p>
+                                    <p class="text-base md:text-2xl font-bold text-purple-600">{{ clientsWithDebt }}</p>
                                 </div>
                             </div>
                         </div>
@@ -294,27 +305,33 @@ if (!isset($_SESSION['user_id'])) {
                     <div v-else>
                         <!-- Filtres -->
                         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                            <h2 class="text-lg font-semibold text-gray-800 mb-4">
-                                <i class="fas fa-filter mr-2"></i>Filtres
-                            </h2>
+                            <div class="flex justify-between items-center mb-4">
+                                <h2 class="text-lg font-semibold text-gray-800">
+                                    <i class="fas fa-filter mr-2"></i>Filtres
+                                </h2>
+                                <button @click="toggleFilters" class="md:hidden text-primary font-medium flex items-center">
+                                    <span>{{ showAllFilters ? 'Masquer les options' : "Plus d'options" }}</span>
+                                    <i :class="['fas ml-2', showAllFilters ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
+                                </button>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
                                     <input v-model="searchTerm" @input="applyFilters" type="text" placeholder="Nom du client..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
-                                <div>
+                                <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Date exacte</label>
                                     <input v-model="exactDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
-                                <div>
+                                <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Date début</label>
                                     <input v-model="startDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
-                                <div>
+                                <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Date fin</label>
                                     <input v-model="endDate" @change="applyFilters" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
-                                <div>
+                                <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Trier par</label>
                                     <select v-model="sortBy" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                         <option value="date">Date</option>
@@ -324,7 +341,7 @@ if (!isset($_SESSION['user_id'])) {
                                     </select>
                                 </div>
                             </div>
-                            <div class="mt-4 flex gap-2">
+                            <div :class="['mt-4 gap-2 md:flex', showAllFilters ? 'flex' : 'hidden']">
                                 <button @click="clearFilters" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
                                     <i class="fas fa-times mr-2"></i>Réinitialiser
                                 </button>
@@ -333,22 +350,22 @@ if (!isset($_SESSION['user_id'])) {
 
                         <!-- Statistiques -->
                         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div class="bg-red-50 p-4 rounded-lg">
                                     <p class="text-sm text-gray-600 mb-1">Total créances</p>
-                                    <p class="text-2xl font-bold text-red-600">{{ formatCurrency(totalClaims) }}</p>
+                                    <p class="text-base md:text-2xl font-bold text-red-600">{{ formatCurrency(totalClaims) }}</p>
                                 </div>
                                 <div class="bg-green-50 p-4 rounded-lg">
                                     <p class="text-sm text-gray-600 mb-1">Total payé</p>
-                                    <p class="text-2xl font-bold text-green-600">{{ formatCurrency(totalPaid) }}</p>
+                                    <p class="text-base md:text-2xl font-bold text-green-600">{{ formatCurrency(totalPaid) }}</p>
                                 </div>
                                 <div class="bg-orange-50 p-4 rounded-lg">
                                     <p class="text-sm text-gray-600 mb-1">Reste à payer</p>
-                                    <p class="text-2xl font-bold text-orange-600">{{ formatCurrency(totalRemaining) }}</p>
+                                    <p class="text-base md:text-2xl font-bold text-orange-600">{{ formatCurrency(totalRemaining) }}</p>
                                 </div>
                                 <div class="bg-blue-50 p-4 rounded-lg">
                                     <p class="text-sm text-gray-600 mb-1">Nombre de créances</p>
-                                    <p class="text-2xl font-bold text-blue-600">{{ filteredClaims.length }}</p>
+                                    <p class="text-base md:text-2xl font-bold text-blue-600">{{ filteredClaims.length }}</p>
                                 </div>
                             </div>
                         </div>
@@ -879,6 +896,7 @@ if (!isset($_SESSION['user_id'])) {
                     clientClaims: [],
                     clientSales: [],
 
+                    showAllFilters: false,
                     searchTerm: '',
                     sortBy: 'date',
                     exactDate: '',
@@ -1149,6 +1167,9 @@ if (!isset($_SESSION['user_id'])) {
             },
 
             methods: {
+                toggleFilters() {
+                    this.showAllFilters = !this.showAllFilters;
+                },
                 async fetchClients() {
                     try {
                         const response = await api.get('?action=allClients');
