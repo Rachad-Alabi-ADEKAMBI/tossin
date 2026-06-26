@@ -466,6 +466,13 @@ function addNewClaim($data)
 {
     global $pdo;
 
+    // Auto-migration: ajouter object si elle n'existe pas
+    try {
+        $pdo->query("SELECT object FROM claims LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE claims ADD COLUMN object VARCHAR(20) DEFAULT NULL AFTER status");
+    }
+
     if (empty($data['client_id']) || empty($data['amount'])) {
         echo json_encode([
             'success' => false,
@@ -475,24 +482,27 @@ function addNewClaim($data)
     }
 
     try {
+        $clientId = $data['client_id'];
+
         // Récupérer le nom du client pour la notification
         $clientStmt = $pdo->prepare("SELECT name FROM clients WHERE id = :id");
-        $clientStmt->execute([':id' => $data['client_id']]);
+        $clientStmt->execute([':id' => $clientId]);
         $client = $clientStmt->fetch(PDO::FETCH_ASSOC);
         $clientName = $client['name'] ?? 'Client inconnu';
 
         $sql = "INSERT INTO claims 
-            (client_id, amount, date_of_claim, due_date, notes, status)
-            VALUES (:client_id, :amount, :date_of_claim, :due_date, :notes, :status)";
+            (client_id, amount, date_of_claim, due_date, notes, status, object)
+            VALUES (:client_id, :amount, :date_of_claim, :due_date, :notes, :status, :object)";
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute([
-            ':client_id'     => $data['client_id'],
+            ':client_id'     => $clientId,
             ':amount'        => $data['amount'],
             ':date_of_claim' => $data['date_of_claim'] ?? date('Y-m-d'),
             ':due_date'      => $data['due_date'] ?? null,
             ':notes'         => $data['notes'] ?? '',
-            ':status'        => 'Actif'
+            ':status'        => 'Actif',
+            ':object'        => 'directe'
         ]);
 
         $claimId = $pdo->lastInsertId();
@@ -504,7 +514,7 @@ function addNewClaim($data)
             'success' => true,
             'claim' => [
                 'id' => $claimId,
-                'client_id' => $data['client_id'],
+                'client_id' => $clientId,
                 'amount' => $data['amount']
             ]
         ]);
@@ -521,6 +531,13 @@ function addNewClaim($data)
 function newClaimPayment($data, $file = null)
 {
     global $pdo;
+
+    // Auto-migration: ajouter date_of_insertion si elle n'existe pas
+    try {
+        $pdo->query("SELECT date_of_insertion FROM claims_payments LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE claims_payments ADD COLUMN date_of_insertion DATETIME DEFAULT NULL AFTER date");
+    }
 
     if (empty($data['claim_id']) || !isset($data['amount']) || empty($data['payment_method'])) {
         echo json_encode([
@@ -574,8 +591,8 @@ function newClaimPayment($data, $file = null)
 
         // Insertion paiement
         $stmt = $pdo->prepare("INSERT INTO claims_payments
-            (date, amount, claim_id, client_id, payment_method, notes, file)
-            VALUES (:date, :amount, :claim_id, :client_id, :payment_method, :notes, :file)");
+            (date, date_of_insertion, amount, claim_id, client_id, payment_method, notes, file)
+            VALUES (:date, NOW(), :amount, :claim_id, :client_id, :payment_method, :notes, :file)");
         $stmt->execute([
             ':date' => $date,
             ':amount' => $amount,
@@ -619,6 +636,13 @@ function newClaimPayment($data, $file = null)
 function updateClaimPayment($data, $file = null)
 {
     global $pdo;
+
+    // Auto-migration: ajouter date_of_insertion si elle n'existe pas
+    try {
+        $pdo->query("SELECT date_of_insertion FROM claims_payments LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE claims_payments ADD COLUMN date_of_insertion DATETIME DEFAULT NULL AFTER date");
+    }
 
     if (empty($data['id']) || !isset($data['amount']) || empty($data['payment_method'])) {
         echo json_encode([
@@ -1272,6 +1296,13 @@ function newSale()
 
             $dueDate = date('Y-m-d', strtotime($dateOfOperation . ' +7 days'));
 
+            // Auto-migration: ajouter object si elle n'existe pas
+            try {
+                $pdo->query("SELECT object FROM claims LIMIT 1");
+            } catch (PDOException $e) {
+                $pdo->exec("ALTER TABLE claims ADD COLUMN object VARCHAR(20) DEFAULT NULL AFTER status");
+            }
+
             $stmtClaim = $pdo->prepare("
                 INSERT INTO claims (
                     client_id,
@@ -1280,7 +1311,8 @@ function newSale()
                     date_of_claim,
                     due_date,
                     notes,
-                    status
+                    status,
+                    object
                 ) VALUES (
                     :client_id,
                     :amount,
@@ -1288,7 +1320,8 @@ function newSale()
                     :date_of_claim,
                     :due_date,
                     :notes,
-                    'actif'
+                    'actif',
+                    :object
                 )
             ");
 
@@ -1300,7 +1333,8 @@ function newSale()
                 ':due_date'          => $dueDate,
                 ':notes'             => !empty($comment)
                     ? $comment
-                    : 'Créance facture #' . $saleId
+                    : 'Créance facture #' . $saleId,
+                ':object'            => 'vente'
             ]);
         }
 
@@ -1527,6 +1561,13 @@ function updateSale()
                     ':id'         => $claim['id']
                 ]);
             } else {
+                // Auto-migration: ajouter object si elle n'existe pas
+                try {
+                    $pdo->query("SELECT object FROM claims LIMIT 1");
+                } catch (PDOException $e) {
+                    $pdo->exec("ALTER TABLE claims ADD COLUMN object VARCHAR(20) DEFAULT NULL AFTER status");
+                }
+
                 $pdo->prepare("
                     INSERT INTO claims (
                         client_id,
@@ -1535,7 +1576,8 @@ function updateSale()
                         date_of_claim,
                         due_date,
                         notes,
-                        status
+                        status,
+                        object
                     ) VALUES (
                         :client_id,
                         :amount,
@@ -1543,14 +1585,16 @@ function updateSale()
                         :date_claim,
                         :due_date,
                         :notes,
-                        'actif'
+                        'actif',
+                        :object
                     )
                 ")->execute([
                     ':client_id' => $clientId,
                     ':amount'    => (float)$data['total'],
                     ':date_claim' => $dateOfOperation,
                     ':due_date'  => $dueDate,
-                    ':notes'     => $claimNote
+                    ':notes'     => $claimNote,
+                    ':object'    => 'vente'
                 ]);
             }
         } else {
@@ -2359,6 +2403,14 @@ function newSaleProduct()
 function getAllClaimsPayments()
 {
     global $pdo;
+
+    // Auto-migration: ajouter date_of_insertion si elle n'existe pas
+    try {
+        $pdo->query("SELECT date_of_insertion FROM claims_payments LIMIT 1");
+    } catch (PDOException $e) {
+        $pdo->exec("ALTER TABLE claims_payments ADD COLUMN date_of_insertion DATETIME DEFAULT NULL AFTER date");
+    }
+
     $stmt = $pdo->query("SELECT * FROM claims_payments ORDER BY id DESC");
     $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -2484,7 +2536,7 @@ function getFinancialReport()
     $salesStmt = $pdo->prepare("
         SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
         FROM sales
-        WHERE DATE(date_of_insertion) BETWEEN :start AND :end
+        WHERE date_of_operation BETWEEN :start AND :end
           AND (status IS NULL OR status != 'annulé')
     ");
     $salesStmt->execute([':start' => $start, ':end' => $end]);
@@ -2494,7 +2546,7 @@ function getFinancialReport()
     $salesByMethod = $pdo->prepare("
         SELECT COALESCE(payment_method, 'non spécifié') AS method, COALESCE(SUM(total), 0) AS total, COUNT(*) AS count
         FROM sales
-        WHERE DATE(date_of_insertion) BETWEEN :start AND :end
+        WHERE date_of_operation BETWEEN :start AND :end
           AND (status IS NULL OR status != 'annulé')
         GROUP BY method
         ORDER BY total DESC
@@ -2526,7 +2578,7 @@ function getFinancialReport()
         FROM sales_products sp
         JOIN sales s ON s.id = sp.sale_id
         LEFT JOIN products p ON p.name = sp.name
-        WHERE DATE(s.date_of_insertion) BETWEEN :start AND :end
+        WHERE s.date_of_operation BETWEEN :start AND :end
           AND (s.status IS NULL OR s.status != 'annulé')
     ");
     $cogsStmt->execute([':start' => $start, ':end' => $end]);
@@ -2537,7 +2589,7 @@ function getFinancialReport()
         SELECT sp.name, SUM(sp.quantity) AS qty, SUM(sp.quantity * sp.price) AS total
         FROM sales_products sp
         JOIN sales s ON s.id = sp.sale_id
-        WHERE DATE(s.date_of_insertion) BETWEEN :start AND :end
+        WHERE s.date_of_operation BETWEEN :start AND :end
           AND (s.status IS NULL OR s.status != 'annulé')
         GROUP BY sp.name
         ORDER BY total DESC
@@ -2587,13 +2639,13 @@ function getDashboardStats()
     $todaySales = $pdo->query("
         SELECT COUNT(*) AS count, COALESCE(SUM(total), 0) AS total
         FROM sales
-        WHERE DATE(date_of_insertion) = CURDATE() AND (status IS NULL OR status != 'annulé')
+        WHERE date_of_operation = CURDATE() AND (status IS NULL OR status != 'annulé')
     ")->fetch(PDO::FETCH_ASSOC);
 
     $yesterdayTotal = $pdo->query("
         SELECT COALESCE(SUM(total), 0)
         FROM sales
-        WHERE DATE(date_of_insertion) = CURDATE() - INTERVAL 1 DAY AND (status IS NULL OR status != 'annulé')
+        WHERE date_of_operation = CURDATE() - INTERVAL 1 DAY AND (status IS NULL OR status != 'annulé')
     ")->fetchColumn();
 
     $claimsDueSoon = $pdo->query("
@@ -2616,6 +2668,547 @@ function getDashboardStats()
         'yesterdayTotal'  => (float) $yesterdayTotal,
         'claimsDueSoon'   => (int) $claimsDueSoon,
         'lowStockCount'   => (int) $lowStockCount,
+    ]);
+}
+
+// Plan comptable OHADA (Bénin / SYSCOHADA)
+function getChartOfAccounts()
+{
+    return [
+        // Classe 1: Capitaux
+        ['account' => '101', 'name' => 'Capital social', 'class' => 1, 'type' => 'capitaux'],
+        ['account' => '106', 'name' => 'Réserves', 'class' => 1, 'type' => 'capitaux'],
+        ['account' => '11', 'name' => 'Report à nouveau', 'class' => 1, 'type' => 'capitaux'],
+        ['account' => '12', 'name' => 'Résultat net', 'class' => 1, 'type' => 'capitaux'],
+        ['account' => '13', 'name' => 'Subventions d\'investissement', 'class' => 1, 'type' => 'capitaux'],
+        ['account' => '14', 'name' => 'Provisions réglementées', 'class' => 1, 'type' => 'capitaux'],
+        ['account' => '15', 'name' => 'Emprunts et dettes financières', 'class' => 1, 'type' => 'passif'],
+        ['account' => '16', 'name' => 'Dettes de location-acquisition', 'class' => 1, 'type' => 'passif'],
+        ['account' => '17', 'name' => 'Dettes de participation', 'class' => 1, 'type' => 'passif'],
+        ['account' => '18', 'name' => 'Comptes de liaison', 'class' => 1, 'type' => 'passif'],
+        // Classe 2: Immobilisations
+        ['account' => '201', 'name' => 'Frais d\'établissement', 'class' => 2, 'type' => 'actif'],
+        ['account' => '202', 'name' => 'Frais de recherche et développement', 'class' => 2, 'type' => 'actif'],
+        ['account' => '203', 'name' => 'Brevet, licences, logiciels', 'class' => 2, 'type' => 'actif'],
+        ['account' => '21', 'name' => 'Terrains', 'class' => 2, 'type' => 'actif'],
+        ['account' => '22', 'name' => 'Constructions', 'class' => 2, 'type' => 'actif'],
+        ['account' => '23', 'name' => 'Matériel et outillage', 'class' => 2, 'type' => 'actif'],
+        ['account' => '24', 'name' => 'Matériel de transport', 'class' => 2, 'type' => 'actif'],
+        ['account' => '25', 'name' => 'Mobilier et matériel de bureau', 'class' => 2, 'type' => 'actif'],
+        ['account' => '26', 'name' => 'Autres immobilisations corporelles', 'class' => 2, 'type' => 'actif'],
+        ['account' => '27', 'name' => 'Immobilisations en cours', 'class' => 2, 'type' => 'actif'],
+        ['account' => '28', 'name' => 'Amortissements', 'class' => 2, 'type' => 'actif_soust'],
+        ['account' => '29', 'name' => 'Provisions pour dépréciation', 'class' => 2, 'type' => 'actif_soust'],
+        // Classe 3: Stocks
+        ['account' => '31', 'name' => 'Marchandises', 'class' => 3, 'type' => 'actif'],
+        ['account' => '32', 'name' => 'Matières premières', 'class' => 3, 'type' => 'actif'],
+        ['account' => '33', 'name' => 'Produits finis', 'class' => 3, 'type' => 'actif'],
+        ['account' => '38', 'name' => 'Provisions pour dépréciation des stocks', 'class' => 3, 'type' => 'actif_soust'],
+        // Classe 4: Tiers
+        ['account' => '401', 'name' => 'Fournisseurs', 'class' => 4, 'type' => 'passif'],
+        ['account' => '404', 'name' => 'Fournisseurs d\'immobilisations', 'class' => 4, 'type' => 'passif'],
+        ['account' => '409', 'name' => 'Fournisseurs débiteurs', 'class' => 4, 'type' => 'actif'],
+        ['account' => '411', 'name' => 'Clients', 'class' => 4, 'type' => 'actif'],
+        ['account' => '416', 'name' => 'Créances douteuses', 'class' => 4, 'type' => 'actif'],
+        ['account' => '421', 'name' => 'Personnel rémunérations dues', 'class' => 4, 'type' => 'passif'],
+        ['account' => '431', 'name' => 'Sécurité sociale', 'class' => 4, 'type' => 'passif'],
+        ['account' => '441', 'name' => 'État - Impôts et taxes', 'class' => 4, 'type' => 'passif'],
+        ['account' => '444', 'name' => 'État - TVA', 'class' => 4, 'type' => 'passif'],
+        ['account' => '447', 'name' => 'Autres impôts et taxes', 'class' => 4, 'type' => 'passif'],
+        ['account' => '461', 'name' => 'Débiteurs divers', 'class' => 4, 'type' => 'actif'],
+        ['account' => '471', 'name' => 'Créditeurs divers', 'class' => 4, 'type' => 'passif'],
+        ['account' => '481', 'name' => 'Provisions pour risques', 'class' => 4, 'type' => 'passif'],
+        ['account' => '49', 'name' => 'Provisions pour dépréciation des comptes clients', 'class' => 4, 'type' => 'actif_soust'],
+        // Classe 5: Trésorerie
+        ['account' => '501', 'name' => 'Banque', 'class' => 5, 'type' => 'actif'],
+        ['account' => '511', 'name' => 'Caisse', 'class' => 5, 'type' => 'actif'],
+        ['account' => '512', 'name' => 'Mobile Money', 'class' => 5, 'type' => 'actif'],
+        ['account' => '521', 'name' => 'Chèques postaux', 'class' => 5, 'type' => 'actif'],
+        ['account' => '531', 'name' => 'Titres de placement', 'class' => 5, 'type' => 'actif'],
+        ['account' => '58', 'name' => 'Virements internes', 'class' => 5, 'type' => 'actif'],
+        ['account' => '59', 'name' => 'Provisions pour dépréciation de trésorerie', 'class' => 5, 'type' => 'actif_soust'],
+        // Classe 6: Charges
+        ['account' => '601', 'name' => 'Achats de marchandises', 'class' => 6, 'type' => 'charge'],
+        ['account' => '602', 'name' => 'Achats de matières premières', 'class' => 6, 'type' => 'charge'],
+        ['account' => '603', 'name' => 'Variations de stocks', 'class' => 6, 'type' => 'charge'],
+        ['account' => '61', 'name' => 'Transports', 'class' => 6, 'type' => 'charge'],
+        ['account' => '62', 'name' => 'Services extérieurs', 'class' => 6, 'type' => 'charge'],
+        ['account' => '63', 'name' => 'Autres services', 'class' => 6, 'type' => 'charge'],
+        ['account' => '64', 'name' => 'Impôts et taxes', 'class' => 6, 'type' => 'charge'],
+        ['account' => '65', 'name' => 'Frais de personnel', 'class' => 6, 'type' => 'charge'],
+        ['account' => '66', 'name' => 'Frais financiers', 'class' => 6, 'type' => 'charge'],
+        ['account' => '67', 'name' => 'Dotations aux amortissements', 'class' => 6, 'type' => 'charge'],
+        ['account' => '68', 'name' => 'Dotations aux provisions', 'class' => 6, 'type' => 'charge'],
+        ['account' => '691', 'name' => 'Pertes sur créances', 'class' => 6, 'type' => 'charge'],
+        ['account' => '699', 'name' => 'Participation des travailleurs', 'class' => 6, 'type' => 'charge'],
+        // Classe 7: Produits
+        ['account' => '701', 'name' => 'Ventes de marchandises', 'class' => 7, 'type' => 'produit'],
+        ['account' => '702', 'name' => 'Ventes de produits finis', 'class' => 7, 'type' => 'produit'],
+        ['account' => '703', 'name' => 'Prestations de services', 'class' => 7, 'type' => 'produit'],
+        ['account' => '71', 'name' => 'Subventions d\'exploitation', 'class' => 7, 'type' => 'produit'],
+        ['account' => '72', 'name' => 'Produits financiers', 'class' => 7, 'type' => 'produit'],
+        ['account' => '73', 'name' => 'Produits exceptionnels', 'class' => 7, 'type' => 'produit'],
+        ['account' => '74', 'name' => 'Transferts de charges', 'class' => 7, 'type' => 'produit'],
+        ['account' => '75', 'name' => 'Reprises de provisions', 'class' => 7, 'type' => 'produit'],
+        // Classe 8: Résultats
+        ['account' => '81', 'name' => 'Résultat d\'exploitation', 'class' => 8, 'type' => 'resultat'],
+        ['account' => '82', 'name' => 'Résultat financier', 'class' => 8, 'type' => 'resultat'],
+        ['account' => '83', 'name' => 'Résultat exceptionnel', 'class' => 8, 'type' => 'resultat'],
+        ['account' => '88', 'name' => 'Résultat net', 'class' => 8, 'type' => 'resultat'],
+    ];
+}
+
+// Générer le Journal Général à partir des données réelles
+function getGeneralJournal($start, $end)
+{
+    global $pdo;
+    $entries = [];
+
+    // 1. Ventes (crédit 701, débit 511/512 selon mode)
+    $sales = $pdo->prepare("
+        SELECT id, date_of_insertion, total, payment_method, seller 
+        FROM sales 
+        WHERE DATE(date_of_insertion) BETWEEN :start AND :end 
+          AND (status IS NULL OR status != 'annulé')
+        ORDER BY date_of_insertion ASC
+    ");
+    $sales->execute([':start' => $start, ':end' => $end]);
+    foreach ($sales as $s) {
+        $date = date('Y-m-d', strtotime($s['date_of_insertion']));
+        $pmt = strtolower($s['payment_method'] ?? 'caisse');
+        $cashAccount = '511';
+        if (strpos($pmt, 'mobile') !== false || strpos($pmt, 'mtn') !== false || strpos($pmt, 'moov') !== false) {
+            $cashAccount = '512';
+        } elseif (strpos($pmt, 'banque') !== false || strpos($pmt, 'bank') !== false || strpos($pmt, 'virement') !== false) {
+            $cashAccount = '501';
+        } elseif (strpos($pmt, 'carte') !== false || strpos($pmt, 'card') !== false) {
+            $cashAccount = '501';
+        }
+
+        $entries[] = [
+            'date' => $date, 'ref' => 'VTE-' . $s['id'],
+            'label' => 'Vente n°' . $s['id'] . ' - ' . ($s['seller'] ?? 'Comptoir'),
+            'account_debit' => $cashAccount, 'label_debit' => getAccountLabel($cashAccount),
+            'account_credit' => '701', 'label_credit' => 'Ventes de marchandises',
+            'montant' => (float) $s['total']
+        ];
+    }
+
+    // 2. Dépenses (débit compte de charge classe 6, crédit 511/512)
+    $expenses = $pdo->prepare("
+        SELECT id, name, category, amount, created_at 
+        FROM expenses 
+        WHERE DATE(created_at) BETWEEN :start AND :end 
+        ORDER BY created_at ASC
+    ");
+    $expenses->execute([':start' => $start, ':end' => $end]);
+    foreach ($expenses as $e) {
+        $date = date('Y-m-d', strtotime($e['created_at']));
+        $cat = strtolower($e['category'] ?? 'divers');
+        // Mapping catégorie → compte OHADA
+        $chargeAccount = '62';
+        if (strpos($cat, 'transport') !== false || strpos($cat, 'carburant') !== false || strpos($cat, 'essence') !== false) {
+            $chargeAccount = '61';
+        } elseif (strpos($cat, 'loyer') !== false || strpos($cat, 'eau') !== false || strpos($cat, 'électricité') !== false || strpos($cat, 'electricite') !== false) {
+            $chargeAccount = '63';
+        } elseif (strpos($cat, 'impôt') !== false || strpos($cat, 'taxe') !== false || strpos($cat, 'impot') !== false || strpos($cat, 'patente') !== false) {
+            $chargeAccount = '64';
+        } elseif (strpos($cat, 'salaire') !== false || strpos($cat, 'personnel') !== false || strpos($cat, 'prime') !== false) {
+            $chargeAccount = '65';
+        } elseif (strpos($cat, 'achat') !== false || strpos($cat, 'fourniture') !== false || strpos($cat, 'stock') !== false) {
+            $chargeAccount = '601';
+        } elseif (strpos($cat, 'frais') !== false || strpos($cat, 'banque') !== false || strpos($cat, 'intérêt') !== false) {
+            $chargeAccount = '66';
+        } elseif (strpos($cat, 'com') !== false || strpos($cat, 'market') !== false || strpos($cat, 'pub') !== false || strpos($cat, 'publicité') !== false) {
+            $chargeAccount = '62';
+        } elseif (strpos($cat, 'nourriture') !== false || strpos($cat, 'restau') !== false || strpos($cat, 'cantine') !== false) {
+            $chargeAccount = '62';
+        }
+
+        $entries[] = [
+            'date' => $date, 'ref' => 'DEP-' . $e['id'],
+            'label' => $e['name'],
+            'account_debit' => $chargeAccount, 'label_debit' => getAccountLabel($chargeAccount),
+            'account_credit' => '511', 'label_credit' => 'Caisse',
+            'montant' => (float) $e['amount']
+        ];
+    }
+
+    // 3. Créances clients - nouvelles créances (débit 411, crédit 701)
+    $claims = $pdo->prepare("
+        SELECT id, client_id, amount, date_of_claim 
+        FROM claims 
+        WHERE DATE(date_of_claim) BETWEEN :start AND :end
+        ORDER BY date_of_claim ASC
+    ");
+    $claims->execute([':start' => $start, ':end' => $end]);
+    foreach ($claims as $c) {
+        $entries[] = [
+            'date' => date('Y-m-d', strtotime($c['date_of_claim'])), 'ref' => 'CLT-' . $c['id'],
+            'label' => 'Créance client n°' . $c['id'],
+            'account_debit' => '411', 'label_debit' => 'Clients',
+            'account_credit' => '701', 'label_credit' => 'Ventes de marchandises',
+            'montant' => (float) $c['amount']
+        ];
+    }
+
+    // 4. Paiements de créances (débit 511/512, crédit 411)
+    $claimPmts = $pdo->prepare("
+        SELECT cp.id, cp.date, cp.amount, cp.payment_method, c.id AS claim_id
+        FROM claims_payments cp
+        JOIN claims c ON c.id = cp.claim_id
+        WHERE DATE(cp.date) BETWEEN :start AND :end
+        ORDER BY cp.date ASC
+    ");
+    $claimPmts->execute([':start' => $start, ':end' => $end]);
+    foreach ($claimPmts as $cp) {
+        $pmt = strtolower($cp['payment_method'] ?? 'caisse');
+        $cashAccount = '511';
+        if (strpos($pmt, 'mobile') !== false) $cashAccount = '512';
+        elseif (strpos($pmt, 'banque') !== false || strpos($pmt, 'virement') !== false) $cashAccount = '501';
+
+        $entries[] = [
+            'date' => date('Y-m-d', strtotime($cp['date'])), 'ref' => 'ENC-' . $cp['id'],
+            'label' => 'Encaissement créance n°' . $cp['claim_id'],
+            'account_debit' => $cashAccount, 'label_debit' => getAccountLabel($cashAccount),
+            'account_credit' => '411', 'label_credit' => 'Clients',
+            'montant' => (float) $cp['amount']
+        ];
+    }
+
+    // 5. Commandes - paiements (débit 511/512, crédit 419 Clients avances)
+    $orderPmts = $pdo->prepare("
+        SELECT op.id, op.date_of_insertion, op.amount, o.id AS order_id
+        FROM orders_payments op
+        JOIN orders o ON o.id = op.order_id
+        WHERE DATE(op.date_of_insertion) BETWEEN :start AND :end
+        ORDER BY op.date_of_insertion ASC
+    ");
+    $orderPmts->execute([':start' => $start, ':end' => $end]);
+    foreach ($orderPmts as $op) {
+        $entries[] = [
+            'date' => date('Y-m-d', strtotime($op['date_of_insertion'])), 'ref' => 'CND-' . $op['id'],
+            'label' => 'Acompte commande n°' . $op['order_id'],
+            'account_debit' => '511', 'label_debit' => 'Caisse',
+            'account_credit' => '419', 'label_credit' => 'Clients avances',
+            'montant' => (float) $op['amount']
+        ];
+    }
+
+    // Trier par date
+    usort($entries, function ($a, $b) {
+        return strcmp($a['date'], $b['date']);
+    });
+
+    return $entries;
+}
+
+function getAccountLabel($code)
+{
+    $accounts = getChartOfAccounts();
+    foreach ($accounts as $a) {
+        if ($a['account'] === $code) return $a['name'];
+    }
+    return 'Compte ' . $code;
+}
+
+// Générer le Grand Livre (soldes par compte)
+function getGeneralLedger($start, $end)
+{
+    $journal = getGeneralJournal($start, $end);
+    $ledger = [];
+
+    foreach ($journal as $entry) {
+        $mt = $entry['montant'];
+        // Débit
+        $deb = $entry['account_debit'];
+        if (!isset($ledger[$deb])) {
+            $ledger[$deb] = ['account' => $deb, 'label' => $entry['label_debit'], 'debit' => 0, 'credit' => 0, 'entries' => []];
+        }
+        $ledger[$deb]['debit'] += $mt;
+        $ledger[$deb]['entries'][] = $entry;
+        // Crédit
+        $cred = $entry['account_credit'];
+        if (!isset($ledger[$cred])) {
+            $ledger[$cred] = ['account' => $cred, 'label' => $entry['label_credit'], 'debit' => 0, 'credit' => 0, 'entries' => []];
+        }
+        $ledger[$cred]['credit'] += $mt;
+        $ledger[$cred]['entries'][] = $entry;
+    }
+
+    ksort($ledger);
+    return array_values($ledger);
+}
+
+// Balance Générale
+function getTrialBalance($start, $end)
+{
+    $ledger = getGeneralLedger($start, $end);
+    $balance = [];
+    $totalDebit = 0;
+    $totalCredit = 0;
+
+    foreach ($ledger as $l) {
+        $solde = $l['debit'] - $l['credit'];
+        $balance[] = [
+            'account' => $l['account'],
+            'label' => $l['label'],
+            'debit' => $l['debit'],
+            'credit' => $l['credit'],
+            'solde' => $solde,
+            'solde_type' => $solde >= 0 ? 'Débiteur' : 'Créditeur'
+        ];
+        $totalDebit += $l['debit'];
+        $totalCredit += $l['credit'];
+    }
+
+    return ['rows' => $balance, 'totalDebit' => $totalDebit, 'totalCredit' => $totalCredit];
+}
+
+// Bilan OHADA complet
+function getFullBalanceSheet($start, $end)
+{
+    global $pdo;
+    $journal = getGeneralJournal($start, $end);
+    $ledger = getGeneralLedger($start, $end);
+
+    // Calculer les soldes par compte
+    $soldes = [];
+    foreach ($ledger as $l) {
+        $soldes[$l['account']] = $l['debit'] - $l['credit'];
+    }
+
+    // Stock valorisé
+    $stockValue = (float) $pdo->query("SELECT COALESCE(SUM(quantity * buying_price), 0) FROM products")->fetchColumn();
+
+    // Créances impayées
+    $receivables = (float) $pdo->query("
+        SELECT COALESCE(SUM(c.amount - COALESCE((SELECT SUM(amount) FROM claims_payments WHERE claim_id = c.id), 0)), 0)
+        FROM claims c WHERE c.status = 'actif'
+    ")->fetchColumn();
+
+    // Chiffre d'affaires
+    $revStmt = $pdo->prepare("
+        SELECT COALESCE(SUM(total), 0) FROM sales 
+        WHERE DATE(date_of_insertion) BETWEEN :start AND :end 
+          AND (status IS NULL OR status != 'annulé')
+    ");
+    $revStmt->execute([':start' => $start, ':end' => $end]);
+    $revenue = (float) $revStmt->fetchColumn();
+
+    // Dépenses
+    $expStmt = $pdo->prepare("
+        SELECT COALESCE(SUM(amount), 0) FROM expenses 
+        WHERE DATE(created_at) BETWEEN :start AND :end
+    ");
+    $expStmt->execute([':start' => $start, ':end' => $end]);
+    $expenses = (float) $expStmt->fetchColumn();
+
+    // COGS
+    $cogsStmt = $pdo->prepare("
+        SELECT COALESCE(SUM(sp.quantity * p.buying_price), 0) AS total
+        FROM sales_products sp
+        JOIN sales s ON s.id = sp.sale_id
+        LEFT JOIN products p ON p.name = sp.name
+        WHERE DATE(s.date_of_insertion) BETWEEN :start AND :end
+          AND (s.status IS NULL OR s.status != 'annulé')
+    ");
+    $cogsStmt->execute([':start' => $start, ':end' => $end]);
+    $cogs = (float) $cogsStmt->fetchColumn();
+
+    $netProfit = $revenue - $cogs - $expenses;
+
+    // Actif
+    $actif = [
+        ['poste' => 'Immobilisations incorporelles', 'montant' => 0, 'class' => 2],
+        ['poste' => 'Immobilisations corporelles', 'montant' => 0, 'class' => 2],
+        ['poste' => 'Stocks de marchandises', 'montant' => $stockValue, 'class' => 3],
+        ['poste' => 'Créances clients', 'montant' => $receivables, 'class' => 4],
+        ['poste' => 'Autres créances', 'montant' => abs($soldes['461'] ?? 0), 'class' => 4],
+        ['poste' => 'Banque', 'montant' => abs($soldes['501'] ?? 0), 'class' => 5],
+        ['poste' => 'Mobile Money', 'montant' => abs($soldes['512'] ?? 0), 'class' => 5],
+        ['poste' => 'Caisse', 'montant' => abs($soldes['511'] ?? 0), 'class' => 5],
+    ];
+
+    // Passif
+    $capitauxPropres = $stockValue + $receivables;
+    $passif = [
+        ['poste' => 'Capital social', 'montant' => 0, 'class' => 1],
+        ['poste' => 'Résultat net de la période', 'montant' => $netProfit, 'class' => 1],
+        ['poste' => 'Capitaux propres estimés', 'montant' => max(0, $capitauxPropres + $netProfit), 'class' => 1],
+        ['poste' => 'Dettes fournisseurs', 'montant' => abs($soldes['401'] ?? 0), 'class' => 4],
+        ['poste' => 'Clients avances', 'montant' => abs($soldes['419'] ?? 0), 'class' => 4],
+        ['poste' => 'Autres dettes', 'montant' => abs($soldes['421'] ?? 0) + abs($soldes['431'] ?? 0) + abs($soldes['441'] ?? 0), 'class' => 4],
+    ];
+
+    $totalActif = array_sum(array_column($actif, 'montant'));
+    $totalPassif = array_sum(array_column($passif, 'montant'));
+
+    return [
+        'actif' => $actif,
+        'passif' => $passif,
+        'totalActif' => $totalActif,
+        'totalPassif' => $totalPassif,
+        'netProfit' => $netProfit,
+        'stockValue' => $stockValue,
+        'receivables' => $receivables,
+        'revenue' => $revenue,
+        'expenses' => $expenses,
+        'cogs' => $cogs,
+    ];
+}
+
+// Endpoint principal de comptabilité
+function getAccountingData()
+{
+    global $pdo;
+    $period = $_GET['period'] ?? 'this_month';
+    $startDate = $_GET['start_date'] ?? null;
+    $endDate = $_GET['end_date'] ?? null;
+
+    switch ($period) {
+        case 'today': $start = date('Y-m-d'); $end = date('Y-m-d'); break;
+        case 'yesterday': $start = date('Y-m-d', strtotime('-1 day')); $end = $start; break;
+        case 'this_week': $start = date('Y-m-d', strtotime('monday this week')); $end = date('Y-m-d'); break;
+        case 'last_month': $start = date('Y-m-01', strtotime('-1 month')); $end = date('Y-m-t', strtotime('-1 month')); break;
+        case 'this_quarter':
+            $month = date('n');
+            $qStart = ceil($month / 3) * 3 - 2;
+            $start = date('Y-' . str_pad($qStart, 2, '0', STR_PAD_LEFT) . '-01');
+            $end = date('Y-m-d');
+            break;
+        case 'this_year': $start = date('Y-01-01'); $end = date('Y-m-d'); break;
+        case 'custom': $start = $startDate ?: date('Y-m-01'); $end = $endDate ?: date('Y-m-d'); break;
+        default: $start = date('Y-m-01'); $end = date('Y-m-d');
+    }
+
+    $journal = getGeneralJournal($start, $end);
+    $ledger = getGeneralLedger($start, $end);
+    $balance = getTrialBalance($start, $end);
+    $bilan = getFullBalanceSheet($start, $end);
+    $plan = getChartOfAccounts();
+
+    // Ventes par méthode de paiement
+    $salesByMethod = $pdo->prepare("
+        SELECT COALESCE(payment_method, 'non spécifié') AS method,
+               COALESCE(SUM(total), 0) AS total, COUNT(*) AS count
+        FROM sales
+        WHERE DATE(date_of_insertion) BETWEEN :start AND :end
+          AND (status IS NULL OR status != 'annulé')
+        GROUP BY method ORDER BY total DESC
+    ");
+    $salesByMethod->execute([':start' => $start, ':end' => $end]);
+
+    // Dépenses par catégorie
+    $expensesByCategory = $pdo->prepare("
+        SELECT category, COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count
+        FROM expenses
+        WHERE DATE(created_at) BETWEEN :start AND :end
+        GROUP BY category ORDER BY total DESC
+    ");
+    $expensesByCategory->execute([':start' => $start, ':end' => $end]);
+
+    // Top produits vendus
+    $topProducts = $pdo->prepare("
+        SELECT sp.name, SUM(sp.quantity) AS qty, SUM(sp.quantity * sp.price) AS total
+        FROM sales_products sp
+        JOIN sales s ON s.id = sp.sale_id
+        WHERE DATE(s.date_of_insertion) BETWEEN :start AND :end
+          AND (s.status IS NULL OR s.status != 'annulé')
+        GROUP BY sp.name ORDER BY total DESC LIMIT 10
+    ");
+    $topProducts->execute([':start' => $start, ':end' => $end]);
+
+    // Échéancier des créances (aging)
+    $claimsAging = [];
+    $now = date('Y-m-d');
+    $agingRanges = [
+        ['label' => 'À échoir (> 30 jours)', 'cond' => "AND c.due_date > DATE_ADD('$now', INTERVAL 30 DAY)"],
+        ['label' => 'Échéance 15-30 jours', 'cond' => "AND c.due_date BETWEEN DATE_ADD('$now', INTERVAL 15 DAY) AND DATE_ADD('$now', INTERVAL 30 DAY)"],
+        ['label' => 'Échéance 1-15 jours', 'cond' => "AND c.due_date BETWEEN DATE_ADD('$now', INTERVAL 1 DAY) AND DATE_ADD('$now', INTERVAL 15 DAY)"],
+        ['label' => 'Échues 1-30 jours', 'cond' => "AND c.due_date BETWEEN DATE_SUB('$now', INTERVAL 30 DAY) AND '$now'"],
+        ['label' => 'Échues 31-60 jours', 'cond' => "AND c.due_date BETWEEN DATE_SUB('$now', INTERVAL 60 DAY) AND DATE_SUB('$now', INTERVAL 31 DAY)"],
+        ['label' => 'Échues > 60 jours', 'cond' => "AND c.due_date < DATE_SUB('$now', INTERVAL 60 DAY)"],
+    ];
+    foreach ($agingRanges as $r) {
+        $stmt = $pdo->query("
+            SELECT COUNT(*) AS count,
+                   COALESCE(SUM(c.amount - COALESCE((SELECT SUM(amount) FROM claims_payments WHERE claim_id = c.id), 0)), 0) AS total
+            FROM claims c
+            WHERE c.status = 'actif' {$r['cond']}
+        ");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row && $row['count'] > 0) {
+            $claimsAging[] = [
+                'period' => $r['label'],
+                'count' => (int) $row['count'],
+                'total' => (float) $row['total'],
+            ];
+        }
+    }
+
+    // Liste détaillée des documents source
+    $salesList = $pdo->prepare("
+        SELECT s.id, s.date_of_insertion, s.total, s.payment_method, s.seller,
+               COALESCE(s.status, 'validé') AS status
+        FROM sales s
+        WHERE DATE(s.date_of_insertion) BETWEEN :start AND :end
+          AND (s.status IS NULL OR s.status != 'annulé')
+        ORDER BY s.date_of_insertion DESC
+    ");
+    $salesList->execute([':start' => $start, ':end' => $end]);
+
+    $expensesList = $pdo->prepare("
+        SELECT e.id, e.name, e.category, e.amount, e.comment, e.created_at
+        FROM expenses e
+        WHERE DATE(e.created_at) BETWEEN :start AND :end
+        ORDER BY e.created_at DESC
+    ");
+    $expensesList->execute([':start' => $start, ':end' => $end]);
+
+    $claimsList = $pdo->prepare("
+        SELECT c.id, c.client_id, cl.name AS client_name, c.amount, c.date_of_claim,
+               c.due_date, c.status,
+               (c.amount - COALESCE((SELECT SUM(amount) FROM claims_payments WHERE claim_id = c.id), 0)) AS remaining
+        FROM claims c
+        LEFT JOIN clients cl ON cl.id = c.client_id
+        WHERE DATE(c.date_of_claim) BETWEEN :start AND :end
+        ORDER BY c.date_of_claim DESC
+    ");
+    $claimsList->execute([':start' => $start, ':end' => $end]);
+
+    $claimPmtsList = $pdo->prepare("
+        SELECT cp.id, cp.date, cp.amount, cp.payment_method, cp.notes,
+               c.id AS claim_id, cl.name AS client_name
+        FROM claims_payments cp
+        JOIN claims c ON c.id = cp.claim_id
+        LEFT JOIN clients cl ON cl.id = c.client_id
+        WHERE DATE(cp.date) BETWEEN :start AND :end
+        ORDER BY cp.date DESC
+    ");
+    $claimPmtsList->execute([':start' => $start, ':end' => $end]);
+
+    echo json_encode([
+        'success' => true,
+        'period' => ['start' => $start, 'end' => $end, 'label' => $period],
+        'planComptable' => $plan,
+        'journal' => $journal,
+        'grandLivre' => $ledger,
+        'balance' => $balance,
+        'bilan' => $bilan,
+        'salesByMethod' => $salesByMethod->fetchAll(PDO::FETCH_ASSOC),
+        'expensesByCategory' => $expensesByCategory->fetchAll(PDO::FETCH_ASSOC),
+        'topProducts' => $topProducts->fetchAll(PDO::FETCH_ASSOC),
+        'claimsAging' => $claimsAging,
+        'documents' => [
+            'sales' => $salesList->fetchAll(PDO::FETCH_ASSOC),
+            'expenses' => $expensesList->fetchAll(PDO::FETCH_ASSOC),
+            'claims' => $claimsList->fetchAll(PDO::FETCH_ASSOC),
+            'claimPayments' => $claimPmtsList->fetchAll(PDO::FETCH_ASSOC),
+        ],
+        'totalJournalEntries' => count($journal),
+        'totalDebit' => $balance['totalDebit'],
+        'totalCredit' => $balance['totalCredit'],
     ]);
 }
 

@@ -13,6 +13,8 @@ $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // gestion des erreurs
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // fetch en tableau associatif
     PDO::ATTR_EMULATE_PREPARES   => false,                  // éviter les requêtes préparées émulated
+    // Aligne CURDATE()/NOW() de MySQL sur la date UTC utilisée par le frontend (toISOString)
+    PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '+00:00'",
 ];
 
 try {
@@ -36,6 +38,8 @@ $options = [
     PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // gestion des erreurs
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // fetch en tableau associatif
     PDO::ATTR_EMULATE_PREPARES   => false,                  // éviter les requêtes préparées émulated
+    // Aligne CURDATE()/NOW() de MySQL sur la date UTC utilisée par le frontend (toISOString)
+    PDO::MYSQL_ATTR_INIT_COMMAND => "SET time_zone = '+00:00'",
 ];
 
 try {

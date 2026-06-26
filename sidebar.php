@@ -10,7 +10,7 @@ $pageTitles = [
     'products.php' => 'Produits',
     'notifications.php' => 'Notifications',
     'financials.php' => 'États financiers',
-    'settings.php' => 'Paramètres',
+    // 'settings.php' => 'Paramètres',
 ];
 $pageTitle = $pageTitles[$currentPage] ?? 'TOBI LODA';
 function navClass($page, $current) {
@@ -21,7 +21,12 @@ function navClass($page, $current) {
 ?>
 <!-- Sidebar -->
 <div id="sidebar"
-    class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
+    class="fixed inset-y-0 left-0 z-[100001] w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-300">
+    <!-- Bouton fermer (mobile uniquement) -->
+    <button onclick="toggleSidebar()" aria-label="Fermer le menu"
+        class="lg:hidden absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-red-500 hover:bg-red-600 text-white shadow-md transition-colors">
+        <i class="fas fa-times text-lg"></i>
+    </button>
     <div class="flex items-center justify-center">
         <div class="flex items-center space-x-2" style="height: 165px;">
             <img src="public/images/logo.png" alt="">
@@ -55,10 +60,7 @@ function navClass($page, $current) {
                 <span>Notifications</span>
             </a>
 
-            <a href="settings.php" class="<?= navClass('settings.php', $currentPage) ?> border-t border-gray-200">
-                <i class="fas fa-cog mr-3"></i>
-                <span>Paramètres</span>
-            </a>
+            <!-- Paramètres removed -->
         </div>
         <a href="#" onclick="confirmLogout(); return false;" class="flex items-center px-6 py-3 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors border-t border-gray-200">
             <i class="fas fa-sign-out-alt mr-3"></i>
@@ -84,11 +86,109 @@ function navClass($page, $current) {
     </div>
 </div>
 
+<!-- Statistiques rapides pour mobile (affichées dans le menu hamburger) -->
+<div id="mobile-stats" class="hidden lg:hidden bg-gray-50 p-4 border-t border-gray-200">
+    <h3 class="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wider">Résumé financier</h3>
+    <div class="grid grid-cols-2 gap-3">
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+            <div class="flex items-center">
+                <div class="bg-blue-100 p-2 rounded-lg">
+                    <i class="fas fa-chart-pie text-blue-600 text-sm"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs text-gray-500 uppercase">Chiffre d'affaires</p>
+                    <p class="text-lg font-bold text-gray-900">0 FCFA</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+            <div class="flex items-center">
+                <div class="bg-emerald-100 p-2 rounded-lg">
+                    <i class="fas fa-wallet text-emerald-600 text-sm"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs text-gray-500 uppercase">Résultat net</p>
+                    <p class="text-lg font-bold text-gray-900">0 FCFA</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+            <div class="flex items-center">
+                <div class="bg-purple-100 p-2 rounded-lg">
+                    <i class="fas fa-file-invoice-dollar text-purple-600 text-sm"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs text-gray-500 uppercase">Ventes</p>
+                    <p class="text-lg font-bold text-gray-900">0</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+            <div class="flex items-center">
+                <div class="bg-red-100 p-2 rounded-lg">
+                    <i class="fas fa-wallet text-red-600 text-sm"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-xs text-gray-500 uppercase">Dépenses</p>
+                    <p class="text-lg font-bold text-gray-900">0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
-    .lg\:ml-64.min-h-screen { padding-bottom: 5rem; }
-    @media (min-width: 1024px) { .bottom-nav-lg { left: 16rem !important; } }
-    @media (max-width: 1023px) { .lg\:ml-64.min-h-screen { padding-top: 3.5rem !important; } }
-    @media (max-width: 1023px) { .fixed.inset-0.z-50:not(.z-40) { z-index: 100000 !important; } .fixed.inset-0.z-50 > .flex.items-center.justify-center.min-h-screen { padding: 4.5rem 0.75rem 5.5rem 0.75rem !important; } }
+    /* Contenu principal : éviter d'être caché par le header mobile et le bottom nav */
+    .lg\:ml-64.min-h-screen,
+    #app.lg\:ml-64.min-h-screen {
+        padding-bottom: 6rem !important;
+    }
+    @media (max-width: 1023px) {
+        .lg\:ml-64.min-h-screen,
+        #app.lg\:ml-64.min-h-screen {
+            padding-top: 4.5rem !important;
+            padding-bottom: 5.5rem !important;
+        }
+    }
+    @media (min-width: 1024px) {
+        .lg\:ml-64.min-h-screen,
+        #app.lg\:ml-64.min-h-screen {
+            padding-bottom: 1.5rem !important;
+        }
+        .bottom-nav-lg { left: 16rem !important; }
+    }
+
+    /* Empêcher la bottom nav de cacher le bas des formulaires */
+    form, .modal-content, [class*="modal"], .form-section {
+        scroll-margin-bottom: 100px;
+    }
+
+    @media (max-width: 1023px) {
+        /* Filet de sécurité : tout overlay de modal passe AU-DESSUS du header
+           (99990) et du menu du bas (99999) afin de ne jamais être masqué par
+           ces barres fixes. Le centrage + my-8 + scroll de l'overlay (comme sur
+           le formulaire de nouvelle vente) garantissent l'espace haut/bas. */
+        .fixed.inset-0.bg-gray-600,
+        .fixed.inset-0.bg-black,
+        .fixed.inset-0.bg-gray-900,
+        .fixed.inset-0[class*="bg-opacity"] {
+            z-index: 100000 !important;
+            /* espace réservé en haut (header ~60px) et en bas (menu ~64px) pour
+               que les bords du formulaire ne soient jamais sous les barres fixes */
+            padding-top: 4rem !important;
+            padding-bottom: 5rem !important;
+            box-sizing: border-box !important;
+        }
+
+        /* Espacement supplémentaire pour les formulaires en mobile */
+        .p-6 > form,
+        .p-6 > .form-container,
+        .p-6 > div > form,
+        [class*="p-"] form {
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+        }
+    }
 </style>
 
 <!-- Barre de navigation du bas -->
@@ -101,7 +201,7 @@ function navClass($page, $current) {
         <a href="sales.php" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:33%;text-decoration:none;color:<?= $currentPage === 'sales.php' ? '#2563EB' : '#6b7280' ?>;">
             <div style="background:#2563EB;color:white;width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:-18px;box-shadow:0 4px 12px rgba(37,99,235,0.3);">
                 <i class="fas fa-file-invoice-dollar" style="font-size:1.25rem"></i>
-            </div>
+        </div>
             <span style="font-size:0.75rem;margin-top:2px">Factures</span>
         </a>
         <a href="products.php" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:33%;text-decoration:none;color:<?= $currentPage === 'products.php' ? '#2563EB' : '#6b7280' ?>;">
@@ -118,13 +218,16 @@ function navClass($page, $current) {
         sidebarOpen = !sidebarOpen;
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('overlay');
+        const mobileStats = document.getElementById('mobile-stats');
 
         if (sidebarOpen) {
             sidebar.classList.remove('-translate-x-full');
             overlay.classList.remove('hidden');
+            mobileStats.classList.remove('hidden');
         } else {
             sidebar.classList.add('-translate-x-full');
             overlay.classList.add('hidden');
+            mobileStats.classList.add('hidden');
         }
     }
 

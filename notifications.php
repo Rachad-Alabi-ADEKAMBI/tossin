@@ -32,6 +32,10 @@ if (!isset($_SESSION['user_id'])) {
             color: #10B981;
         }
 
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
         .bg-primary {
             background-color: #2563EB;
         }
@@ -135,7 +139,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <button @click="printNotificationsList" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
                                     <i class="fas fa-print mr-2"></i>Imprimer
                                 </button>
-                                <button @click="markAllAsRead" class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center">
+                                <button @click="markAllAsRead" :disabled="submitting" class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center disabled:opacity-50 disabled:cursor-not-allowed">
                                     <i class="fas fa-check-double mr-2"></i>Tout marquer comme lu
                                 </button>
                             </div>
@@ -343,7 +347,8 @@ if (!isset($_SESSION['user_id'])) {
                     dateFrom: '',
                     dateTo: '',
                     currentPage: 1,
-                    itemsPerPage: 10
+                    itemsPerPage: 10,
+                    submitting: false
                 }
             },
             computed: {
@@ -526,6 +531,8 @@ if (!isset($_SESSION['user_id'])) {
                 },
                 markAllAsRead() {
                     if (!confirm('Êtes-vous sûr de vouloir marquer toutes les notifications comme lues ?')) return;
+                    if (this.submitting) return;
+                    this.submitting = true;
 
                     api.post('?action=markAllNotificationsRead')
                         .then(response => {
@@ -539,6 +546,9 @@ if (!isset($_SESSION['user_id'])) {
                         .catch(error => {
                             console.error('Erreur lors du marquage des notifications :', error);
                             alert('Erreur lors du marquage des notifications');
+                        })
+                        .finally(() => {
+                            this.submitting = false;
                         });
                 },
                 printNotificationsList() {

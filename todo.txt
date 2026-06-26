@@ -1,0 +1,7 @@
+n'affiche le bouton supprimer dans les lignes des creances que sil'objet de la vente c'est "directe" 
+et il faut aussi permettre de pouvoir ajouter un client directement depuis le formulaire
+ d'ajout de nopuvelle creance, exemple quand on commence a ecrire le nom du client et eu le systemee ne le trouve pas, il faut proposer de pouvoir creer directementt un nouveau client
+ depuis le formulaire 
+
+quand on ajoute une creance depuis le formmulaire d'ajout, l'object dans la table de la bdd doit etre "directe" mais quand la creance est creée suite a une vente, l'object doit être "vente"
+quand on ajoute une creance depuis le formmulaire d'ajout, l'object dans la table de la bdd doit etre "directe" mais quand la creance est creée suite a une vente, l'object doit être "vente"

@@ -33,6 +33,10 @@ if (!isset($_SESSION['user_id'])) {
             color: #10B981;
         }
 
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
         .bg-primary {
             background-color: #2563EB;
         }
@@ -324,9 +328,9 @@ if (!isset($_SESSION['user_id'])) {
             </div>
 
             <!-- Updated modal to use category instead of currency -->
-            <div v-if="showExpenseModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
+            <div v-if="showExpenseModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 my-8">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-receipt mr-2"></i>{{ editingExpense ? 'Modifier la dépense' : 'Nouvelle Dépense' }}
@@ -389,7 +393,8 @@ if (!isset($_SESSION['user_id'])) {
 
                             <div class="flex space-x-3 pt-4">
                                 <button type="submit"
-                                    class="flex-1 bg-accent hover:bg-green-600 text-white py-3 px-4 rounded-lg transition-colors font-medium">
+                                    :class="submitting ? 'flex-1 bg-gray-400 cursor-not-allowed text-white py-3 px-4 rounded-lg font-medium' : 'flex-1 bg-accent hover:bg-green-600 text-white py-3 px-4 rounded-lg transition-colors font-medium'"
+                                    :disabled="submitting">
                                     <i class="fas fa-save mr-2"></i>Enregistrer
                                 </button>
                                 <button type="button" @click="closeExpenseModal"
@@ -436,6 +441,7 @@ if (!isset($_SESSION['user_id'])) {
                     currentPage: 1,
                     itemsPerPage: 10,
                     showExpenseModal: false,
+                    submitting: false,
                     editingExpense: null,
                     expenses: [],
                     expenseForm: {
@@ -740,6 +746,7 @@ if (!isset($_SESSION['user_id'])) {
                     console.log('[DEBUG] Envoi de la requête vers:', action, 'avec payload:', payload);
 
                     try {
+                        this.submitting = true;
                         const response = await api.post(`?action=${action}`, payload);
 
                         console.log('[DEBUG] Réponse API:', response.data);
@@ -755,6 +762,8 @@ if (!isset($_SESSION['user_id'])) {
                     } catch (error) {
                         console.error('[DEBUG] Erreur lors de l\'enregistrement de la dépense:', error);
                         alert('Erreur lors de l\'enregistrement de la dépense');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
 

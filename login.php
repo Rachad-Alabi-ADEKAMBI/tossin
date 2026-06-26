@@ -53,8 +53,8 @@
                 </div>
             </div>
 
-            <button type="submit"
-                class="w-full bg-primary hover:bg-secondary text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
+            <button type="submit" id="loginBtn"
+                class="w-full bg-primary hover:bg-secondary text-white py-3 px-4 rounded-lg font-medium transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
                 <i class="fas fa-sign-in-alt mr-2"></i>Se connecter
             </button>
         </form>
@@ -70,11 +70,16 @@
 
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <script>
+        let submitting = false;
+
         async function login(username, password) {
             if (!username || !password) {
                 alert('Veuillez remplir tous les champs');
                 return;
             }
+            if (submitting) return;
+            submitting = true;
+            document.querySelector('button[type="submit"]').disabled = true;
 
             try {
                 const response = await axios.post('api/index.php?action=login', {
@@ -90,6 +95,9 @@
             } catch (error) {
                 console.error('Erreur lors de la connexion:', error);
                 alert('Erreur lors de la connexion');
+            } finally {
+                submitting = false;
+                document.querySelector('button[type="submit"]').disabled = false;
             }
         }
 

@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <link rel="icon" type="image/x-icon" href="public/images/logo.png">
     <style>
         .primary {
@@ -21,6 +22,10 @@
 
         .accent {
             color: #10B981;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
         }
 
         .bg-primary {
@@ -94,6 +99,12 @@
                 font-weight: 600;
                 color: #4b5563;
                 text-align: left;
+            }
+
+            td[data-label="Actions"] .flex {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
             }
 
             /* Styles pour le bouton de dépliement des filtres */
@@ -321,7 +332,6 @@
                                                 <button @click="printInvoice(sale)" class="text-blue-600 hover:text-blue-800 text-xl" title="Imprimer facture">
                                                     <i class="fas fa-print"></i>
                                                 </button>
-
                                                 <button @click="cancelSale(sale.id)" :disabled="sale.status === 'Annulé'" :class="sale.status === 'Annulé' ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 hover:text-red-800'" class="text-xl" title="Annuler">
                                                     <i class="fas fa-ban"></i>
                                                 </button>
@@ -369,9 +379,9 @@
             </div>
 
             <!-- New optimized sale modal with client dropdown and searchable list -->
-            <div v-if="showSaleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto">
+            <div v-if="showSaleModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 my-8">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-file-invoice mr-2"></i>{{ isEditMode ? 'Modifier Vente' : 'Nouvelle Vente / Facture' }}
@@ -382,16 +392,26 @@
                         </div>
 
                         <form @submit.prevent="showConfirmationModal" class="space-y-6">
+                            <!-- IFU (optionnel, non sauvegardé) -->
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    <i class="fas fa-id-card mr-1"></i>IFU <span class="text-gray-400 font-normal">(optionnel)</span>
+                                </label>
+                                <input type="text"
+                                    placeholder="Numéro IFU (optionnel)"
+                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <!-- Client selection with searchable dropdown -->
                                 <div class="relative">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-user mr-1"></i>Client
+                                        <i class="fas fa-user mr-1"></i>Client <span class="text-red-500">*</span>
                                     </label>
                                     <div class="relative">
                                         <input
                                             v-model="clientSearchTerm"
-                                            @focus="showClientDropdown = true"
+                                            @focus="filterClients"
                                             @input="filterClients"
                                             type="text"
                                             placeholder="Rechercher ou créer un client..."
@@ -407,7 +427,7 @@
                                                 @click="selectClient(client)"
                                                 class="px-4 py-3 cursor-pointer client-option border-b border-gray-100">
                                                 <div class="font-medium text-gray-900">{{ client.name }}</div>
-                                                <div class="text-sm text-gray-500">{{ client.phone }}</div>
+                                                <div class="text-sm text-gray-500">{{ formatPhone(client.phone) }}</div>
                                             </div>
 
                                             <!-- Create new client option -->
@@ -423,18 +443,26 @@
                                     <div v-if="saleForm.selectedClient" class="mt-2 p-3 bg-blue-50 rounded-lg flex justify-between items-center">
                                         <div>
                                             <div class="font-medium text-blue-900">{{ saleForm.selectedClient.name }}</div>
-                                            <div class="text-sm text-blue-600">{{ saleForm.selectedClient.phone }}</div>
+                                            <div class="text-sm text-blue-600">{{ formatPhone(saleForm.selectedClient.phone) }}</div>
                                         </div>
-                                        <button type="button" @click="clearClientSelection" class="text-red-500 hover:text-red-700">
-                                            <i class="fas fa-times-circle"></i>
-                                        </button>
+                                        <div class="flex space-x-2">
+                                            <button type="button" @click="callClient(saleForm.selectedClient.phone)" class="text-green-600 hover:text-green-800 text-lg" title="Appeler">
+                                                <i class="fas fa-phone"></i>
+                                            </button>
+                                            <button type="button" @click="whatsappClient(saleForm.selectedClient.phone)" class="text-emerald-600 hover:text-emerald-800 text-lg" title="WhatsApp">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </button>
+                                            <button type="button" @click="clearClientSelection" class="text-red-500 hover:text-red-700">
+                                                <i class="fas fa-times-circle"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <!-- Added payment method selector -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-credit-card mr-1"></i>Mode de paiement
+                                        <i class="fas fa-credit-card mr-1"></i>Mode de paiement <span class="text-red-500">*</span>
                                     </label>
                                     <select v-model="saleForm.payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                         <option value="cash">Cash</option>
@@ -445,7 +473,7 @@
                                 <!-- Added sale date selector with default to today -->
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        <i class="fas fa-calendar mr-1"></i>Date de la vente
+                                        <i class="fas fa-calendar mr-1"></i>Date de la vente <span class="text-red-500">*</span>
                                     </label>
                                     <input v-model="saleForm.date_of_operation" type="date" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                                 </div>
@@ -471,7 +499,7 @@
                                         class="grid grid-cols-1 md:grid-cols-7 gap-3 p-4 border border-gray-200 rounded-lg bg-gray-50">
                                         <div class="md:col-span-2 relative">
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                <i class="fas fa-box mr-1"></i>Produit
+                                                <i class="fas fa-box mr-1"></i>Produit <span class="text-red-500">*</span>
                                             </label>
                                             <input
                                                 v-model="line.productSearchTerm"
@@ -498,7 +526,7 @@
                                         <!-- Déplacé l'input du type de prix après la quantité et défini "gros" par défaut -->
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                <i class="fas fa-sort-numeric-up mr-1"></i>Quantité
+                                                <i class="fas fa-sort-numeric-up mr-1"></i>Quantité <span class="text-red-500">*</span>
                                             </label>
                                             <!-- Suppression de la valeur par défaut 1 et du placeholder -->
                                             <input v-model.number="line.quantity" type="number" min="0.01" step="0.01" required
@@ -509,7 +537,7 @@
                                         <!-- Type de prix maintenant après la quantité -->
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                <i class="fas fa-tag mr-1"></i>Type Prix
+                                                <i class="fas fa-tag mr-1"></i>Type Prix <span class="text-red-500">*</span>
                                             </label>
                                             <select v-model="line.priceType" @change="changePriceType(index)"
                                                 class="w-full px-2 py-2 border border-gray-300 rounded text-sm">
@@ -522,7 +550,7 @@
                                         <!-- Prix unitaire sans affichage de 0 -->
                                         <div>
                                             <label class="block text-xs font-medium text-gray-700 mb-1">
-                                                <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire
+                                                <i class="fas fa-money-bill-wave mr-1"></i>Prix unitaire <span class="text-red-500">*</span>
                                             </label>
                                             <!-- Suppression de la valeur par défaut 0 et du placeholder -->
                                             <input v-model.number="line.price" type="number" step="1" min="0" required
@@ -589,7 +617,7 @@
                                 <!-- Rendu des boutons de finalisation plus visibles -->
                                 <button type="button" @click="showConfirmationModal"
                                     class="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg shadow-lg font-bold transform transition-all hover:scale-105">
-                                    <i class="fas fa-check-circle mr-2 text-lg"></i>FINALISER LA VENTE
+                                    <i class="fas fa-check-circle mr-2 text-lg"></i>Finaliser
                                 </button>
                             </div>
                         </form>
@@ -598,7 +626,7 @@
             </div>
 
             <!-- New client creation modal -->
-            <div v-if="showNewClientForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[60]">
+            <div v-if="showNewClientForm" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100010]">
                 <div class="flex items-center justify-center min-h-screen p-4">
                     <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
                         <div class="flex justify-between items-center mb-6">
@@ -629,7 +657,7 @@
 
                             <div class="flex space-x-3 pt-4">
                                 <button type="submit"
-                                    class="flex-1 bg-accent hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                    :class="submitting ? 'flex-1 bg-gray-400 cursor-not-allowed text-white py-2 px-4 rounded-lg font-medium' : 'flex-1 bg-accent hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium'" :disabled="submitting">
                                     <i class="fas fa-check mr-2"></i>Créer
                                 </button>
                                 <button type="button" @click="showNewClientForm = false"
@@ -640,10 +668,11 @@
                         </form>
                     </div>
                 </div>
+                
             </div>
 
             <!-- Modal Détails de Vente -->
-            <div v-if="showDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+            <div v-if="showDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
                 <div class="flex items-center justify-center min-h-screen p-4">
                     <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6">
                         <div class="flex justify-between items-center mb-6">
@@ -724,7 +753,7 @@
             </div>
 
             <!-- Added new modal for sales history list print preview -->
-            <div v-if="showPrintListModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+            <div v-if="showPrintListModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
                 <div class="flex items-center justify-center min-h-screen p-4">
                     <div class="bg-white rounded-xl shadow-xl max-w-7xl w-full p-6 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6 no-print">
@@ -817,7 +846,7 @@
             </div>
 
             <!-- Modal de confirmation finalisation -->
-            <div v-if="showConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 z-[100] flex items-center justify-center p-4">
+            <div v-if="showConfirmModal" class="fixed inset-0 bg-gray-600 bg-opacity-75 z-[100010] flex items-center justify-center p-4">
                 <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 border-t-8 border-green-500 max-h-[90vh] overflow-y-auto">
                     <div class="text-center mb-6">
                         <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -873,14 +902,22 @@
                             <i class="fas fa-user mr-2 text-blue-600"></i>Informations client
                         </h4>
                         <p class="text-gray-900 font-medium">{{ saleForm.selectedClient.name }}</p>
-                        <p v-if="saleForm.selectedClient.phone" class="text-gray-600 text-sm">{{ saleForm.selectedClient.phone }}</p>
+                        <div v-if="saleForm.selectedClient.phone" class="flex items-center space-x-2">
+                            <p class="text-gray-600 text-sm">{{ formatPhone(saleForm.selectedClient.phone) }}</p>
+                            <button type="button" @click="callClient(saleForm.selectedClient.phone)" class="text-green-600 hover:text-green-800 text-sm" title="Appeler">
+                                <i class="fas fa-phone"></i>
+                            </button>
+                            <button type="button" @click="whatsappClient(saleForm.selectedClient.phone)" class="text-emerald-600 hover:text-emerald-800 text-sm" title="WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </button>
+                        </div>
                         <p v-if="saleForm.comment" class="text-gray-600 text-sm italic mt-2">💬 {{ saleForm.comment }}</p>
                     </div>
 
                     <div class="flex flex-col space-y-3">
                         <!-- Bouton de confirmation rendu extrêmement visible -->
                         <button @click="processSale"
-                            class="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold text-lg shadow-xl transform transition-active active:scale-95 flex items-center justify-center">
+                            :class="submitting ? 'w-full bg-gray-400 cursor-not-allowed text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center' : 'w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold text-lg shadow-xl transform transition-active active:scale-95 flex items-center justify-center'" :disabled="submitting">
                             <i class="fas fa-check mr-2"></i>OUI, CONFIRMER LA VENTE
                         </button>
                         <button @click="showConfirmModal = false" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-xl font-semibold">
@@ -891,7 +928,7 @@
             </div>
 
             <!-- Nouveau modal de profil client inspiré de claims.php -->
-            <div v-if="showClientProfileModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+            <div v-if="showClientProfileModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
                 <div class="flex items-center justify-center min-h-screen p-4">
                     <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full p-6 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6">
@@ -913,7 +950,15 @@
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">Téléphone</p>
-                                        <p class="text-lg font-semibold text-gray-900">{{ selectedClientProfile.phone }}</p>
+                                        <div class="flex items-center space-x-2">
+                                            <p class="text-lg font-semibold text-gray-900">{{ formatPhone(selectedClientProfile.phone) }}</p>
+                                            <button @click="callClient(selectedClientProfile.phone)" class="text-green-600 hover:text-green-800 text-lg" title="Appeler">
+                                                <i class="fas fa-phone"></i>
+                                            </button>
+                                            <button @click="whatsappClient(selectedClientProfile.phone)" class="text-emerald-600 hover:text-emerald-800 text-lg" title="WhatsApp">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">Dette totale</p>
@@ -1107,6 +1152,7 @@
                 const clientProfileClaims = ref([]);
                 const clientProfileSales = ref([]);
                 const yesterdayTotal = ref(0);
+                const submitting = ref(false);
 
                 const toggleFilters = () => {
                     showAllFilters.value = !showAllFilters.value;
@@ -1376,10 +1422,15 @@
                 };
 
                 const filterClients = () => {
-                    const term = clientSearchTerm.value.toLowerCase();
+                    const term = (clientSearchTerm.value || '').toLowerCase().trim();
+                    showClientDropdown.value = true;
+                    if (!term) {
+                        filteredClients.value = clients.value;
+                        return;
+                    }
                     filteredClients.value = clients.value.filter(client =>
-                        client.name.toLowerCase().includes(term) ||
-                        client.phone.includes(term)
+                        (client.name || '').toLowerCase().includes(term) ||
+                        String(client.phone || '').toLowerCase().includes(term)
                     );
                 };
 
@@ -1401,6 +1452,7 @@
                     }
 
                     try {
+                        submitting.value = true;
                         const response = await api.post('?action=createClient', newClientForm.value);
 
                         if (response.data.success) {
@@ -1425,19 +1477,22 @@
                     } catch (error) {
                         console.error('Erreur lors de la création du client:', error);
                         alert('Erreur lors de la création du client');
+                    } finally {
+                        submitting.value = false;
                     }
                 };
 
                 const filterProducts = (index) => {
                     const line = saleForm.value.lines[index];
-                    const term = line.productSearchTerm.toLowerCase();
+                    const term = (line.productSearchTerm || '').toLowerCase().trim();
+                    line.showProductDropdown = true;
 
                     const selectedProductIds = saleForm.value.lines
                         .filter((l, i) => i !== index && l.product_id)
                         .map(l => l.product_id);
 
                     line.filteredProducts = products.value.filter(product =>
-                        product.name.toLowerCase().includes(term) &&
+                        (product.name || '').toLowerCase().includes(term) &&
                         !selectedProductIds.includes(product.id)
                     );
                 };
@@ -1587,6 +1642,7 @@
                     const action = isEditMode.value ? 'updateSale' : 'newSale';
 
                     try {
+                        submitting.value = true;
                         const response = await api.post(`?action=${action}`, saleData);
 
                         if (!response.data.success) {
@@ -1603,6 +1659,8 @@
                     } catch (error) {
                         console.error('Erreur lors de l\'enregistrement:', error);
                         alert('Erreur lors de l\'enregistrement de la vente');
+                    } finally {
+                        submitting.value = false;
                     }
                 };
 
@@ -1766,9 +1824,172 @@
                     }
                 };
 
+                const shareInvoice = async (sale) => {
+                    try {
+                        const response = await api.get('?action=allSalesProducts');
+                        const saleProducts = response.data.filter(product => product.sale_id === sale.id);
+
+                        if (saleProducts.length === 0) {
+                            alert('Aucun produit trouvé pour cette vente');
+                            return;
+                        }
+
+                        const client = clients.value.find(c => c.name === sale.buyer);
+                        const clientPhone = client ? client.phone : null;
+
+                        const totalArticles = saleProducts.length;
+                        const totalQuantity = saleProducts.reduce((sum, product) => sum + parseFloat(product.quantity || 0), 0);
+
+                        const invoiceHtml = `
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                                <title>Facture #${sale.id}</title>
+                                <style>
+                                    body { font-family: Arial, sans-serif; margin: 20px; position: relative; }
+                                    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+                                    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                    th, td { border: 1px solid #000; padding: 8px; text-align: left; }
+                                    th { background-color: #f0f0f0; font-weight: bold; }
+                                    .total { font-weight: bold; font-size: 1.2em; margin-top: 20px; text-align: right; }
+                                    .summary { margin-top: 20px; background-color: #f9f9f9; padding: 15px; border-radius: 8px; }
+                                    .summary-item { display: flex; justify-content: space-between; margin-bottom: 8px; }
+                                    .footer { margin-top: 60px; text-align: center; font-size: 12px; color: #6B7280; border-top: 1px solid #ddd; padding-top: 20px; }
+                                </style>
+                            </head>
+                            <body>
+                                <div class="header">
+                                    <h1>ETS TOBI LODA ET FILS</h1>
+                                    <p>Commerçialisation de boissons<br>
+                                    <p>IFU 0202371384670<p>
+                                    Lokossa, Quinji carrefour Abo, <br>
+                                    téléphone 01 49 91 65 66</p>
+                                    <h2>FACTURE #${sale.id}</h2>
+                                </div>
+                                <p><strong>Client:</strong> ${sale.buyer}</p>
+                                <p><strong>Date:</strong> ${formatDate(sale.date_of_operation)}</p>
+                                <p><strong>Mode de paiement:</strong> ${sale.payment_method === 'cash' ? 'Cash' : 'Crédit'}</p>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th>Quantité</th>
+                                            <th>Prix unitaire</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${saleProducts.map(product => `
+                                            <tr>
+                                                <td>${product.name}</td>
+                                                <td>${formatNumber(product.quantity)}</td>
+                                                <td>${formatCurrency(product.price)}</td>
+                                                <td>${formatCurrency(parseFloat(product.quantity) * parseFloat(product.price))}</td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                                <div class="summary">
+                                    <div class="summary-item">
+                                        <span><strong>Nombre d'articles:</strong></span>
+                                        <span><strong>${totalArticles}</strong></span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <span><strong>Quantité totale:</strong></span>
+                                        <span><strong>${formatNumber(totalQuantity)}</strong></span>
+                                    </div>
+                                    <div class="summary-item" style="border-top: 2px solid #333; padding-top: 10px; margin-top: 10px; font-size: 1.2em;">
+                                        <span><strong>TOTAL:</strong></span>
+                                        <span style="color: #059669;"><strong>${formatCurrency(sale.total)}</strong></span>
+                                    </div>
+                                </div>
+                                <div class="footer">
+                                    <p>Merci pour votre confiance!</p>
+                                    <p>Document généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
+                                </div>
+                            </body>
+                            </html>
+                        `;
+
+                        // Create a temporary visible container for PDF rendering
+                        const container = document.createElement('div');
+                        container.innerHTML = invoiceHtml;
+                        container.style.position = 'fixed';
+                        container.style.left = '0';
+                        container.style.top = '0';
+                        container.style.width = '210mm';
+                        container.style.opacity = '0.001';
+                        container.style.pointerEvents = 'none';
+                        container.style.zIndex = '-1';
+                        document.body.appendChild(container);
+
+                        // Generate PDF using html2pdf.js
+                        const pdfBlob = await html2pdf()
+                            .set({ margin: [5, 5, 5, 5], filename: `facture_${sale.id}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true, logging: false }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } })
+                            .from(container)
+                            .outputPdf('blob');
+
+                        document.body.removeChild(container);
+
+                        const fileName = `facture_${sale.id}.pdf`;
+                        const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+                        // Generate WhatsApp text summary
+                        const itemsList = saleProducts.map(p =>
+                            `- ${p.name}: ${formatNumber(p.quantity)} x ${formatCurrency(p.price)}`
+                        ).join('%0A');
+
+                        const message = `🧾 *FACTURE #${sale.id} - TOBI LODA*%0A%0A` +
+                            `👤 *Client:* ${sale.buyer}%0A` +
+                            `📅 *Date:* ${formatDate(sale.date_of_operation)}%0A` +
+                            `💳 *Paiement:* ${sale.payment_method === 'cash' ? 'Cash' : 'Crédit'}%0A%0A` +
+                            `📦 *Articles:*%0A${itemsList}%0A%0A` +
+                            `🔢 *Total articles:* ${totalArticles}%0A` +
+                            `📊 *Quantité totale:* ${formatNumber(totalQuantity)}%0A` +
+                            `💰 *TOTAL:* ${formatCurrency(sale.total)}%0A%0A` +
+                            `📎 *Facture PDF en pièce jointe*%0A%0A` +
+                            `_ETS TOBI LODA ET FILS - ${new Date().toLocaleDateString('fr-FR')}_`;
+
+                        // Try Web Share API first (mobile: shares PDF directly to WhatsApp as document)
+                        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                            try {
+                                await navigator.share({
+                                    files: [pdfFile],
+                                    title: `Facture #${sale.id}`,
+                                    text: `Facture #${sale.id} - ${sale.buyer}`
+                                });
+                                return;
+                            } catch (shareError) {
+                                if (shareError.name !== 'AbortError') {
+                                    console.error('Erreur partage:', shareError);
+                                }
+                            }
+                        }
+
+                        // Fallback: download PDF + open WhatsApp
+                        const url = URL.createObjectURL(pdfBlob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+                        if (clientPhone) {
+                            window.open(`https://wa.me/${normalizePhone(clientPhone)}?text=${message}`, '_blank');
+                        } else {
+                            alert('Facture téléchargée. Numéro du client non disponible pour WhatsApp.');
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors du partage:', error);
+                        alert('Erreur lors du partage de la facture');
+                    }
+                };
+
                 const printSalesList = () => {
                     const modalContent = `
-                        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50" id="print-modal">
+                        <div class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005]" id="print-modal">
                             <div class="flex items-center justify-center min-h-screen p-4">
                                 <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full p-6 max-h-screen overflow-y-auto">
                                     <div class="flex justify-between items-center mb-6 no-print">
@@ -1943,6 +2164,49 @@
                     const number = parseFloat(amount);
                     const roundedAmount = Math.round(isNaN(number) ? 0 : number);
                     return `${roundedAmount.toLocaleString('fr-FR')} ${currency}`;
+                };
+
+                const formatPhone = (phone) => {
+                    if (!phone) return '';
+                    const cleaned = phone.toString().replace(/\D/g, '');
+                    if (cleaned.length === 8) {
+                        return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4');
+                    }
+                    if (cleaned.length === 10) {
+                        return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5');
+                    }
+                    if (cleaned.length === 11) {
+                        return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{3})/, '$1 $2 $3 $4 $5');
+                    }
+                    return phone;
+                };
+
+                const normalizePhone = (phone) => {
+                    // Nettoie et ajoute l'indicatif Bénin (229) s'il est absent
+                    let cleaned = phone.toString().replace(/\D/g, '');
+                    if (cleaned.startsWith('00')) {
+                        cleaned = cleaned.slice(2);
+                    }
+                    if (!cleaned.startsWith('229')) {
+                        cleaned = '229' + cleaned;
+                    }
+                    return cleaned;
+                };
+
+                const callClient = (phone) => {
+                    if (!phone) {
+                        alert('Numéro de téléphone non disponible');
+                        return;
+                    }
+                    window.location.href = `tel:+${normalizePhone(phone)}`;
+                };
+
+                const whatsappClient = (phone) => {
+                    if (!phone) {
+                        alert('Numéro de téléphone non disponible');
+                        return;
+                    }
+                    window.open(`https://wa.me/${normalizePhone(phone)}`, '_blank');
                 };
 
                 const calculateTotalProducts = (sale) => {
@@ -2225,6 +2489,8 @@
                     showPrintListModal,
                     showConfirmModal,
                     showAllFilters,
+                    showClientProfileModal,
+                    selectedClientProfile,
                     showClientProfile,
                     closeClientProfileModal,
                     toggleFilters,
@@ -2259,17 +2525,19 @@
                     viewSaleDetails,
                     closeDetailsModal,
                     printInvoice,
+                    shareInvoice,
                     printSalesList,
                     closePrintListModal,
                     printListNow,
-                    showClientProfile,
-                    closeClientProfileModal,
                     previousPage,
                     nextPage,
                     goToPage,
                     formatDate,
                     formatNumber,
                     formatCurrency,
+                    formatPhone,
+                    callClient,
+                    whatsappClient,
                     calculateTotalProducts,
                     calculateUniqueProducts,
                     processSale,
@@ -2287,6 +2555,7 @@
                     todayTotalSales,
                     todaySalesCount,
                     yesterdayTotal,
+                    submitting,
                     todayTotalProductsCount,
                     todayTotalUniqueProducts,
                     currentSaleTotalProducts,

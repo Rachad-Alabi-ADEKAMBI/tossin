@@ -32,6 +32,10 @@ if (!isset($_SESSION['user_id'])) {
             color: #10B981;
         }
 
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
         .bg-primary {
             background-color: #2563EB;
         }
@@ -95,6 +99,12 @@ if (!isset($_SESSION['user_id'])) {
                 font-weight: bold;
                 color: #374151;
             }
+
+            td[data-label="Actions"] .flex {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
         }
 
         @media print {
@@ -146,7 +156,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <button @click="printClaimsList" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
                                     <i class="fas fa-print mr-2"></i>Imprimer
                                 </button>
-                                <button v-if="!showClientsTab" @click="openNewClaimModal" class="bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors flex items-center w-full sm:w-auto">
+                                <button v-if="!showClientsTab" @click="openNewClaimModal" class="bg-accent hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors flex items-center">
                                     <i class="fas fa-plus mr-2"></i>Nouvelle créance
                                 </button>
                             </div>
@@ -241,7 +251,7 @@ if (!isset($_SESSION['user_id'])) {
                                                     </div>
                                                     <div class="ml-4">
                                                         <div class="text-sm font-medium text-gray-900">{{ client.name }}</div>
-                                                        <div class="text-sm text-gray-500">{{ client.phone }}</div>
+                                                        <div class="text-sm text-gray-500">{{ formatPhone(client.phone) }}</div>
                                                     </div>
                                                 </div>
                                             </td>
@@ -258,9 +268,17 @@ if (!isset($_SESSION['user_id'])) {
                                                 {{ client.salesCount }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
-                                                <button @click="showClientDetails(client)" class="text-primary hover:text-secondary text-xl" title="Voir détails">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
+                                                <div class="flex space-x-3">
+                                                    <button @click="callClient(client.phone)" class="text-green-600 hover:text-green-800 text-xl" title="Appeler">
+                                                        <i class="fas fa-phone"></i>
+                                                    </button>
+                                                    <button @click="whatsappClient(client.phone)" class="text-emerald-600 hover:text-emerald-800 text-xl" title="WhatsApp">
+                                                        <i class="fab fa-whatsapp"></i>
+                                                    </button>
+                                                    <button @click="showClientDetails(client)" class="text-primary hover:text-secondary text-xl" title="Voir détails">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -314,7 +332,7 @@ if (!isset($_SESSION['user_id'])) {
                                     <i :class="['fas ml-2', showAllFilters ? 'fa-chevron-up' : 'fa-chevron-down']"></i>
                                 </button>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Rechercher</label>
                                     <input v-model="searchTerm" @input="applyFilters" type="text" placeholder="Nom du client..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
@@ -340,6 +358,14 @@ if (!isset($_SESSION['user_id'])) {
                                         <option value="remaining">Restant</option>
                                     </select>
                                 </div>
+                                <div :class="['md:block', showAllFilters ? 'block' : 'hidden']">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Filtrer par statut</label>
+                                    <select v-model="filterStatus" @change="applyFilters" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="all">Toutes les créances</option>
+                                        <option value="remaining">Créances restantes</option>
+                                        <option value="sold">Créances soldées</option>
+                                    </select>
+                                </div>
                             </div>
                             <div :class="['mt-4 gap-2 md:flex', showAllFilters ? 'flex' : 'hidden']">
                                 <button @click="clearFilters" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
@@ -350,22 +376,14 @@ if (!isset($_SESSION['user_id'])) {
 
                         <!-- Statistiques -->
                         <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div class="bg-red-50 p-4 rounded-lg">
-                                    <p class="text-sm text-gray-600 mb-1">Total créances</p>
-                                    <p class="text-base md:text-2xl font-bold text-red-600">{{ formatCurrency(totalClaims) }}</p>
-                                </div>
-                                <div class="bg-green-50 p-4 rounded-lg">
-                                    <p class="text-sm text-gray-600 mb-1">Total payé</p>
-                                    <p class="text-base md:text-2xl font-bold text-green-600">{{ formatCurrency(totalPaid) }}</p>
-                                </div>
+                            <div class="grid grid-cols-2 md:grid-cols-2 gap-4">
                                 <div class="bg-orange-50 p-4 rounded-lg">
-                                    <p class="text-sm text-gray-600 mb-1">Reste à payer</p>
+                                    <p class="text-sm text-gray-600 mb-1">Total à recouvrer</p>
                                     <p class="text-base md:text-2xl font-bold text-orange-600">{{ formatCurrency(totalRemaining) }}</p>
                                 </div>
                                 <div class="bg-blue-50 p-4 rounded-lg">
-                                    <p class="text-sm text-gray-600 mb-1">Nombre de créances</p>
-                                    <p class="text-base md:text-2xl font-bold text-blue-600">{{ filteredClaims.length }}</p>
+                                    <p class="text-sm text-gray-600 mb-1">Créances actives</p>
+                                    <p class="text-base md:text-2xl font-bold text-blue-600">{{ unpaidCount }}</p>
                                 </div>
                             </div>
                         </div>
@@ -378,6 +396,7 @@ if (!isset($_SESSION['user_id'])) {
                                         <tr>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date dette</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enregistré le</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Échéance</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant initial</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Notes</th>
@@ -398,12 +417,15 @@ if (!isset($_SESSION['user_id'])) {
                                                     </div>
                                                     <div class="ml-4">
                                                         <div class="text-sm font-medium text-gray-900">{{ getClientName(claim.client_id) }}</div>
-                                                        <div class="text-sm text-gray-500">{{ getClientPhone(claim.client_id) }}</div>
+                                                        <div class="text-sm text-gray-500">{{ formatPhone(getClientPhone(claim.client_id)) }}</div>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Date dette'">
                                                 {{ formatDate(claim.date_of_claim) }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" :data-label="'Enregistré le'">
+                                                {{ formatDateTime(claim.date_of_insertion) }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm" :data-label="'Échéance'" :class="isOverdue(claim) ? 'text-red-600 font-semibold' : 'text-gray-500'">
                                                 {{ formatDate(claim.due_date) }}
@@ -430,13 +452,22 @@ if (!isset($_SESSION['user_id'])) {
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium" :data-label="'Actions'">
                                                 <div class="flex space-x-3">
+                                                    <button @click="openQuickPayment(claim)" class="text-accent hover:text-green-800 text-xl" title="Ajouter un paiement">
+                                                        <i class="fas fa-money-bill-wave"></i>
+                                                    </button>
                                                     <button @click="showPaymentHistory(claim)" class="text-primary hover:text-secondary text-xl" title="Historique & Paiements">
                                                         <i class="fas fa-history"></i>
                                                     </button>
-                                                    <button @click="printClaimHistory(claim)" class="text-green-600 hover:text-green-800 text-xl" title="Imprimer">
+                                                    <button @click="whatsappClient(getClientPhone(claim.client_id))" class="text-emerald-600 hover:text-emerald-800 text-xl" title="WhatsApp">
+                                                        <i class="fab fa-whatsapp"></i>
+                                                    </button>
+                                                    <button @click="callClient(getClientPhone(claim.client_id))" class="text-green-600 hover:text-green-800 text-xl" title="Appeler">
+                                                        <i class="fas fa-phone"></i>
+                                                    </button>
+                                                    <button @click="printClaimHistory(claim)" class="text-blue-600 hover:text-blue-800 text-xl" title="Imprimer">
                                                         <i class="fas fa-print"></i>
                                                     </button>
-                                                    <button @click="deleteClaim(claim.id)" class="text-red-600 hover:text-red-800 text-xl" title="Supprimer">
+                                                    <button v-if="claim.object === 'directe'" @click="deleteClaim(claim.id)" class="text-red-600 hover:text-red-800 text-xl" title="Supprimer">
                                                         <i class="fas fa-trash"></i>
                                                     </button>
                                                 </div>
@@ -483,69 +514,133 @@ if (!isset($_SESSION['user_id'])) {
             </div>
 
             <!-- Modal nouvelle créance -->
-            <div v-if="showNewClaimModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
+          <!-- Modal nouvelle créance -->
+<div v-if="showNewClaimModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
+  <div class="flex min-h-full items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl my-8">
+
+        <!-- Header -->
+        <div class="flex justify-between items-center p-6 border-b border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-900">
+                <i class="fas fa-plus-circle mr-2"></i>Nouvelle Créance
+            </h3>
+            <button @click="closeNewClaimModal" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Formulaire -->
+        <form @submit.prevent="addNewClaim" class="p-6 space-y-4">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Client -->
+                <div class="relative">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nom du débiteur <span class="text-red-500">*</span></label>
+                    <input
+                        v-model="newClaimClientSearch"
+                        @input="showNewClaimClientDropdown = true; filterNewClaimClients()"
+                        @focus="showNewClaimClientDropdown = true"
+                        type="text"
+                        placeholder="Rechercher un client..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        required>
+                    <div v-if="showNewClaimClientDropdown"
+                         class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        <div v-if="filteredNewClaimClients.length > 0">
+                            <div
+                                v-for="client in filteredNewClaimClients"
+                                :key="client.id"
+                                @click="selectNewClaimClient(client)"
+                                class="px-4 py-2 hover:bg-gray-100 cursor-pointer">
+                                <div class="font-medium">{{ client.name }}</div>
+                                <div class="text-sm text-gray-500">{{ formatPhone(client.phone) }}</div>
+                            </div>
+                        </div>
+                        <div v-if="newClaimClientSearch && !filteredNewClaimClients.some(c => c.name.toLowerCase() === newClaimClientSearch.toLowerCase())"
+                             @click="openNewClientFromClaim"
+                             class="px-4 py-2 hover:bg-green-100 cursor-pointer bg-green-50 text-green-700 font-medium">
+                            <i class="fas fa-plus-circle mr-2"></i>Créer "{{ newClaimClientSearch }}"
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Montant -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Montant <span class="text-red-500">*</span></label>
+                    <input v-model.number="newClaim.amount" type="number" step="0.01" placeholder="0.00"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Date créance -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date de la créance <span class="text-red-500">*</span></label>
+                    <input v-model="newClaim.date_of_claim" type="date"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                </div>
+
+                <!-- Date échéance -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Date d'échéance <span class="text-red-500">*</span></label>
+                    <input v-model="newClaim.due_date" type="date"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea v-model="newClaim.notes" rows="3" placeholder="Notes supplémentaires..."
+                          class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+            </div>
+
+            <!-- Boutons -->
+            <div class="flex justify-end space-x-3 pt-2">
+                <button type="button" @click="closeNewClaimModal"
+                        class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-bold">
+                    Annuler
+                </button>
+                <button type="submit" :disabled="submitting"
+                        :class="submitting ? 'px-6 py-2 bg-gray-400 cursor-not-allowed text-white rounded-lg font-bold' : 'px-6 py-2 bg-accent hover:bg-green-600 text-white rounded-lg transition-colors font-bold'">
+                    <i class="fas fa-save mr-2"></i>Enregistrer
+                </button>
+            </div>
+
+        </form>
+    </div>
+  </div>
+</div>
+
+            <!-- Modal nouveau client depuis créance -->
+            <div v-if="showNewClientFromClaimModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100015]">
                 <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-screen overflow-y-auto">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
-                                <i class="fas fa-plus-circle mr-2"></i>Nouvelle Créance
+                                <i class="fas fa-user-plus mr-2"></i>Nouveau Client
                             </h3>
-                            <button @click="closeNewClaimModal" class="text-gray-400 hover:text-gray-600">
+                            <button @click="showNewClientFromClaimModal = false" class="text-gray-400 hover:text-gray-600">
                                 <i class="fas fa-times text-xl"></i>
                             </button>
                         </div>
-
-                        <form @submit.prevent="addNewClaim" class="space-y-6">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div class="relative">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Client *</label>
-                                    <input
-                                        v-model="newClaimClientSearch"
-                                        @input="showNewClaimClientDropdown = true; filterNewClaimClients()"
-                                        @focus="showNewClaimClientDropdown = true"
-                                        type="text"
-                                        placeholder="Rechercher un client..."
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        required>
-                                    <div v-if="showNewClaimClientDropdown && filteredNewClaimClients.length > 0" class="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                        <div
-                                            v-for="client in filteredNewClaimClients"
-                                            :key="client.id"
-                                            @click="selectNewClaimClient(client)"
-                                            class="px-4 py-2 hover:bg-gray-100 cursor-pointer">
-                                            <div class="font-medium">{{ client.name }}</div>
-                                            <div class="text-sm text-gray-500">{{ client.phone }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Montant *</label>
-                                    <input v-model.number="newClaim.amount" type="number" step="0.01" placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Date de la créance *</label>
-                                    <input v-model="newClaim.date_of_claim" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Date d'échéance *</label>
-                                    <input v-model="newClaim.due_date" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
-                                </div>
-                            </div>
-
+                        <form @submit.prevent="createClientFromClaim" class="space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                                <textarea v-model="newClaim.notes" rows="3" placeholder="Notes supplémentaires..." class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nom du client *</label>
+                                <input v-model="claimNewClientForm.name" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
                             </div>
-
-                            <div class="flex justify-end space-x-3">
-                                <button type="button" @click="closeNewClaimModal" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                                    Annuler
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone *</label>
+                                <input v-model="claimNewClientForm.phone" type="tel" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div class="flex space-x-3 pt-4">
+                                <button type="submit"
+                                    class="flex-1 bg-accent hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-check mr-2"></i>Créer
                                 </button>
-                                <button type="submit" class="px-6 py-2 bg-accent hover:bg-green-600 text-white rounded-lg transition-colors">
-                                    <i class="fas fa-save mr-2"></i>Enregistrer
+                                <button type="button" @click="showNewClientFromClaimModal = false"
+                                    class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
+                                    <i class="fas fa-times mr-2"></i>Annuler
                                 </button>
                             </div>
                         </form>
@@ -554,9 +649,9 @@ if (!isset($_SESSION['user_id'])) {
             </div>
 
             <!-- Modal historique des paiements -->
-            <div v-if="showPaymentHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
+            <div v-if="showPaymentHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 my-8 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-history mr-2"></i>Historique des Paiements
@@ -607,6 +702,7 @@ if (!isset($_SESSION['user_id'])) {
                                     <thead class="bg-gray-50">
                                         <tr>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Enregistré le</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Moyen</th>
                                             <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
@@ -616,13 +712,14 @@ if (!isset($_SESSION['user_id'])) {
                                     </thead>
                                     <tbody class="divide-y divide-gray-200">
                                         <tr v-if="claimPayments.length === 0">
-                                            <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                                            <td colspan="6" class="px-4 py-8 text-center text-gray-500">
                                                 <i class="fas fa-inbox text-4xl mb-2"></i>
                                                 <p>Aucun paiement enregistré</p>
                                             </td>
                                         </tr>
                                         <tr v-for="payment in claimPayments" :key="payment.id" class="hover:bg-gray-50">
                                             <td class="px-4 py-3 text-sm text-gray-900" :data-label="'Date'">{{ formatDate(payment.date) }}</td>
+                                            <td class="px-4 py-3 text-sm text-gray-500" :data-label="'Enregistré le'">{{ formatDateTime(payment.date_of_insertion) }}</td>
                                             <td class="px-4 py-3 text-sm font-medium text-green-600" :data-label="'Montant'">{{ formatCurrency(payment.amount) }}</td>
                                             <td class="px-4 py-3 text-sm text-gray-500" :data-label="'Moyen'">{{ payment.payment_method || '-' }}</td>
                                             <td class="px-4 py-3 text-sm text-gray-500" :data-label="'Notes'">{{ payment.notes || '-' }}</td>
@@ -641,9 +738,9 @@ if (!isset($_SESSION['user_id'])) {
             </div>
 
             <!-- Modal nouveau paiement -->
-            <div v-if="showNewPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6">
+            <div v-if="showNewPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100010] overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 my-8">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-money-bill-wave mr-2"></i>Nouveau Paiement
@@ -653,20 +750,20 @@ if (!isset($_SESSION['user_id'])) {
                             </button>
                         </div>
 
-                        <form @submit.prevent="addNewPayment" class="space-y-4">
+                       <form @submit.prevent="addNewPayment" class="px-6 py-8 mt -5 space-y-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Montant *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Montant <span class="text-red-500">*</span></label>
                                 <input v-model.number="newPayment.amount" type="number" step="0.01" :max="selectedClaimRemaining" placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
                                 <p class="text-xs text-gray-500 mt-1">Maximum: {{ formatCurrency(selectedClaimRemaining) }}</p>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Date *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Date <span class="text-red-500">*</span></label>
                                 <input v-model="newPayment.date" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
                             </div>
 
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Moyen de paiement *</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Moyen de paiement <span class="text-red-500">*</span></label>
                                 <select v-model="newPayment.payment_method" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
                                     <option value="">Sélectionner...</option>
                                     <option value="Espèces">Espèces</option>
@@ -686,7 +783,7 @@ if (!isset($_SESSION['user_id'])) {
                                 <button type="button" @click="closeNewPaymentModal" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">
                                     Annuler
                                 </button>
-                                <button type="submit" class="px-6 py-2 bg-accent hover:bg-green-600 text-white rounded-lg transition-colors">
+                                <button type="submit" :disabled="submitting" :class="submitting ? 'px-6 py-2 bg-gray-400 cursor-not-allowed text-white rounded-lg' : 'px-6 py-2 bg-accent hover:bg-green-600 text-white rounded-lg transition-colors'">
                                     <i class="fas fa-save mr-2"></i>Enregistrer
                                 </button>
                             </div>
@@ -696,9 +793,9 @@ if (!isset($_SESSION['user_id'])) {
             </div>
 
             <!-- Modal détails client -->
-            <div v-if="showClientDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full p-6 max-h-screen overflow-y-auto">
+            <div v-if="showClientDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-6xl w-full p-6 my-8 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-user-circle mr-2"></i>Détails du Client
@@ -724,7 +821,15 @@ if (!isset($_SESSION['user_id'])) {
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">Téléphone</p>
-                                        <p class="text-lg font-semibold text-gray-900">{{ selectedClient.phone }}</p>
+                                        <div class="flex items-center space-x-2">
+                                            <p class="text-lg font-semibold text-gray-900">{{ formatPhone(selectedClient.phone) }}</p>
+                                            <button @click="callClient(selectedClient.phone)" class="text-green-600 hover:text-green-800 text-lg" title="Appeler">
+                                                <i class="fas fa-phone"></i>
+                                            </button>
+                                            <button @click="whatsappClient(selectedClient.phone)" class="text-emerald-600 hover:text-emerald-800 text-lg" title="WhatsApp">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <div>
                                         <p class="text-sm text-gray-600">Dette totale</p>
@@ -814,9 +919,9 @@ if (!isset($_SESSION['user_id'])) {
 
             <!-- Modal modifier paiement -->
             <!-- CHANGE: Ajout du modal d'édition de paiement -->
-            <div v-if="showEditPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div v-if="showEditPaymentModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100010] overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 my-8">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-edit mr-2"></i>Modifier Paiement
@@ -856,7 +961,7 @@ if (!isset($_SESSION['user_id'])) {
                                 </div>
 
                                 <div class="flex space-x-3 pt-4">
-                                    <button type="submit" class="flex-1 bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors">
+                                    <button type="submit" :disabled="submitting" :class="submitting ? 'flex-1 bg-gray-400 cursor-not-allowed text-white px-6 py-2 rounded-lg' : 'flex-1 bg-accent hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors'">
                                         <i class="fas fa-save mr-2"></i>Enregistrer
                                     </button>
                                     <button type="button" @click="closeEditPaymentModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-6 py-2 rounded-lg transition-colors">
@@ -884,6 +989,7 @@ if (!isset($_SESSION['user_id'])) {
             data() {
                 return {
                     showClientsTab: false,
+                    submitting: false,
                     clients: [],
                     sales: [],
                     claimsPayments: [],
@@ -897,6 +1003,7 @@ if (!isset($_SESSION['user_id'])) {
                     clientSales: [],
 
                     showAllFilters: false,
+                    filterStatus: 'all',
                     searchTerm: '',
                     sortBy: 'date',
                     exactDate: '',
@@ -926,6 +1033,12 @@ if (!isset($_SESSION['user_id'])) {
                     newClaimClientSearch: '',
                     showNewClaimClientDropdown: false,
                     filteredNewClaimClients: [],
+
+                    showNewClientFromClaimModal: false,
+                    claimNewClientForm: {
+                        name: '',
+                        phone: ''
+                    },
 
                     // CHANGE: Ajout des variables pour l'édition de paiement
                     showEditPaymentModal: false,
@@ -1059,6 +1172,12 @@ if (!isset($_SESSION['user_id'])) {
                         });
                     }
 
+                    if (this.filterStatus === 'remaining') {
+                        filtered = filtered.filter(claim => this.getClaimRemaining(claim.id) > 0);
+                    } else if (this.filterStatus === 'sold') {
+                        filtered = filtered.filter(claim => this.getClaimRemaining(claim.id) === 0);
+                    }
+
                     if (this.exactDate) {
                         filtered = filtered.filter(claim => {
                             const claimDate = claim.date_of_claim.split(' ')[0];
@@ -1153,6 +1272,10 @@ if (!isset($_SESSION['user_id'])) {
                     return this.filteredClaims.reduce((sum, claim) => {
                         return sum + this.getClaimRemaining(claim.id);
                     }, 0);
+                },
+
+                unpaidCount() {
+                    return this.filteredClaims.filter(claim => this.getClaimRemaining(claim.id) > 0).length;
                 },
 
                 selectedClaimPaid() {
@@ -1304,6 +1427,7 @@ if (!isset($_SESSION['user_id'])) {
                     this.exactDate = '';
                     this.startDate = '';
                     this.endDate = '';
+                    this.filterStatus = 'all';
                 },
 
                 previousPage() {
@@ -1358,6 +1482,39 @@ if (!isset($_SESSION['user_id'])) {
                     this.showNewClaimClientDropdown = false;
                 },
 
+                openNewClientFromClaim() {
+                    this.claimNewClientForm.name = this.newClaimClientSearch;
+                    this.showNewClientFromClaimModal = true;
+                    this.showNewClaimClientDropdown = false;
+                },
+
+                async createClientFromClaim() {
+                    if (!this.claimNewClientForm.name || !this.claimNewClientForm.phone) {
+                        alert('Veuillez remplir tous les champs');
+                        return;
+                    }
+                    try {
+                        this.submitting = true;
+                        const response = await api.post('?action=createClient', this.claimNewClientForm);
+                        if (response.data.success) {
+                            await this.fetchClients();
+                            const newClient = this.clients.find(c => c.name === this.claimNewClientForm.name);
+                            if (newClient) {
+                                this.selectNewClaimClient(newClient);
+                            }
+                            this.showNewClientFromClaimModal = false;
+                            this.claimNewClientForm = { name: '', phone: '' };
+                        } else {
+                            alert('Erreur: ' + (response.data.message || 'Une erreur est survenue'));
+                        }
+                    } catch (error) {
+                        console.error('Erreur création client:', error);
+                        alert('Erreur lors de la création du client');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+
                 async addNewClaim() {
                     if (!this.newClaim.client_id) {
                         alert('Veuillez sélectionner un client');
@@ -1365,6 +1522,8 @@ if (!isset($_SESSION['user_id'])) {
                     }
 
                     const url = '?action=newClaim';
+
+                    this.submitting = true;
 
                     // LOGS
                     console.log('URL appelée :', url);
@@ -1389,6 +1548,8 @@ if (!isset($_SESSION['user_id'])) {
                             payload: this.newClaim
                         });
                         alert('Erreur lors de l\'ajout de la créance');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
 
@@ -1447,6 +1608,8 @@ if (!isset($_SESSION['user_id'])) {
                         notes: this.newPayment.notes
                     };
 
+                    this.submitting = true;
+
                     // LOGS
                     console.log('URL appelée :', url);
                     console.log('Données envoyées :', JSON.stringify(payload));
@@ -1471,6 +1634,8 @@ if (!isset($_SESSION['user_id'])) {
                             payload
                         });
                         alert('Erreur lors de l\'ajout du paiement');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
 
@@ -1478,6 +1643,8 @@ if (!isset($_SESSION['user_id'])) {
                     if (!confirm('Êtes-vous sûr de vouloir supprimer cette créance?')) {
                         return;
                     }
+
+                    this.submitting = true;
 
                     try {
                         const response = await api.post('?action=deleteClaim', {
@@ -1493,6 +1660,8 @@ if (!isset($_SESSION['user_id'])) {
                     } catch (error) {
                         console.error('Erreur lors de la suppression:', error);
                         alert('Erreur lors de la suppression de la créance');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
 
@@ -1633,10 +1802,9 @@ if (!isset($_SESSION['user_id'])) {
                             
                             <div class="summary">
                                 <h3>Résumé:</h3>
-                                <p><strong>Nombre de créances:</strong> ${this.filteredClaims.length}</p>
-                                <p><strong>Total créances:</strong> ${this.formatCurrency(this.totalClaims)}</p>
+                                <p><strong>Créances actives:</strong> ${this.unpaidCount}</p>
+                                <p><strong>Total à recouvrer:</strong> ${this.formatCurrency(this.totalRemaining)}</p>
                                 <p><strong>Total payé:</strong> ${this.formatCurrency(this.totalPaid)}</p>
-                                <p><strong>Total restant:</strong> ${this.formatCurrency(this.totalRemaining)}</p>
                             </div>
                             
                             <table>
@@ -1719,7 +1887,7 @@ if (!isset($_SESSION['user_id'])) {
                             <div class="client-info">
                                 <h3>Informations du client:</h3>
                                 <p><strong>Nom:</strong> ${this.selectedClient.name}</p>
-                                <p><strong>Téléphone:</strong> ${this.selectedClient.phone}</p>
+                                <p><strong>Téléphone:</strong> ${this.formatPhone(this.selectedClient.phone)}</p>
                             </div>
                             
                             <div class="summary">
@@ -1813,6 +1981,11 @@ if (!isset($_SESSION['user_id'])) {
                     printWindow.print();
                 },
 
+                openQuickPayment(claim) {
+                    this.selectedClaim = claim;
+                    this.openNewPaymentModal();
+                },
+
                 editPayment(payment) {
                     this.editingPayment = {
                         ...payment
@@ -1848,6 +2021,8 @@ if (!isset($_SESSION['user_id'])) {
                         notes
                     };
 
+                    this.submitting = true;
+
                     // LOG AVANT REQUÊTE
                     console.log('➡️ Route API :', route);
                     console.log('📤 Données envoyées :', payload);
@@ -1877,6 +2052,8 @@ if (!isset($_SESSION['user_id'])) {
                         });
 
                         alert('Erreur lors de la modification du paiement');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
 
@@ -1887,10 +2064,70 @@ if (!isset($_SESSION['user_id'])) {
                     return d.toLocaleDateString('fr-FR');
                 },
 
+                formatDateTime(date) {
+                    if (!date) return '-';
+                    const d = new Date(date);
+                    if (isNaN(d)) return '-';
+                    return d.toLocaleDateString('fr-FR') + ' à ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                },
+
                 formatCurrency(amount) {
                     const number = parseFloat(amount);
                     const roundedAmount = Math.round(isNaN(number) ? 0 : number);
                     return `${roundedAmount.toLocaleString('fr-FR')} FCFA`;
+                },
+
+                formatPhone(phone) {
+                    if (!phone) return '';
+                    const cleaned = phone.toString().replace(/\D/g, '');
+                    if (cleaned.length === 8) {
+                        return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4');
+                    }
+                    if (cleaned.length === 10) {
+                        return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5');
+                    }
+                    if (cleaned.length === 11) {
+                        return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{3})/, '$1 $2 $3 $4 $5');
+                    }
+                    return phone;
+                },
+
+                normalizePhone(phone) {
+                    // Nettoie et ajoute l'indicatif Bénin (229) s'il est absent
+                    let cleaned = phone.toString().replace(/\D/g, '');
+                    // retire un éventuel 00 international en tête
+                    if (cleaned.startsWith('00')) {
+                        cleaned = cleaned.slice(2);
+                    }
+                    // ajoute l'indicatif 229 si le numéro est purement local
+                    if (!cleaned.startsWith('229')) {
+                        cleaned = '229' + cleaned;
+                    }
+                    return cleaned;
+                },
+
+                callClient(phone) {
+                    if (!phone) {
+                        alert('Numéro de téléphone non disponible');
+                        return;
+                    }
+                    window.location.href = `tel:+${this.normalizePhone(phone)}`;
+                },
+
+                sendSmsToClient(phone) {
+                    if (!phone) {
+                        alert('Numéro de téléphone non disponible');
+                        return;
+                    }
+                    window.location.href = `sms:+${this.normalizePhone(phone)}`;
+                },
+
+                whatsappClient(phone) {
+                    if (!phone) {
+                        alert('Numéro de téléphone non disponible');
+                        return;
+                    }
+                    window.open(`https://wa.me/${this.normalizePhone(phone)}`, '_blank');
                 }
             }
         }).mount('#app');

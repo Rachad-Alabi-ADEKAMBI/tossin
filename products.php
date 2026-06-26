@@ -53,6 +53,10 @@ if (!isset($_SESSION['user_id'])) {
 
         }
 
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
 
 
         .accent {
@@ -616,11 +620,11 @@ if (!isset($_SESSION['user_id'])) {
 
             <!-- Modal Nouveau/Éditer Produit -->
 
-            <div v-if="showProductModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+            <div v-if="showProductModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
 
-                <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="flex min-h-full items-center justify-center p-4">
 
-                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6">
+                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 my-8">
 
                         <div class="flex justify-between items-center mb-6">
 
@@ -760,7 +764,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                 </button>
 
-                                <button type="submit" class="bg-primary hover:bg-secondary text-white px-6 py-2 rounded-lg">
+                                <button type="submit" :disabled="submitting" :class="submitting ? 'px-6 py-2 bg-gray-400 cursor-not-allowed text-white rounded-lg' : 'px-6 py-2 bg-primary hover:bg-secondary text-white rounded-lg'">
 
                                     <i class="fas fa-save mr-2"></i>{{ isEditMode ? 'Mettre à jour' : 'Créer' }}
 
@@ -780,11 +784,11 @@ if (!isset($_SESSION['user_id'])) {
 
             <!-- Modal Ajuster Stock -->
 
-            <div v-if="showStockModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+            <div v-if="showStockModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
 
-                <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="flex min-h-full items-center justify-center p-4">
 
-                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 my-8">
 
                         <div class="flex justify-between items-center mb-6">
 
@@ -892,7 +896,7 @@ if (!isset($_SESSION['user_id'])) {
 
                                 </button>
 
-                                <button type="submit" :class="['text-white px-6 py-2 rounded-lg', stockAction === 'add' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600']">
+                                <button type="submit" :disabled="submitting" :class="submitting ? 'px-6 py-2 bg-gray-400 cursor-not-allowed text-white rounded-lg' : ['text-white px-6 py-2 rounded-lg', stockAction === 'add' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600']">
 
                                     <i :class="['fas', stockAction === 'add' ? 'fa-check' : 'fa-minus', 'mr-2']"></i>
 
@@ -914,11 +918,11 @@ if (!isset($_SESSION['user_id'])) {
 
             <!-- Modal Historique -->
 
-            <div v-if="showHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+            <div v-if="showHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
 
-                <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="flex min-h-full items-center justify-center p-4">
 
-                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 my-8 max-h-screen overflow-y-auto">
 
                         <div class="flex justify-between items-center mb-6">
 
@@ -1042,11 +1046,11 @@ if (!isset($_SESSION['user_id'])) {
 
             <!-- Modal d'impression avec options multiples -->
 
-            <div v-if="showPrintSettingsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 overflow-y-auto">
+            <div v-if="showPrintSettingsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
 
-                <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="flex min-h-full items-center justify-center p-4">
 
-                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6">
+                    <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 my-8">
 
                         <div class="flex justify-between items-center mb-6">
 
@@ -1343,6 +1347,7 @@ if (!isset($_SESSION['user_id'])) {
 
                     selectedProduct: null,
 
+                    submitting: false,
                     showProductModal: false,
 
                     showStockModal: false,
@@ -1470,7 +1475,7 @@ if (!isset($_SESSION['user_id'])) {
 
                 totalStockValue() {
 
-                    return this.products.reduce((sum, p) => sum + (p.quantity * p.buying_price), 0);
+                    return this.products.reduce((sum, p) => sum + (p.quantity * p.retail_price), 0);
 
                 },
 
@@ -1653,6 +1658,8 @@ if (!isset($_SESSION['user_id'])) {
 
                 saveProduct() {
 
+                    this.submitting = true;
+
                     const action = this.isEditMode ? 'update' : 'create';
 
                     const formData = new FormData();
@@ -1731,9 +1738,15 @@ if (!isset($_SESSION['user_id'])) {
 
                         .catch(error => {
 
-                            console.error('Erreur lors de l’enregistrement du produit :', error);
+                            console.error('Erreur lors de l\'enregistrement du produit :', error);
 
-                            alert('Erreur lors de l’enregistrement du produit');
+                            alert('Erreur lors de l\'enregistrement du produit');
+
+                        })
+
+                        .finally(() => {
+
+                            this.submitting = false;
 
                         });
 
@@ -1775,7 +1788,7 @@ if (!isset($_SESSION['user_id'])) {
 
                     }
 
-
+                    this.submitting = true;
 
                     const quantity = this.stockAction === 'add' ? this.stockForm.quantity : -this.stockForm.quantity;
 
@@ -1834,6 +1847,10 @@ if (!isset($_SESSION['user_id'])) {
                         console.error('Erreur lors de l\'ajustement du stock :', error);
 
                         alert('Erreur lors de l\'ajustement du stock');
+
+                    } finally {
+
+                        this.submitting = false;
 
                     }
 
@@ -2200,7 +2217,7 @@ if (!isset($_SESSION['user_id'])) {
 
                         summary += '<p><strong>Quantité totale:</strong> ' + this.formatNumber(products.reduce((sum, p) => sum + p.quantity, 0)) + ' unités</p>';
 
-                        let totalValue = products.reduce((sum, p) => sum + (p.quantity * p.buying_price), 0);
+                        let totalValue = products.reduce((sum, p) => sum + (p.quantity * p.retail_price), 0);
 
                         summary += '<p><strong>Valeur d\'achat totale:</strong> ' + this.formatCurrency(totalValue) + '</p>';
 

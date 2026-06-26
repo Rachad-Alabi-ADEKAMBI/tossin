@@ -232,6 +232,10 @@ switch ($action) {
         getFinancialReport();
         break;
 
+    case 'accountingData':
+        getAccountingData();
+        break;
+
     default:
         echo json_encode(['error' => 'Action non reconnue']);
         break;

@@ -36,6 +36,10 @@
             color: #F59E0B;
         }
 
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
         .bg-primary {
             background-color: #2563EB;
         }
@@ -354,9 +358,9 @@
             </div>
 
             <!-- Modal Nouvelle Commande -->
-            <div v-if="showNewOrderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto">
+            <div v-if="showNewOrderModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 my-8 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-shopping-cart mr-2"></i>Nouvelle Commande
@@ -474,7 +478,7 @@
                             </div>
 
                             <div class="flex space-x-3 pt-4">
-                                <button type="submit" class="flex-1 bg-accent hover:bg-yellow-600 text-white py-3 px-4 rounded-lg transition-colors font-medium">
+                                <button type="submit" :disabled="submitting" :class="['flex-1 py-3 px-4 rounded-lg transition-colors font-medium text-white', submitting ? 'bg-yellow-400 cursor-not-allowed' : 'bg-accent hover:bg-yellow-600']">
                                     <i class="fas fa-save mr-2"></i>Créer la commande
                                 </button>
                                 <button type="button" @click="closeNewOrderModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-3 px-4 rounded-lg transition-colors font-medium">
@@ -487,9 +491,9 @@
             </div>
 
             <!-- Modal Modifier Ligne -->
-            <div v-if="showEditLineModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-70">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div v-if="showEditLineModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100010] overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 my-8">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-edit mr-2"></i>Modifier la ligne
@@ -536,9 +540,9 @@
             </div>
 
             <!-- Modal Modifier Statut -->
-            <div v-if="showEditStatusModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-60">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div v-if="showEditStatusModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100010] overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 my-8">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-edit mr-2"></i>Modifier le statut
@@ -561,7 +565,7 @@
                             </div>
 
                             <div class="flex space-x-3 pt-4">
-                                <button type="submit" class="flex-1 bg-accent hover:bg-yellow-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                <button type="submit" :disabled="submitting" :class="['flex-1 py-2 px-4 rounded-lg transition-colors font-medium text-white', submitting ? 'bg-yellow-400 cursor-not-allowed' : 'bg-accent hover:bg-yellow-600']">
                                     <i class="fas fa-save mr-2"></i>Modifier
                                 </button>
                                 <button type="button" @click="closeEditStatusModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
@@ -574,9 +578,9 @@
             </div>
 
             <!-- Modal Détails Commande -->
-            <div v-if="showOrderDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50 no-print">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 max-h-screen overflow-y-auto modal-content">
+            <div v-if="showOrderDetailsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-[100005] no-print overflow-y-auto">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-5xl w-full p-6 my-8 max-h-screen overflow-y-auto modal-content">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-file-alt mr-2"></i>Détails de la commande
@@ -697,7 +701,7 @@
                                                 <td class="px-4 py-3 text-sm font-medium" data-label="Total">{{ formatCurrency(newProductLine.quantity * newProductLine.price || 0, selectedOrder.currency) }}</td>
                                                 <td class="px-4 py-3 text-sm no-print" data-label="Actions">
                                                     <div class="flex space-x-3">
-                                                        <button @click="validateNewLine" class="px-3 py-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded transition-colors" title="Valider">
+                                                        <button @click="validateNewLine" :disabled="submitting" :class="['px-3 py-2 rounded transition-colors', submitting ? 'text-green-400 cursor-not-allowed' : 'text-green-600 hover:text-green-800 hover:bg-green-50']" title="Valider">
                                                             <i class="fas fa-check text-lg fa-lg"></i>
                                                         </button>
                                                         <button @click="cancelNewLine" class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors" title="Annuler">
@@ -752,9 +756,9 @@
             </div>
 
             <!-- Modal Options d'Impression -->
-            <div v-if="showPrintOptionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-60 no-print" style="z-index: 9999;">
-                <div class="flex items-center justify-center min-h-screen p-4">
-                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div v-if="showPrintOptionsModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 no-print overflow-y-auto" style="z-index: 100010;">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 my-8">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-print mr-2"></i>Options d'impression
@@ -818,9 +822,9 @@
             </div>
 
             <!-- Modal Payment History -->
-            <div v-if="showPaymentHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 z-50" style="z-index: 9997;">
-                <div class="flex items-center justify-center min-h-screen p-4 overflow-auto">
-                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 max-h-screen overflow-y-auto">
+            <div v-if="showPaymentHistoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto" style="z-index: 100005;">
+                <div class="flex min-h-full items-center justify-center p-4">
+                    <div class="bg-white rounded-xl shadow-xl max-w-4xl w-full p-6 my-8 max-h-screen overflow-y-auto">
                         <div class="flex justify-between items-center mb-6">
                             <h3 class="text-xl font-semibold text-gray-900">
                                 <i class="fas fa-history mr-2"></i>Historique des Paiements
@@ -957,7 +961,7 @@
                             </div>
 
                             <div class="flex space-x-3 pt-4">
-                                <button type="submit" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                <button type="submit" :disabled="submitting" :class="['flex-1 py-2 px-4 rounded-lg transition-colors font-medium text-white', submitting ? 'bg-green-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600']">
                                     <i class="fas fa-save mr-2"></i>Enregistrer
                                 </button>
                                 <button type="button" @click="closeNewPaymentModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
@@ -1021,7 +1025,7 @@
                             </div>
 
                             <div class="flex space-x-3 pt-4">
-                                <button type="submit" class="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg transition-colors font-medium">
+                                <button type="submit" :disabled="submitting" :class="['flex-1 py-2 px-4 rounded-lg transition-colors font-medium text-white', submitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600']">
                                     <i class="fas fa-save mr-2"></i>Sauvegarder
                                 </button>
                                 <button type="button" @click="closeEditPaymentModal" class="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 py-2 px-4 rounded-lg transition-colors font-medium">
@@ -1053,6 +1057,7 @@
             data() {
                 return {
                     loading: false,
+                    submitting: false,
                     orders: [],
                     filteredOrders: [],
                     showAllFilters: false,
@@ -1315,6 +1320,7 @@
                     }
                 },
                 async addNewOrder() {
+                    this.submitting = true;
                     try {
                         const orderData = {
                             seller: this.newOrder.supplier,
@@ -1336,6 +1342,8 @@
                     } catch (error) {
                         console.error('Erreur:', error);
                         alert('Erreur lors de la création de la commande');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
                 showOrderDetails(order) {
@@ -1360,6 +1368,7 @@
                     this.editingOrder = null;
                 },
                 async saveEditStatus() {
+                    this.submitting = true;
                     try {
                         const response = await api.post('?action=updateOrderStatus', {
                             id: this.editingOrder.id,
@@ -1383,6 +1392,8 @@
                     } catch (error) {
                         console.error('Erreur:', error);
                         alert('Erreur lors de la modification du statut');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
                 // Added confirmation dialog to deleteOrder function
@@ -1460,6 +1471,7 @@
                         return;
                     }
 
+                    this.submitting = true;
                     try {
                         const response = await api.post('?action=newOrderProduct', {
                             order_id: this.selectedOrder.id,
@@ -1496,6 +1508,8 @@
                     } catch (error) {
                         console.error('Erreur:', error);
                         alert('Erreur lors de l\'ajout du produit');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
                 cancelNewLine() {
@@ -1876,6 +1890,7 @@
                         return;
                     }
 
+                    this.submitting = true;
                     const formData = new FormData();
                     formData.append('order_id', this.selectedOrder.id);
                     formData.append('amount', this.newPayment.amount);
@@ -1905,6 +1920,8 @@
                     } catch (error) {
                         console.error('Erreur lors de l\'ajout du paiement:', error);
                         alert('Erreur lors de l\'ajout du paiement: ' + error.message);
+                    } finally {
+                        this.submitting = false;
                     }
                 },
                 getImgUrl(fileName) {
@@ -1944,6 +1961,7 @@
                         return;
                     }
 
+                    this.submitting = true;
                     const formData = new FormData();
                     formData.append('id', this.editingPayment.id);
                     formData.append('amount', this.editingPayment.amount);
@@ -1974,6 +1992,8 @@
                     } catch (error) {
                         console.error('Erreur lors de la modification du paiement:', error);
                         alert('Erreur lors de la modification du paiement: ' + error.message);
+                    } finally {
+                        this.submitting = false;
                     }
                 },
                 async deletePayment(paymentId) {
